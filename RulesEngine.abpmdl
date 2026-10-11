@@ -1,0 +1,114 @@
+{
+  "template": "app",
+  "imports": {
+    "Volo.Abp.LeptonXLiteTheme": {
+      "version": "5.6.1",
+      "isInstalled": true,
+      "creationTime": "10/05/2026 11:39:55 +00:00"
+    },
+    "Volo.Abp.Account": {
+      "version": "10.6.1",
+      "isInstalled": true,
+      "creationTime": "10/05/2026 11:39:55 +00:00"
+    },
+    "Volo.Abp.OpenIddict": {
+      "version": "10.6.1",
+      "isInstalled": true,
+      "creationTime": "10/05/2026 11:39:55 +00:00"
+    },
+    "Volo.Abp.Identity": {
+      "version": "10.6.1",
+      "isInstalled": true,
+      "creationTime": "10/05/2026 11:39:55 +00:00"
+    },
+    "Volo.Abp.TenantManagement": {
+      "version": "10.6.1",
+      "isInstalled": true,
+      "creationTime": "10/05/2026 11:39:55 +00:00"
+    },
+    "Volo.Abp.SettingManagement": {
+      "version": "10.6.1",
+      "isInstalled": true,
+      "creationTime": "10/05/2026 11:39:55 +00:00"
+    },
+    "Volo.Abp.PermissionManagement": {
+      "version": "10.6.1",
+      "isInstalled": true,
+      "creationTime": "10/05/2026 11:39:55 +00:00"
+    },
+    "Volo.Abp.FeatureManagement": {
+      "version": "10.6.1",
+      "isInstalled": true,
+      "creationTime": "10/05/2026 11:39:55 +00:00"
+    },
+    "Volo.Abp.BlobStoring.Database": {
+      "version": "10.6.1",
+      "isInstalled": true,
+      "creationTime": "10/05/2026 11:39:55 +00:00"
+    }
+  },
+  "folders": {
+    "items": {
+      "src": {},
+      "test": {}
+    }
+  },
+  "packages": {
+    "RulesEngine.Application": {
+      "path": "src/RulesEngine.Application/RulesEngine.Application.abppkg",
+      "folder": "src"
+    },
+    "RulesEngine.Application.Tests": {
+      "path": "test/RulesEngine.Application.Tests/RulesEngine.Application.Tests.abppkg",
+      "folder": "test"
+    },
+    "RulesEngine.Domain.Shared": {
+      "path": "src/RulesEngine.Domain.Shared/RulesEngine.Domain.Shared.abppkg",
+      "folder": "src"
+    },
+    "RulesEngine.Application.Contracts": {
+      "path": "src/RulesEngine.Application.Contracts/RulesEngine.Application.Contracts.abppkg",
+      "folder": "src"
+    },
+    "RulesEngine.HttpApi": {
+      "path": "src/RulesEngine.HttpApi/RulesEngine.HttpApi.abppkg",
+      "folder": "src"
+    },
+    "RulesEngine.HttpApi.Client": {
+      "path": "src/RulesEngine.HttpApi.Client/RulesEngine.HttpApi.Client.abppkg",
+      "folder": "src"
+    },
+    "RulesEngine.EntityFrameworkCore.Tests": {
+      "path": "test/RulesEngine.EntityFrameworkCore.Tests/RulesEngine.EntityFrameworkCore.Tests.abppkg",
+      "folder": "test"
+    },
+    "RulesEngine.EntityFrameworkCore": {
+      "path": "src/RulesEngine.EntityFrameworkCore/RulesEngine.EntityFrameworkCore.abppkg",
+      "folder": "src"
+    },
+    "RulesEngine.TestBase": {
+      "path": "test/RulesEngine.TestBase/RulesEngine.TestBase.abppkg",
+      "folder": "test"
+    },
+    "RulesEngine.Domain.Tests": {
+      "path": "test/RulesEngine.Domain.Tests/RulesEngine.Domain.Tests.abppkg",
+      "folder": "test"
+    },
+    "RulesEngine.HttpApi.Client.ConsoleTestApp": {
+      "path": "test/RulesEngine.HttpApi.Client.ConsoleTestApp/RulesEngine.HttpApi.Client.ConsoleTestApp.abppkg",
+      "folder": "test"
+    },
+    "RulesEngine.DbMigrator": {
+      "path": "src/RulesEngine.DbMigrator/RulesEngine.DbMigrator.abppkg",
+      "folder": "src"
+    },
+    "RulesEngine.HttpApi.Host": {
+      "path": "src/RulesEngine.HttpApi.Host/RulesEngine.HttpApi.Host.abppkg",
+      "folder": "src"
+    },
+    "RulesEngine.Domain": {
+      "path": "src/RulesEngine.Domain/RulesEngine.Domain.abppkg",
+      "folder": "src"
+    }
+  }
+}

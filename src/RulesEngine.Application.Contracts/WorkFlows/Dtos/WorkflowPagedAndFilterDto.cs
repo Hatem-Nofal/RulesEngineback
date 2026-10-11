@@ -1,0 +1,13 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Volo.Abp.Application.Dtos;
+
+namespace RulesEngine.WorkFlows.Dtos
+{
+    public class WorkflowPagedAndFilterDto : PagedAndSortedResultRequestDto
+    {
+        public string Name { get; set; } = default!;
+        public string? RuleFormConfigName { get; set; }
+     }
+}

@@ -1,0 +1,23 @@
+<Solution>
+    <Configurations>
+        <Platform Name="Any CPU" />
+    </Configurations>
+    <Folder Name="/src/">
+        <Project Path="src/RulesEngine.Domain/RulesEngine.Domain.csproj" />
+        <Project Path="src/RulesEngine.Application/RulesEngine.Application.csproj" />
+        <Project Path="src/RulesEngine.EntityFrameworkCore/RulesEngine.EntityFrameworkCore.csproj" />
+        <Project Path="src/RulesEngine.Domain.Shared/RulesEngine.Domain.Shared.csproj" />
+        <Project Path="src/RulesEngine.Application.Contracts/RulesEngine.Application.Contracts.csproj" />
+        <Project Path="src/RulesEngine.HttpApi/RulesEngine.HttpApi.csproj" />
+        <Project Path="src/RulesEngine.HttpApi.Client/RulesEngine.HttpApi.Client.csproj" />
+        <Project Path="src/RulesEngine.HttpApi.Host/RulesEngine.HttpApi.Host.csproj" />
+        <Project Path="src/RulesEngine.DbMigrator/RulesEngine.DbMigrator.csproj" />
+    </Folder>
+    <Folder Name="/test/">
+        <Project Path="test/RulesEngine.Application.Tests/RulesEngine.Application.Tests.csproj" />
+        <Project Path="test/RulesEngine.EntityFrameworkCore.Tests/RulesEngine.EntityFrameworkCore.Tests.csproj" />
+        <Project Path="test/RulesEngine.TestBase/RulesEngine.TestBase.csproj" />
+        <Project Path="test/RulesEngine.Domain.Tests/RulesEngine.Domain.Tests.csproj" />
+        <Project Path="test/RulesEngine.HttpApi.Client.ConsoleTestApp/RulesEngine.HttpApi.Client.ConsoleTestApp.csproj" />
+    </Folder>
+</Solution>
