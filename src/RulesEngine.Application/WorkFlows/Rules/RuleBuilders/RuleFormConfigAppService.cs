@@ -1,7 +1,7 @@
 using RulesEngine.Application.Repositories.WorkFlows;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
-using RulesEngine.LookupsDtos;
+using RulesEngine.Lookups.Dtos;
 using RulesEngine.Repositories.WorkFlows;
 using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
 using RulesEngine.WorkFlows.Rules.RuleBuilders;

@@ -13,9 +13,9 @@ namespace RulesEngine.Lookups
         public string IqviaCode { get; private set; }
         public string ShortDesc { get; private set; }
         public string MediumDesc { get; private set; }
-        public int ActivityId { get; private set; }
+        public int ActivityTypeId { get; private set; }
 
-        [ForeignKey("Activity_id")]
+        [ForeignKey("ActivityTypeId")]
         public ActivityType ActivityType { get; private set; }
         public int Status { get; private set; }
         public string IqviaType { get; private set; }
@@ -37,7 +37,7 @@ namespace RulesEngine.Lookups
             Id = id;
             IqviaCode = iqviaCode;
             ShortDesc = shortDesc;
-            ActivityId = activityId;
+            ActivityTypeId = activityId;
             Status = status;
             Create_timestamp = DateTime.UtcNow;
             Update_timestamp = Create_timestamp;

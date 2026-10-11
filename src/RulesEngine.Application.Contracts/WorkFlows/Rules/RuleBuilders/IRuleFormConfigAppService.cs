@@ -1,4 +1,4 @@
-﻿using RulesEngine.LookupsDtos;
+﻿using RulesEngine.Lookups.Dtos;
 using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
 using System;
 using System.Collections.Generic;
