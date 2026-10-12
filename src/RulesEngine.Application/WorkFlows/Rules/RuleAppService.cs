@@ -5,9 +5,11 @@ using RulesEngine.WorkFlows;
 using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
 using RulesEngine.WorkFlows.Dtos.RulesDtos;
 using RulesEngine.WorkFlows.Rules.Helpers;
+using RulesEngine.WorkFlows.Rules.RuleExpressionBuilders;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
@@ -162,5 +164,7 @@ namespace RulesEngine.WorkFlows.Rules
 
             return rule.Id;
         }
+
+         public Task<RuleExpressionResultDto> PreviewExpression(  RuleDto input) => _expressionsBuilder.BuildForRuleAsync(input);
     }
 }

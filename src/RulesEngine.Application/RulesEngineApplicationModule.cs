@@ -1,11 +1,12 @@
-﻿using Volo.Abp.PermissionManagement;
-using Volo.Abp.SettingManagement;
+﻿using Microsoft.Extensions.DependencyInjection;
+using RulesEngine.WorkFlows.Rules.RuleExpressionBuilders;
 using Volo.Abp.Account;
+using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
 using Volo.Abp.Mapperly;
-using Volo.Abp.FeatureManagement;
 using Volo.Abp.Modularity;
-using Microsoft.Extensions.DependencyInjection;
+using Volo.Abp.PermissionManagement;
+using Volo.Abp.SettingManagement;
 using Volo.Abp.TenantManagement;
 
 namespace RulesEngine;
@@ -22,5 +23,9 @@ namespace RulesEngine;
     )]
 public class RulesEngineApplicationModule : AbpModule
 {
+    public override void ConfigureServices(ServiceConfigurationContext context)
+    {
+        context.Services.AddScoped<IRuleExpressionBuilder, RuleExpressionBuilder>();
+    }
 
 }

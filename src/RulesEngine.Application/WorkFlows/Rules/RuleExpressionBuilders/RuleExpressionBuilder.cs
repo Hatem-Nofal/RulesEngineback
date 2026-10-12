@@ -11,13 +11,12 @@ using System.Threading.Tasks;
 
 namespace RulesEngine.WorkFlows.Rules.RuleExpressionBuilders;
 
-public record RuleExpressionResult(string StrategyKey, string Condition, string Expression);
 
 /// <summary>
 /// Walks the rule tree once (shared logic) and delegates every leaf/group/final wrap to the
 /// strategy chosen by the workflow's form config.
 /// </summary>
-public class RuleExpressionBuilder
+public class RuleExpressionBuilder : IRuleExpressionBuilder
 {
     private readonly IRuleExpressionStrategy _strategy;
     private readonly IRuleFormConfigAppService _forms;
@@ -29,18 +28,20 @@ public class RuleExpressionBuilder
     }
 
     /// <summary>Validates the tree against the workflow's config, then builds the expression.</summary>
-    public async Task<RuleExpressionResult> BuildForRuleAsync(RuleDto rule)
+    public async Task<RuleExpressionResultDto> BuildForRuleAsync(RuleDto rule)
     {
         var config = await _forms.GetByWorkflowAsync(rule.WorkflowId)
                      ?? throw new RuleValidationException("This workflow has no form config assigned.");
         RuleTreeValidator.Validate(rule.Root, config);
-        return await Build(rule.Root, config.StrategyKey);
+        var result = await Build(rule.Root, config.StrategyKey);
+        return new RuleExpressionResultDto(result.StrategyKey, result.Condition, result.Expression);
+
     }
 
-    public async Task<RuleExpressionResult> Build(RuleNodeDto root, string? strategyKey)
+    public async Task<RuleExpressionResultDto> Build(RuleNodeDto root, string? strategyKey)
     {
         var condition = await Render(root, _strategy, isRoot: true);
-        return new RuleExpressionResult(_strategy.Key, condition, _strategy.Finalize(condition));
+        return new RuleExpressionResultDto(_strategy.Key, condition, _strategy.Finalize(condition));
     }
 
     private static async Task<string> Render(RuleNodeDto node, IRuleExpressionStrategy strategy, bool isRoot)

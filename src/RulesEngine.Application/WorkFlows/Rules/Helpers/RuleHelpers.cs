@@ -13,11 +13,7 @@ using System.Threading.Tasks;
 namespace RulesEngine.WorkFlows.Rules.Helpers
 {
     // Minimal placeholders so application compiles. Replace with real implementations.
-    public class RuleExpressionBuilder
-    {
-        public Task<ExpressionBuildResult> BuildForRuleAsync(RuleDto input)
-            => Task.FromResult(new ExpressionBuildResult { Expression = string.Empty });
-    }
+    
 
     public class ExpressionBuildResult
     {
