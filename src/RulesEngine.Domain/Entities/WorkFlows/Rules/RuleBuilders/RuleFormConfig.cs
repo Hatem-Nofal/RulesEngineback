@@ -7,7 +7,7 @@ using Volo.Abp.Domain.Entities.Auditing;
 namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 {
     [Table("RuleFormConfigs", Schema = "RuleBuilders")]
-    public class RuleFormConfig : FullAuditedEntity<Guid>
+    public sealed class RuleFormConfig : FullAuditedEntity<Guid>
     {
         public string Name { get; private set; }
         public string? Description { get; private set; }
@@ -21,8 +21,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
         [NotMapped]
         public IReadOnlyCollection<RuleFormConfigField> _RuleFormConfigFields => RuleFormConfigFields.AsReadOnly();
 
-        private RuleFormConfig() { }
-
+ 
         public RuleFormConfig(  string name, string? description = null)
         {
             Id = Guid.NewGuid();

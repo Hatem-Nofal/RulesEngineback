@@ -7,7 +7,7 @@ using Volo.Abp.Domain.Entities.Auditing;
 namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 {
     [Table("RuleFormConfigFields", Schema = "RuleBuilders")]
-    public class RuleFormConfigField : FullAuditedEntity<Guid>
+    public sealed class RuleFormConfigField : FullAuditedEntity<Guid>
     {
         public Guid RuleformConfigId { get; private set; }
 
@@ -23,10 +23,13 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 
         public int Order { get; private set; }
         public string? AllowedOperatorsJson { get; private set; }
+        public bool IsMultiple { get; private set; }
 
-        private RuleFormConfigField() { }
-
-        public RuleFormConfigField( Guid formConfigId, Guid ruleFieldId, int order, string? allowedOperatorsJson = null)
+        public RuleFormConfigField()
+        {
+            
+        }
+        public RuleFormConfigField( Guid formConfigId, Guid ruleFieldId, int order, bool isMultiple, string? allowedOperatorsJson = null)
         {
             Id = Guid.CreateVersion7();
 
@@ -34,6 +37,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
             RulefieldId = ruleFieldId;
             Order = order;
             AllowedOperatorsJson = allowedOperatorsJson;
+            IsMultiple = isMultiple;
         }
 
         public void Update(int order, string? allowedOperatorsJson = null)

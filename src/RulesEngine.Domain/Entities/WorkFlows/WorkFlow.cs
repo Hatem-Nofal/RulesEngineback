@@ -27,15 +27,22 @@ namespace RulesEngine.Entities.WorkFlows
 
         [NotMapped]
         public IReadOnlyCollection<Rule> _Rules => (IReadOnlyCollection<Rule>)Rules;
-
-        private WorkFlow() { }
-
-        public WorkFlow(Guid id, string name, Guid ruleFormConfigId)
+        public WorkFlow()
         {
-            Id = id;
-            Name = name ?? throw new ArgumentNullException(nameof(name));
+            
+        }
+
+        public WorkFlow(  string name, Guid ruleFormConfigId, RejectionLevel rejectionLevel)
+        {
+             Name = name ?? throw new ArgumentNullException(nameof(name));
             RuleformconfigId = ruleFormConfigId;
             NormalizedName = name.NormalizeSpace();
+            RejectionLevel = rejectionLevel;
+        }
+
+        public void SetId(Guid? id)
+        {
+            Id = id??Guid.CreateVersion7();
         }
 
         public void AddRule(Rule rule)

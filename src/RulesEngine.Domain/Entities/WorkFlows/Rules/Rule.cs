@@ -7,7 +7,7 @@ using Volo.Abp.Domain.Entities.Auditing;
 namespace RulesEngine.Entities.WorkFlows.Rules
 {
     [Table("Rules")]
-    public class Rule : FullAuditedEntity<Guid>
+    public sealed class Rule : FullAuditedEntity<Guid>
     {
         public string Name { get; private set; }
 
@@ -27,12 +27,14 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         [NotMapped]
         public IReadOnlyCollection<RuleNode> _Nodes => Nodes.AsReadOnly();
 
-        public virtual ICollection<RuleDiagnosis> RuleDiagnosis { get; private set; } = new List<RuleDiagnosis>();
-        public virtual ICollection<RuleActivitySubType> RuleActivitySubTypes { get; private set; } = new List<RuleActivitySubType>();
-        public virtual ICollection<RuleSpecialities> RuleSpecialities { get; private set; } = new List<RuleSpecialities>();
+        public  ICollection<RuleDiagnosis> RuleDiagnosis { get; private set; } = new List<RuleDiagnosis>();
+        public  ICollection<RuleActivitySubType> RuleActivitySubTypes { get; private set; } = new List<RuleActivitySubType>();
+        public  ICollection<RuleSpecialities> RuleSpecialities { get; private set; } = new List<RuleSpecialities>();
 
-        private Rule() { }
-
+        public Rule()
+        {
+            
+        }
         public Rule(Guid id, string name, Guid workflowId, string expression)
         {
             Id = id;

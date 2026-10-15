@@ -7,7 +7,7 @@ using Volo.Abp.Domain.Entities;
 namespace RulesEngine.Entities.WorkFlows.Rules
 {
     [Table("RuleActivitySubTypes")]
-    public class RuleActivitySubType : Entity<long>
+    public sealed class RuleActivitySubType : Entity<long>
     {
         public Guid RuleId { get; private set; }
 
@@ -20,8 +20,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         public ActivitySubType Activity_Sub_Type { get; private set; }
         public bool? IsSecondary { get; private set; }
 
-        private RuleActivitySubType() { }
-
+ 
         public RuleActivitySubType(long id, Guid ruleId, long activitySubTypeId, bool? isSecondary = null)
         {
             Id = id;

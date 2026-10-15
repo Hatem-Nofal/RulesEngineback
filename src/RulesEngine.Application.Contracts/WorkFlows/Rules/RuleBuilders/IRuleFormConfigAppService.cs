@@ -9,7 +9,7 @@ using Volo.Abp.Application.Services;
 
 namespace RulesEngine.WorkFlows.Rules.RuleBuilders
 {
-    public interface IRuleFormConfigAppService : ICrudAppService< RuleFormConfigDto, FormConfigListDto, Guid, PagedAndSortedResultRequestDto, FormConfigEditDto, FormConfigEditDto>
+    public interface IRuleFormConfigAppService : ICrudAppService< RuleFormConfigDto, FormConfigListDto, Guid, PagedAndSortedResultRequestDto, CreateFormConfigEditDto, CreateFormConfigEditDto>
     {
         Task<RuleFormConfigDto?> GetByWorkflowAsync(Guid workflowId);
         Task<List<LookupDto>> GetConfigsAsync();

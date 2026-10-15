@@ -230,6 +230,9 @@ namespace RulesEngine.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("IsDeleted");
 
+                    b.Property<bool>("IsMultiple")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("LastModificationTime")
                         .HasColumnType("datetime2")
                         .HasColumnName("LastModificationTime");
@@ -455,10 +458,7 @@ namespace RulesEngine.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
-                    b.Property<int>("ActivityId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Activity_id")
+                    b.Property<int>("ActivityTypeId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("Create_timestamp")
@@ -494,7 +494,7 @@ namespace RulesEngine.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Activity_id");
+                    b.HasIndex("ActivityTypeId");
 
                     b.HasIndex("Valid_DateId");
 
@@ -2693,7 +2693,7 @@ namespace RulesEngine.Migrations
                 {
                     b.HasOne("RulesEngine.Lookups.ActivityType", "ActivityType")
                         .WithMany()
-                        .HasForeignKey("Activity_id")
+                        .HasForeignKey("ActivityTypeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

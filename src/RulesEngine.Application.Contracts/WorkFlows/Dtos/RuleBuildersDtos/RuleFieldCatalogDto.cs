@@ -10,6 +10,7 @@ namespace RulesEngine.WorkFlows.Dtos.RuleBuildersDtos
         public string Key { get; set; } = default!;
         public string Label { get; set; } = default!;
         public string DataType { get; set; } = default!;
+ 
         public List<string>? Options { get; set; }
     }
 }

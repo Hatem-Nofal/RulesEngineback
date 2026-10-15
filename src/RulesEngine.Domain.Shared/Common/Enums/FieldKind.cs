@@ -7,12 +7,14 @@ namespace RulesEngine.Common.Enums
     public enum FieldKind
     {
         /// <summary>ctx.X is a collection of strings: Equal / NotEqual.</summary>
-        Collection,
+        List=1,
         /// <summary>ctx.X is a number: == != &gt; &gt;= &lt; &lt;=.</summary>
-        Number,
+        Number=2,
         /// <summary>ctx.X is a string: Equal / NotEqual / In / NotIn.</summary>
-        Text,
-        /// <summary>ctx.X is a collection of strings: Contains / NotContains.</summary>
-        MultipleSelect
+        Text=3,
+        /// <summary>ctx.X is a decimal: == != &gt; &gt;= &lt; &lt;=.</summary>
+        Decimal=4,
+        /// <summary>ctx.X is a datetime: == != &gt; &gt;= &lt; &lt;=.</summary>
+        DateTime=5
     }
 }

@@ -1,3 +1,5 @@
+using AutoMapper;
+using RulesEngine.Common.Extensions;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
@@ -19,13 +21,13 @@ using Volo.Abp.Guids;
 
 namespace RulesEngine.WorkFlows.Rules
 {
-    public class RuleAppService : CrudAppService<Rule, RuleDto, RuleListItemDto, Guid, PagedAndSortedResultRequestDto, RuleDto, RuleDto>, IRuleAppService
+    public class RuleAppService : CrudAppService<Rule, RuleDto, RuleListItemDto, Guid, PagedAndSortedResultRequestDto, CreateRuleDto, CreateRuleDto>, IRuleAppService
     {
         private readonly IRepository<RuleNode, Guid> _ruleNodeRepository;
         private readonly IRepository<WorkFlow, Guid> _workflowRepository;
         private readonly IRepository<RuleFormConfig, Guid> _formConfigRepository;
         private readonly IGuidGenerator _guidGenerator;
-        private readonly RuleExpressionBuilder _expressionsBuilder;
+        private readonly IRuleExpressionBuilder _expressionsBuilder;
 
         public RuleAppService(
             IRepository<Rule, Guid> repository,
@@ -33,7 +35,7 @@ namespace RulesEngine.WorkFlows.Rules
             IRepository<WorkFlow, Guid> workflowRepository,
             IRepository<RuleFormConfig, Guid> formConfigRepository,
             IGuidGenerator guidGenerator,
-            RuleExpressionBuilder expressionsBuilder) : base(repository)
+            IRuleExpressionBuilder expressionsBuilder) : base(repository)
         {
             _ruleNodeRepository = ruleNodeRepository;
             _workflowRepository = workflowRepository;
@@ -80,16 +82,15 @@ namespace RulesEngine.WorkFlows.Rules
             };
         }
 
-        public override async Task<RuleDto> CreateAsync(RuleDto input)
+        public override async Task<RuleDto> CreateAsync(CreateRuleDto input)
         {
-            var id = await SaveRuleAsync(input);
+            var id = await SaveRuleAsync(input, null);
             return await GetAsync(id);
         }
 
-        public override async Task<RuleDto> UpdateAsync(Guid id, RuleDto input)
+        public override async Task<RuleDto> UpdateAsync(Guid id, CreateRuleDto input)
         {
-            input.Id = id;
-            var ruleId = await SaveRuleAsync(input);
+            var ruleId = await SaveRuleAsync(input, id);
             return await GetAsync(ruleId);
         }
 
@@ -104,7 +105,7 @@ namespace RulesEngine.WorkFlows.Rules
             await Repository.DeleteAsync(id);
         }
 
-        private async Task<Guid> SaveRuleAsync(RuleDto input)
+        private async Task<Guid> SaveRuleAsync(CreateRuleDto input, Guid? id)
         {
             if (string.IsNullOrWhiteSpace(input.Name))
                 throw new RuleValidationException("Rule name is required.");
@@ -118,7 +119,7 @@ namespace RulesEngine.WorkFlows.Rules
 
             if (config == null)
                 throw new RuleValidationException("This workflow has no form config assigned.");
-            var configdto= new RuleFormConfigDto
+            var configdto = new RuleFormConfigDto
             {
                 Id = config.Id,
                 Name = config.Name,
@@ -127,18 +128,19 @@ namespace RulesEngine.WorkFlows.Rules
                     Id = f.RulefieldId,
                     Key = f.Rulefield.Key,
                     DataType = f.Rulefield.DataType,
-                    AllowedOperators = JsonSerializer.Deserialize<List<int>>(f.AllowedOperatorsJson),
+                    AllowedOperators = ListExtensions.DeserializeIntList(f.AllowedOperatorsJson),
                     Label = f.Rulefield.Label,
-                    Options = JsonSerializer.Deserialize<List<string>>(f.Rulefield.OptionsJson)
+                    Options = ListExtensions.DeserializeStringList(f.Rulefield.OptionsJson),
+                    IsMultiple = f.IsMultiple
                 }).ToList()
             };
             RuleTreeValidator.Validate(input.Root, configdto);
+            var ruleDto = ObjectMapper.Map<CreateRuleDto, RuleDto>(input);
+            var expressionsRes = await _expressionsBuilder.BuildForRuleAsync(ruleDto);
 
-            var expressionsRes = await _expressionsBuilder.BuildForRuleAsync(input);
+            var ruleId = id ?? _guidGenerator.Create();
 
-            var ruleId = input.Id ?? _guidGenerator.Create();
-
-            var existing = input.Id is null ? null : await Repository.FirstOrDefaultAsync(r => r.Id == input.Id.Value);
+            var existing = await Repository.FirstOrDefaultAsync(r => r.Id == ruleId);
             if (existing != null)
             {
                 var existingNodes = await _ruleNodeRepository.GetListAsync(n => n.RuleId == existing.Id);
@@ -165,6 +167,6 @@ namespace RulesEngine.WorkFlows.Rules
             return rule.Id;
         }
 
-         public Task<RuleExpressionResultDto> PreviewExpression(  RuleDto input) => _expressionsBuilder.BuildForRuleAsync(input);
+        public Task<RuleExpressionResultDto> PreviewExpression(RuleDto input) => _expressionsBuilder.BuildForRuleAsync(input);
     }
 }

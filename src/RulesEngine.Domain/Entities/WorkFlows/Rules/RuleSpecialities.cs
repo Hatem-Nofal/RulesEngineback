@@ -6,7 +6,7 @@ using Volo.Abp.Domain.Entities;
 namespace RulesEngine.Entities.WorkFlows.Rules
 {
     [Table("RuleSpecialities")]
-    public class RuleSpecialities : Entity<long>
+    public sealed class RuleSpecialities : Entity<long>
     {
         public Guid RuleId { get; private set; }
         [ForeignKey("RuleId")]
@@ -17,8 +17,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
 
         public Specialities Specialitiy { get; private set; }
 
-        private RuleSpecialities() { }
-
+ 
         public RuleSpecialities(long id, Guid ruleId, int specialitiesId)
         {
             Id = id;

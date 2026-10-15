@@ -14,10 +14,10 @@ using Volo.Abp.EntityFrameworkCore;
 
 namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 {
-    public class FormConfigRepository : EfCoreRepository<RulesEngineDbContext, RuleFormConfig, Guid>, IFormConfigRepository
+    public class RuleFormConfigRepository : EfCoreRepository<RulesEngineDbContext, RuleFormConfig, Guid>, IRuleFormConfigRepository
     {
         private readonly RulesEngineDbContext _context;
-        public FormConfigRepository(IDbContextProvider<RulesEngineDbContext> dbContextProvider, RulesEngineDbContext context) : base(dbContextProvider)
+        public RuleFormConfigRepository(IDbContextProvider<RulesEngineDbContext> dbContextProvider, RulesEngineDbContext context) : base(dbContextProvider)
         {
             _context = context;
         }
@@ -81,7 +81,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 
         public async Task<RuleFormConfig> GetAsync(Guid id)
         {
-            var config = await _context.RuleFormConfigs.AsNoTracking().Include(x => x.RuleFormConfigFields)
+            var config = await _context.RuleFormConfigs.AsNoTracking().Include(x => x.RuleFormConfigFields).ThenInclude(x=>x.Rulefield)
                         .FirstOrDefaultAsync(x => x.Id == id)
                     ?? throw new KeyNotFoundException("Form config not found.");
 
@@ -192,10 +192,10 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
                 if (!catalog.TryGetValue(f.RulefieldId, out var field))
                     throw new RuleValidationException($"Unknown field: {f.RulefieldId}");
                  string? allowedJson = null;
-                if (string.IsNullOrEmpty(f.AllowedOperatorsJson))
+                if (!string.IsNullOrEmpty(f.AllowedOperatorsJson))
                     allowedJson = JsonSerializer.Serialize(f.AllowedOperatorsJson);
 
-                var cfgField = new RuleFormConfigField(Guid.Empty, f.RulefieldId, order++, allowedJson);
+                var cfgField = new RuleFormConfigField(Guid.Empty, f.RulefieldId, order++, f.IsMultiple, allowedJson);
                 list.Add(cfgField);
             }
 

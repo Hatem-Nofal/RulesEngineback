@@ -6,7 +6,7 @@ using Volo.Abp.Domain.Entities.Auditing;
 namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 {
     [Table("RuleNodes", Schema = "RuleBuilders")]
-    public class RuleNode : FullAuditedEntity<Guid>
+    public sealed class RuleNode : FullAuditedEntity<Guid>
     {
         public Guid RuleId { get; private set; }
         [ForeignKey(nameof(RuleId))]
@@ -18,12 +18,14 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 
         public RuleNodeType NodeType { get; private set; }
         public LogicalOperator? LogicalOperator { get; private set; }
+        public LogicalOperator? LogicalJoinOperator { get; set; }
+
         public string? FieldKey { get; private set; }
         public RuleOperator? Operator { get; private set; }
         public string? ValueJson { get; private set; }
         public int Order { get; private set; }
 
-        private RuleNode() { }
+        public RuleNode() { }
 
         public RuleNode(Guid id, Guid ruleId, RuleNodeType nodeType, int order)
         {
@@ -39,12 +41,13 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
             ParentId = parent?.Id;
         }
 
-        public void UpdateCriteria(string? fieldKey, RuleOperator? op, string? valueJson, LogicalOperator? logical = null)
+        public void UpdateCriteria(string? fieldKey, RuleOperator? op, string? valueJson, LogicalOperator? logical = null, LogicalOperator? joinOperator = null)
         {
             FieldKey = fieldKey;
             Operator = op;
             ValueJson = valueJson;
             LogicalOperator = logical;
+            LogicalJoinOperator = joinOperator;
         }
     }
 

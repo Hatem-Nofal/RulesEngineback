@@ -40,10 +40,11 @@ public class FieldMapProvider: IFieldMapProvider
             var kind = f.DataType switch
             {
                 DataTypes.Number => FieldKind.Number,
-                DataTypes.ItemList => FieldKind.Collection,
+                DataTypes.List => FieldKind.List,
                 DataTypes.Enum => FieldKind.Text,
-                DataTypes.MultipleSelect => FieldKind.MultipleSelect,
-                _ => FieldKind.Text
+                DataTypes.DateTime => FieldKind.DateTime,
+                DataTypes.Decimal => FieldKind.Decimal,
+                 _ => FieldKind.Text
             };
             dict[f.Key] = new FieldMapDto(path, kind);
         }

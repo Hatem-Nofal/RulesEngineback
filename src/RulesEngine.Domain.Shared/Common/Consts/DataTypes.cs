@@ -7,9 +7,10 @@ namespace RulesEngine.Common.Consts
     public static class DataTypes
     {
         public const string Number = "Number";
+        public const string Decimal = "Decimal";
+        public const string DateTime = "DateTime";
         public const string String = "String";
         public const string Enum = "Enum";
-        public const string ItemList = "ItemList";
-        public const string MultipleSelect = "MultipleSelect";
+        public const string List = "List";
     }
 }

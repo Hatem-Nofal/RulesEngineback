@@ -54,9 +54,10 @@ namespace RulesEngine.WorkFlows
 
         public override async Task<WorkflowDto> CreateAsync(SaveWorkflowDto input)
         {
-            var workflow = new WorkFlow(GuidGenerator.Create(), input.Name, input.RuleFormConfigId);    
+            var workflow = new WorkFlow(input.Name, input.RuleFormConfigId, input.RejectionLevel);
+            workflow.SetId(null);
 
-             await _workFlowRepository.InsertAsync(workflow);
+            await _workFlowRepository.InsertAsync(workflow);
 
             return Map(workflow, new Dictionary<Guid, string>(), new Dictionary<Guid, int> { [workflow.Id] = 0 });
         }
@@ -65,7 +66,7 @@ namespace RulesEngine.WorkFlows
         {
             var workflow = await _workFlowRepository.GetAsync(id);
             workflow.UpdateName(input.Name);
-            workflow.UpdateRuleFormConfigId(input.RuleFormConfigId) ;
+            workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
 
             await _workFlowRepository.UpdateAsync(workflow);
 
@@ -79,7 +80,7 @@ namespace RulesEngine.WorkFlows
                 throw new RuleValidationException($"Cannot delete: {count} rule(s) use this workflow. Delete or move them first.");
 
             await _workFlowRepository.DeleteAsync(id);
-         }
+        }
 
         private static WorkflowDto Map(WorkFlow w, Dictionary<Guid, string> configs, Dictionary<Guid, int> counts) => new()
         {

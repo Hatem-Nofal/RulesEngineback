@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Volo.Abp.Application.Dtos;
 
 namespace RulesEngine.WorkFlows.Dtos.RuleBuildersDtos
 {
-    public class FormConfigListDto
+    public class FormConfigListDto:EntityDto<Guid>
     {
-        public Guid Id { get; set; }
         public string Name { get; set; } = default!;
         public string? Description { get; set; }
         public bool IsActive { get; set; }

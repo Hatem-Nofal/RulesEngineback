@@ -10,7 +10,7 @@ using Volo.Abp.Application.Services;
 
 namespace RulesEngine.WorkFlows.Rules
 {
-    public interface IRuleAppService : ICrudAppService< RuleDto, RuleListItemDto, Guid, PagedAndSortedResultRequestDto, RuleDto, RuleDto>
+    public interface IRuleAppService : ICrudAppService< RuleDto, RuleListItemDto, Guid, PagedAndSortedResultRequestDto, CreateRuleDto, CreateRuleDto>
     {
         Task<RuleExpressionResultDto> PreviewExpression(RuleDto input);
     }

@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using RulesEngine.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.WorkFlows.Rules.RuleExpressionBuilders;
 using Volo.Abp.Account;
+using Volo.Abp.AutoMapper;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
 using Volo.Abp.Mapperly;
@@ -25,7 +27,15 @@ public class RulesEngineApplicationModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        context.Services.AddScoped<IRuleExpressionBuilder, RuleExpressionBuilder>();
-    }
+        Configure<AbpAutoMapperOptions>(options =>
+        {
+            // 2. This line automatically finds and registers 
+            // RulesEngineApplicationAutoMapperProfile since it's in this assembly
+            options.AddMaps<RulesEngineApplicationModule>();
+        });
+         context.Services.AddScoped<IRuleExpressionBuilder, RuleExpressionBuilder>();
+         context.Services.AddScoped<IRuleExpressionStrategy, RuleExpressionStrategyBase>();
+         context.Services.AddScoped<IFieldMapProvider, FieldMapProvider>();
+     }
 
 }

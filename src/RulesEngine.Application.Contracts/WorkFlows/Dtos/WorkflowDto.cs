@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RulesEngine.Common.Enums;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -11,5 +12,7 @@ namespace RulesEngine.WorkFlows.Dtos
         public Guid? RuleFormConfigId { get; set; }
         public string? RuleFormConfigName { get; set; }
         public int RuleCount { get; set; }
+        public RejectionLevel RejectionLevel { get; private set; }
+
     }
 }

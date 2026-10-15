@@ -6,7 +6,7 @@ using Volo.Abp.Domain.Entities;
 namespace RulesEngine.Entities.WorkFlows.Rules
 {
     [Table("RuleDiagnosis")]
-    public class RuleDiagnosis : Entity<long>
+    public sealed class RuleDiagnosis : Entity<long>
     {
         public Guid RuleId { get; private set; }
         [ForeignKey("RuleId")]
@@ -18,8 +18,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         public Diagnosis Diagnosis { get; private set; }
         public bool? IsSecondary { get; private set; }
 
-        private RuleDiagnosis() { }
-
+ 
         public RuleDiagnosis(long id, Guid ruleId, long diagnosisId, bool? isSecondary = null)
         {
             Id = id;

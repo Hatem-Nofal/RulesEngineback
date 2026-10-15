@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
@@ -15,10 +14,8 @@ using RulesEngine.EntityFrameworkCore;
 using RulesEngine.HealthChecks;
 using RulesEngine.MultiTenancy;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.Account;
@@ -32,8 +29,6 @@ using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
 using Volo.Abp.Data;
-using Volo.Abp.Identity;
-using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.Security.Claims;
@@ -106,7 +101,7 @@ public class RulesEngineHttpApiHostModule : AbpModule
             {
                 options.DisableTransportSecurityRequirement = true;
             });
-            
+
             Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
@@ -258,7 +253,7 @@ public class RulesEngineHttpApiHostModule : AbpModule
 
     public override async Task OnApplicationInitializationAsync(ApplicationInitializationContext context)
     {
-      
+
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
         var serviceProvider = context.ServiceProvider;
@@ -315,7 +310,7 @@ public class RulesEngineHttpApiHostModule : AbpModule
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
 
- 
+
     }
 
 

@@ -11,6 +11,8 @@ namespace RulesEngine.WorkFlows.Dtos.RulesDtos
         public string Name { get; set; } = default!;
         public Guid WorkflowId { get; set; }
         public bool IsActive { get; set; } = true;
+        public bool IsMultiple { get; set; }
+
         public RuleNodeDto Root { get; set; } = default!;
     }
 }
