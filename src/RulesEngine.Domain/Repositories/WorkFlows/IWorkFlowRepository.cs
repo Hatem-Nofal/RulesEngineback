@@ -1,6 +1,7 @@
 ﻿using RulesEngine.Entities.WorkFlows;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Volo.Abp.Domain.Repositories;
 
@@ -14,6 +15,8 @@ namespace RulesEngine.Repositories.WorkFlows
         Task CreateRulesAsync(WorkFlow input);
         Task UpdateAsync(Guid id, WorkFlow input);
         Task DeleteAsync(Guid id);
-     }
+        Task<IQueryable<WorkFlow>> GetAllForRuleEngine();
+
+    }
 }
  

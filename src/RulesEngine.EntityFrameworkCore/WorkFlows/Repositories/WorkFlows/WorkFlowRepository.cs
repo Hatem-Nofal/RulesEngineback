@@ -41,8 +41,8 @@ IWorkFlowRepository
         public async Task<WorkFlow> GetAsync(Guid id)
         {
             var w = await _context.WorkFlows
-                .Include(x=>x.Rules)
-                .Include(x=>x.Rules).ThenInclude(x=>x.Nodes)
+                //.Include(x=>x.Rules)
+                //.Include(x=>x.Rules).ThenInclude(x=>x.Nodes)
                 .Include(x=>x.Ruleformconfig)
                 .ThenInclude(x=>x.RuleFormConfigFields)
              //   .ThenInclude(x=>x.Rulefield)
@@ -106,6 +106,11 @@ IWorkFlowRepository
                     ?? throw new KeyNotFoundException("Workflow not found.");
             w = input;
           await  _context.SaveChangesAsync();
+        }
+
+        public async Task<IQueryable<WorkFlow>> GetAllForRuleEngine()
+        {
+          return  _context.WorkFlows.Include(x=>x.Rules).Where(x => x.IsActive);
         }
     }
 }

@@ -22,6 +22,9 @@ namespace RulesEngine.Entities.WorkFlows
 
         public RuleFormConfig Ruleformconfig { get; private set; }
 
+        public bool IsActive { get; private set; } = true;
+
+
         // EF mapping property - keep private setter and expose read-only view
         public ICollection<Rule> Rules { get; private set; } = new List<Rule>();
 

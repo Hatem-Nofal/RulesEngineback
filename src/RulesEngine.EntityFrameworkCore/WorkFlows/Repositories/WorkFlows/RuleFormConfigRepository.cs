@@ -154,7 +154,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 
             await using var tx = await _context.Database.BeginTransactionAsync();
 
-            await _context.RuleFormConfigFields.Where(x => x.RuleformConfigId == id).ExecuteDeleteAsync();
+           await _context.RuleFormConfigFields.Where(x => x.RuleformConfigId == id).ExecuteDeleteAsync();
 
             config.Update(input.Name.Trim(), input.Description?.Trim(), input.IsActive, input.AllowNestedGroups);
 

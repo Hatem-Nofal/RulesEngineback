@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using RulesEngine.Integrations.RulesEngineManagers;
 using RulesEngine.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.WorkFlows.Rules.RuleExpressionBuilders;
 using Volo.Abp.Account;
@@ -36,6 +37,9 @@ public class RulesEngineApplicationModule : AbpModule
          context.Services.AddScoped<IRuleExpressionBuilder, RuleExpressionBuilder>();
          context.Services.AddScoped<IRuleExpressionStrategy, RuleExpressionStrategyBase>();
          context.Services.AddScoped<IFieldMapProvider, FieldMapProvider>();
+
+         // Register rules engine manager used by IntegrationsAppService
+         context.Services.AddScoped<IRulesEngineManager, RulesEngineManager>();
      }
 
 }

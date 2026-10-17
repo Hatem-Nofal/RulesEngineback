@@ -11,7 +11,7 @@ namespace RulesEngine.WorkFlows.Dtos.RuleBuildersDtos
         public List<int>? AllowedOperators { get; set; }
 
         public bool IsMultiple { get;  set; }
-        public bool IsDefault { get; private set; }
+        public bool IsDefault { get;  set; }
 
 
     }

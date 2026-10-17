@@ -46,6 +46,11 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
             if (field == null) throw new ArgumentNullException(nameof(field));
             RuleFormConfigFields.Remove(field);
         }
+
+        public void ResetRuleFormConfigFields( )
+        {
+             RuleFormConfigFields=new();
+        }
         public void Update(string name, string? description = null, bool isActive = true, bool allowNestedGroups = true)
         {
             Name = name ?? throw new ArgumentNullException(nameof(name));

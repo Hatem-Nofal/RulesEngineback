@@ -6,7 +6,9 @@ namespace RulesEngine.Common.Enums
 {
     public enum RejectionLevel
     {
-        Activity,
-        Claim
+        Activity=1,
+        Claim=2,
+        AllActivity=3
+
     }
 }

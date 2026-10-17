@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Extensions.Options;
+using RulesEngine.Common.Enums;
 using RulesEngine.Common.Extensions;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
@@ -105,13 +106,14 @@ namespace RulesEngine.WorkFlows.Rules
 
         public override async Task DeleteAsync(Guid id)
         {
+            var rule =await Repository.GetAsync(x => x.Id == id);
             var nodes = await _ruleNodeRepository.GetListAsync(n => n.RuleId == id);
             foreach (var n in nodes)
             {
-                await _ruleNodeRepository.DeleteAsync(n);
+                await _ruleNodeRepository.HardDeleteAsync(n);
             }
 
-            await Repository.DeleteAsync(id);
+            await Repository.HardDeleteAsync(rule);
         }
 
         private async Task<RuleDto> SaveRuleAsync(CreateRuleDto input, Guid? id)
@@ -150,9 +152,8 @@ namespace RulesEngine.WorkFlows.Rules
             var ruleId = id ?? Guid.CreateVersion7();
 
             var rule = new Rule(ruleId, input.Name.Trim(), input.WorkflowId, expressionsRes.Expression);
-            if (id.HasValue && workflow.Rules.Any(x => x.Id == id))
+            if (id.HasValue )
             {
-                rule = workflow.Rules.FirstOrDefault(x => x.Id == id);
                 rule.Update(input.Name.Trim(), input.WorkflowId, expressionsRes.Expression);
                 var existingNodes = await _ruleNodeRepository.GetListAsync(n => n.RuleId == rule.Id);
                 foreach (var n in existingNodes)
@@ -221,6 +222,7 @@ namespace RulesEngine.WorkFlows.Rules
                     "This workflow has no form config assigned.");
 
             var configFields = config.RuleFormConfigFields
+                .Where(x=>x.IsDefault)
                 .OrderBy(f => f.Order)
                 .ToList();
 
@@ -244,9 +246,11 @@ namespace RulesEngine.WorkFlows.Rules
             ws.Cell(1, 2).Value = "IsActive";
             ws.Cell(1, 3).Value = "ID";
 
+            // For each field we will have two columns: <FieldKey> and <FieldKey>Operators
             for (int i = 0; i < fields.Count; i++)
             {
-                ws.Cell(1, 4 + i).Value = fields[i].Key;
+                ws.Cell(1, 4 + i * 2).Value = fields[i].Key;
+                ws.Cell(1, 5 + i * 2).Value = fields[i].Key + "Operators";
             }
 
             ws.Row(1).Style.Font.SetBold();
@@ -277,7 +281,7 @@ namespace RulesEngine.WorkFlows.Rules
                 if (options.Count == 0)
                     continue;
 
-                // Store this field's options in its own column.
+                // Store this field's options in its own column on the hidden sheet.
                 int optionsCol = i + 1;
 
                 for (int j = 0; j < options.Count; j++)
@@ -296,8 +300,8 @@ namespace RulesEngine.WorkFlows.Rules
                     $"${optionsColumnLetter}${options.Count}"
                 );
 
-                // A=Name, B=IsActive, C=ID, D onwards=rule fields.
-                int excelCol = 4 + i;
+                // A=Name, B=IsActive, C=ID, D onwards= field and operator pairs.
+                int excelCol = 4 + i * 2; // field value column
 
                 var validation = ws.Range(
                     2, excelCol,
@@ -308,6 +312,38 @@ namespace RulesEngine.WorkFlows.Rules
                 validation.InCellDropdown = true;
                 validation.IgnoreBlanks = true;
                 validation.ShowErrorMessage = true;
+
+                // Add validation for the operator column (adjacent column)
+                int operatorCol = excelCol + 1;
+                var opValidation = ws.Range(2, operatorCol, lastRowValidation, operatorCol).CreateDataValidation();
+                opValidation.InCellDropdown = true;
+                opValidation.IgnoreBlanks = true;
+                opValidation.ShowErrorMessage = true;
+            }
+
+            // Add operator options in the Options sheet and a named range.
+            var operatorNames = Enum.GetNames(typeof(RuleOperator)).ToList();
+            int operatorOptionsCol = fields.Count + 1; // after per-field options columns
+            for (int j = 0; j < operatorNames.Count; j++)
+            {
+                optionsSheet.Cell(j + 1, operatorOptionsCol).Value = operatorNames[j];
+            }
+
+            string operatorOptionsColumnLetter = XLHelper.GetColumnLetterFromNumber(operatorOptionsCol);
+            workbook.DefinedNames.Add(
+                "OperatorOptions",
+                $"'Options'!${operatorOptionsColumnLetter}$1:${operatorOptionsColumnLetter}${operatorNames.Count}"
+            );
+
+            // Assign the operator named range to each operator column we created earlier.
+            for (int i = 0; i < fields.Count; i++)
+            {
+                int operatorCol = 5 + i * 2; // matching header placement
+                var opValidation = ws.Range(2, operatorCol, lastRowValidation, operatorCol).CreateDataValidation();
+                opValidation.List("OperatorOptions");
+                opValidation.InCellDropdown = true;
+                opValidation.IgnoreBlanks = true;
+                opValidation.ShowErrorMessage = true;
             }
 
             // Hide the sheet containing dropdown options.
@@ -328,7 +364,11 @@ namespace RulesEngine.WorkFlows.Rules
                 for (int i = 0; i < fields.Count; i++)
                 {
                     var f = fields[i];
-                    int col = 4 + i;
+                    int fieldCol = 4 + i * 2;
+                    int operatorCol = fieldCol + 1;
+
+                    // default operator = Equal, default value = first option (if available)
+                    ws.Cell(row, operatorCol).Value = RuleOperator.Equal.ToString();
 
                     string value = string.Empty;
 
@@ -348,7 +388,7 @@ namespace RulesEngine.WorkFlows.Rules
                         }
                     }
 
-                    ws.Cell(row, col).Value = value;
+                    ws.Cell(row, fieldCol).Value = value;
                 }
             }
             else
@@ -368,10 +408,15 @@ namespace RulesEngine.WorkFlows.Rules
                     for (int i = 0; i < fields.Count; i++)
                     {
                         var f = fields[i];
-                        int col = 4 + i;
+                        int fieldCol = 4 + i * 2;
+                        int operatorCol = fieldCol + 1;
 
                         var node = allNodes.FirstOrDefault(
                             n => n.RuleId == rule.Id && n.FieldKey == f.Key);
+
+                        // Fill operator cell if present for this field's node
+                        if (node?.Operator != null)
+                            ws.Cell(row, operatorCol).Value = node.Operator.Value.ToString();
 
                         string cellValue = string.Empty;
 
@@ -405,7 +450,7 @@ namespace RulesEngine.WorkFlows.Rules
                             }
                         }
 
-                        ws.Cell(row, col).Value = cellValue;
+                        ws.Cell(row, fieldCol).Value = cellValue;
                     }
 
                     row++;
@@ -416,7 +461,7 @@ namespace RulesEngine.WorkFlows.Rules
             ws.Columns().AdjustToContents();
 
             // Preserve the dropdown columns' width within reasonable limits.
-            for (int col = 1; col <= 3 + fields.Count; col++)
+            for (int col = 1; col <= 3 + fields.Count * 2; col++)
             {
                 if (ws.Column(col).Width > 40)
                     ws.Column(col).Width = 40;
@@ -439,6 +484,8 @@ namespace RulesEngine.WorkFlows.Rules
         public async Task BulkUploadAsync(Guid workflowId, IRemoteStreamContent fileContent)
         {
             if (fileContent == null || fileContent.ContentLength == 0) return;
+            var ruleFields = (await _ruleFieldRepository.GetListAsync()).ToHashSet();
+
             using (var stream = fileContent.GetStream())
             {
                 // Convert the stream to a byte array and save it to the provider (keep for compatibility)
@@ -462,6 +509,19 @@ namespace RulesEngine.WorkFlows.Rules
                 }
 
                 var colKeys = headerCells.Select(c => UnwrapHeader(c.GetString())).ToList();
+
+                // Build mapping from field key -> operator column index (headers named like 'AgeOperators')
+                var operatorSuffix = "Operators";
+                var operatorIndexByField = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                for (int i = 0; i < colKeys.Count; i++)
+                {
+                    var k = colKeys[i];
+                    if (k.EndsWith(operatorSuffix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var fieldKey = k.Substring(0, k.Length - operatorSuffix.Length);
+                        operatorIndexByField[fieldKey] = i;
+                    }
+                }
 
                 var workflow = await _workflowRepository.GetAsync(workflowId)
                     ?? throw new KeyNotFoundException("Workflow not found.");
@@ -493,7 +553,7 @@ namespace RulesEngine.WorkFlows.Rules
                         if (!string.IsNullOrWhiteSpace(idCell) && Guid.TryParse(idCell, out var parsedId))
                         {
                             // Only consider it an update if the rule belongs to the same workflow
-                            if (workflow.Rules.Any(x => x.Id == parsedId)) existingId = parsedId;
+                             existingId = parsedId;
                         }
                     }
 
@@ -505,7 +565,7 @@ namespace RulesEngine.WorkFlows.Rules
                         if (!string.IsNullOrWhiteSpace(s)) bool.TryParse(s, out isActive);
                     }
 
-                    var root = new RuleNodeDto { Id = Guid.NewGuid(), NodeType = RulesEngine.Common.Enums.RuleNodeType.Group };
+                    var root = new RuleNodeDto { Id = Guid.NewGuid(), NodeType = RuleNodeType.Group };
 
                     for (int c = 0; c < colKeys.Count; c++)
                     {
@@ -522,12 +582,25 @@ namespace RulesEngine.WorkFlows.Rules
 
                         var cfg = allowed[key];
                         var field = fields.FirstOrDefault(x => x.Id == cfg.RulefieldId);
+
+// Determine operator for this field (per-row operator column named '<FieldKey>Operators')
+                        var operatorToUse = RuleOperator.Equal;
+                        if (operatorIndexByField.TryGetValue(key, out var opIdx))
+                        {
+                            var opCellStr = ws.Cell(r, opIdx + 1).GetString()?.Trim();
+                            if (!string.IsNullOrWhiteSpace(opCellStr) && Enum.TryParse<RuleOperator>(opCellStr, true, out var parsedOp))
+                                operatorToUse = parsedOp;
+                        }
+                        var ruleField = ruleFields.FirstOrDefault(x => x.Key == key);
+                        var configField = configFields.FirstOrDefault(x => x.RulefieldId == ruleField.Id);
                         var node = new RuleNodeDto
                         {
                             Id = Guid.NewGuid(),
-                            NodeType = RulesEngine.Common.Enums.RuleNodeType.Condition,
+                            NodeType = RuleNodeType.Condition,
                             FieldKey = key,
-                            Operator = RulesEngine.Common.Enums.RuleOperator.Equal
+                            Operator = operatorToUse,
+                            IsMultiple= configField.IsMultiple
+
                         };
 
                         if (cfg.IsMultiple || val.Contains('|') || (field.DataType == "List" && val.Contains(',')))
@@ -542,13 +615,13 @@ namespace RulesEngine.WorkFlows.Rules
                             node.Value = JsonDocument.Parse(json).RootElement;
                         }
 
-                        if (root.Children.Count > 0) node.LogicalJoinOperator = RulesEngine.Common.Enums.LogicalOperator.And;
+                        if (root.Children.Count > 0) node.LogicalJoinOperator = LogicalOperator.And;
                         root.Children.Add(node);
                     }
 
                     if (root.Children.Count == 0)
                     {
-                        var emptyRoot = new RuleNodeDto { Id = Guid.NewGuid(), NodeType = RulesEngine.Common.Enums.RuleNodeType.Group };
+                        var emptyRoot = new RuleNodeDto { Id = Guid.NewGuid(), NodeType = RuleNodeType.Group };
                         await SaveRuleAsync(new CreateRuleDto { Name = ruleName.Trim(), WorkflowId = workflowId, IsActive = isActive, Root = emptyRoot }, existingId);
                     }
                     else

@@ -22,21 +22,21 @@ namespace RuleBuilder.Api;
 /// <summary>Read-only: configs are managed in the database (see DbSeeder or plain SQL).</summary>
 public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormConfigDto, FormConfigListDto, Guid, PagedAndSortedResultRequestDto, CreateFormConfigEditDto, CreateFormConfigEditDto>, IRuleFormConfigAppService 
 {
-     private readonly IRuleFormConfigRepository _ruleFormConfigsRepository;
+    private readonly IRuleFormConfigRepository _formRepo;
+    private readonly IRuleFormConfigRepository _ruleFormConfigsRepository;
     private readonly IRepository<RuleField, Guid> _ruleFieldsRepository;
-    private readonly IRepository<RuleFormConfigField, Guid> _ruleFormConfigFieldsRepository;
     private readonly IWorkFlowRepository _workFlowRepository;
 
 
-    public RuleFormConfigAppService(IRepository<RuleFormConfig, Guid> repository, IRuleFormConfigRepository formRepo, IRuleFormConfigRepository ruleFormConfigsRepository, IWorkFlowRepository workFlowRepository, IRepository<RuleField, Guid> ruleFieldsRepository, IRepository<RuleFormConfigField, Guid> ruleFormConfigFieldsRepository) : base(repository)
+    public RuleFormConfigAppService(IRepository<RuleFormConfig, Guid> repository, IRuleFormConfigRepository formRepo, IRuleFormConfigRepository ruleFormConfigsRepository, IWorkFlowRepository workFlowRepository, IRepository<RuleField, Guid> ruleFieldsRepository) : base(repository)
     {
+        _formRepo = formRepo;
         _ruleFormConfigsRepository = ruleFormConfigsRepository;
         _workFlowRepository = workFlowRepository;
         _ruleFieldsRepository = ruleFieldsRepository;
-        _ruleFormConfigFieldsRepository = ruleFormConfigFieldsRepository;
     }
 
-    public async Task<List<LookupDto>> GetConfigsAsync() =>(await _ruleFormConfigsRepository.GetConfigsAsync()).Select(x => new LookupDto(x.Id, x.Name)).ToList();
+    public async Task<List<LookupDto>> GetConfigsAsync() =>(await _formRepo.GetConfigsAsync()).Select(x => new LookupDto(x.Id, x.Name)).ToList();
 
     public override async Task<RuleFormConfigDto> GetAsync(Guid id)
     {
@@ -52,6 +52,7 @@ public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormC
                  Key = x.Rulefield.Key,
                  Label = x.Rulefield.Label,
                  Options = ListExtensions.DeserializeStringList(x.Rulefield.OptionsJson),
+                 IsDefault=x.IsDefault
                  
              }).ToList(),
              AllowNestedGroups = ruleFormConfig.AllowNestedGroups,
@@ -122,28 +123,23 @@ public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormC
     {
         var newRruleFormConfig = new RuleFormConfig(input.Name?.Trim(), input.Description?.Trim());
         newRruleFormConfig.AddFields(input.Fields.Select((x,i) => new RuleFormConfigField(newRruleFormConfig.Id, x.FieldId, i+1, x.IsMultiple, x.IsDefault, $"[{string.Join(",", x.AllowedOperators)}]")).ToList());
-        var ruleFormConfig = await _ruleFormConfigsRepository.CreateAsync(newRruleFormConfig);
+        var ruleFormConfig = await _formRepo.CreateAsync(newRruleFormConfig);
         return await MapToGetOutputDtoAsync(ruleFormConfig);
 
     }
 
     public override async Task<RuleFormConfigDto> UpdateAsync(Guid id, CreateFormConfigEditDto input)
     {
-        var rruleFormConfig = await _ruleFormConfigsRepository.GetAsync(id);
-
-        foreach (var n in rruleFormConfig.RuleFormConfigFields)
-        {
-            await _ruleFormConfigFieldsRepository.HardDeleteAsync(n);
-        }
-        rruleFormConfig.AddFields(input.Fields.Select((x, i) => new RuleFormConfigField(rruleFormConfig.Id, x.FieldId, i + 1, x.IsMultiple,x.IsDefault, $"[{string.Join(",", x.AllowedOperators)}]")).ToList());
-        var ruleFormConfig = await _ruleFormConfigsRepository.UpdateAsync(id, rruleFormConfig);
+        var newRruleFormConfig = new RuleFormConfig(input.Name?.Trim(), input.Description?.Trim());
+        newRruleFormConfig.AddFields(input.Fields.Select((x, i) => new RuleFormConfigField(newRruleFormConfig.Id, x.FieldId, i + 1, x.IsMultiple,x.IsDefault, $"[{string.Join(",", x.AllowedOperators)}]")).ToList());
+        var ruleFormConfig = await _formRepo.UpdateAsync(id, newRruleFormConfig);
 
         return await MapToGetOutputDtoAsync(ruleFormConfig);
 
     }
     public override async Task DeleteAsync(Guid id)
     {
-        await _ruleFormConfigsRepository.DeleteAsync(id);
+        await _formRepo.DeleteAsync(id);
     }
 
 }
