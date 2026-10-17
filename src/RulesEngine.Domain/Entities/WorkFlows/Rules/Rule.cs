@@ -42,17 +42,33 @@ namespace RulesEngine.Entities.WorkFlows.Rules
             WorkflowId = workflowId;
             Expression = expression;
         }
+        public  void Update(string name, Guid workflowId, string expression)
+        {
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+            WorkflowId = workflowId;
+            Expression = expression;
+
+        }
 
         public void AddNode(RuleNode node)
         {
             if (node == null) throw new ArgumentNullException(nameof(node));
             Nodes.Add(node);
         }
+        public void AddNodes(List<RuleNode> nodes)
+        {
+             Nodes.AddRange(nodes);
+        }
 
         public void RemoveNode(RuleNode node)
         {
             if (node == null) throw new ArgumentNullException(nameof(node));
             Nodes.Remove(node);
+        }
+        public void ResetNodes()
+        {
+
+            Nodes = new();
         }
 
         public void Activate() => IsActive = true;

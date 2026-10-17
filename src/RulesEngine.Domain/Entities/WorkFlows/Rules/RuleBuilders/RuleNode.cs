@@ -27,11 +27,18 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 
         public RuleNode() { }
 
-        public RuleNode(Guid id, Guid ruleId, RuleNodeType nodeType, int order)
+        public RuleNode(Guid ruleId,  Guid? parentId,  RuleNodeType nodeType, LogicalOperator? logicalOperator, LogicalOperator? logicalJoinOperator, string? fieldKey, RuleOperator? @operator, string? valueJson, int order)
         {
-            Id = id;
+            Id = Guid.CreateVersion7();
+
             RuleId = ruleId;
+            ParentId = parentId;
             NodeType = nodeType;
+            LogicalOperator = logicalOperator;
+            LogicalJoinOperator = logicalJoinOperator;
+            FieldKey = fieldKey;
+            Operator = @operator;
+            ValueJson = valueJson;
             Order = order;
         }
 

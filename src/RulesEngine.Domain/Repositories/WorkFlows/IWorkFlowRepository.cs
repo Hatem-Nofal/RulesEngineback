@@ -11,6 +11,7 @@ namespace RulesEngine.Repositories.WorkFlows
         Task<List<WorkFlow>> GetListAsync();
         Task<WorkFlow> GetAsync(Guid id);
         Task<Guid> CreateAsync(WorkFlow input);
+        Task CreateRulesAsync(WorkFlow input);
         Task UpdateAsync(Guid id, WorkFlow input);
         Task DeleteAsync(Guid id);
      }

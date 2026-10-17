@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using DocumentFormat.OpenXml.Office2010.Excel;
+using Microsoft.EntityFrameworkCore;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.EntityFrameworkCore;
@@ -39,10 +40,15 @@ IWorkFlowRepository
 
         public async Task<WorkFlow> GetAsync(Guid id)
         {
-            var w = await _context.WorkFlows.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
+            var w = await _context.WorkFlows
+                .Include(x=>x.Rules)
+                .Include(x=>x.Rules).ThenInclude(x=>x.Nodes)
+                .Include(x=>x.Ruleformconfig)
+                .ThenInclude(x=>x.RuleFormConfigFields)
+             //   .ThenInclude(x=>x.Rulefield)
+                .AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
                     ?? throw new KeyNotFoundException("Workflow not found.");
-            var configs = await _context.RuleFormConfigs.AsNoTracking().ToDictionaryAsync(x => x.Id, x => x.Name);
-            var count = await _context.Rules.CountAsync(x => x.WorkflowId == id);
+          
             return w;
         }
 
@@ -92,6 +98,14 @@ IWorkFlowRepository
                 throw new RuleValidationException("The selected form config does not exist or is inactive.");
         }
 
-
+        public async Task CreateRulesAsync(WorkFlow input)
+        {
+            var  w = await _context.WorkFlows
+                
+                .AsNoTracking().FirstOrDefaultAsync(x => x.Id == input.Id)
+                    ?? throw new KeyNotFoundException("Workflow not found.");
+            w = input;
+          await  _context.SaveChangesAsync();
+        }
     }
 }

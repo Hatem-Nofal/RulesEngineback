@@ -195,7 +195,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
                 if (!string.IsNullOrEmpty(f.AllowedOperatorsJson))
                     allowedJson = JsonSerializer.Serialize(f.AllowedOperatorsJson);
 
-                var cfgField = new RuleFormConfigField(Guid.Empty, f.RulefieldId, order++, f.IsMultiple, allowedJson);
+                var cfgField = new RuleFormConfigField(Guid.Empty, f.RulefieldId, order++, f.IsMultiple,f.IsDefault, allowedJson);
                 list.Add(cfgField);
             }
 

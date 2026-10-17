@@ -24,12 +24,13 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
         public int Order { get; private set; }
         public string? AllowedOperatorsJson { get; private set; }
         public bool IsMultiple { get; private set; }
+        public bool IsDefault { get; private set; }
 
         public RuleFormConfigField()
         {
             
         }
-        public RuleFormConfigField( Guid formConfigId, Guid ruleFieldId, int order, bool isMultiple, string? allowedOperatorsJson = null)
+        public RuleFormConfigField( Guid formConfigId, Guid ruleFieldId, int order, bool isMultiple, bool isDefault, string? allowedOperatorsJson = null)
         {
             Id = Guid.CreateVersion7();
 
@@ -38,6 +39,18 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
             Order = order;
             AllowedOperatorsJson = allowedOperatorsJson;
             IsMultiple = isMultiple;
+            IsDefault = isDefault;
+        }
+        public void Update( Guid formConfigId, Guid ruleFieldId, int order, bool isMultiple, bool isDefault, string? allowedOperatorsJson = null)
+        {
+             
+
+            RuleformConfigId = formConfigId;
+            RulefieldId = ruleFieldId;
+            Order = order;
+            AllowedOperatorsJson = allowedOperatorsJson;
+            IsMultiple = isMultiple;
+            IsDefault = isDefault;
         }
 
         public void Update(int order, string? allowedOperatorsJson = null)

@@ -22,14 +22,70 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
     public static class RuleTreeMapper
     {
-        public static RuleNodeDto ToTree(List<RuleNode> nodes)
+        public static RuleNodeDto ToTree(List<RuleNode> flat,List<RuleFormConfigField> ruleFormConfigFields )
         {
-            return new RuleNodeDto();
+            if (flat.Count == 0)
+                return new RuleNodeDto { NodeType = RuleNodeType.Group, LogicalOperator = LogicalOperator.And };
+
+            var byParent = flat.ToLookup(x => x.ParentId);
+
+            RuleNodeDto Build(RuleNode n, LogicalOperator? parentGroupOp, bool isFirst)
+            {
+                JsonElement? value = null;
+                if (n.ValueJson is not null)
+                    value = JsonSerializer.Deserialize<JsonElement>(n.ValueJson);
+
+                var groupOp = n.LogicalOperator ?? LogicalOperator.And;
+                var children = byParent[n.Id].OrderBy(c => c.Order).ToList();
+                bool isMultiple = ruleFormConfigFields.FirstOrDefault(x => x.Rulefield.Key == n.FieldKey)?.IsMultiple??false;
+                return new RuleNodeDto
+                {
+                    Id = n.Id,
+                    NodeType = n.NodeType,
+                    LogicalOperator = n.LogicalOperator,
+                    // Rules saved before per-item connectors used ONE operator per group: every child joins with it.
+                    LogicalJoinOperator = isFirst ? (LogicalOperator?)null : n.LogicalJoinOperator ?? parentGroupOp ?? LogicalOperator.And,
+                    FieldKey = n.FieldKey,
+                    Operator = n.Operator,
+                    Value = value,
+                    Children = children.Select((c, i) => Build(c, groupOp, i == 0)).ToList(),
+                    IsMultiple= isMultiple
+
+                };
+            }
+
+            return Build(byParent[null].Single(), null, true);
         }
 
-        public static void Flatten(RuleNodeDto root, Guid ruleId, Guid? parentId, int order, List<RuleNode> flat)
+
+        public static void Flatten(RuleNodeDto dto, Guid ruleId, Guid? parentId, int order, List<RuleNode> output)
         {
-            // noop placeholder
+            var isGroup = dto.NodeType == RuleNodeType.Group;
+
+            string? valueJson = null;
+            if (!isGroup && dto.Value.HasValue)
+            {
+                var v = dto.Value.Value;
+                if (v.ValueKind != JsonValueKind.Null && v.ValueKind != JsonValueKind.Undefined)
+                    valueJson = v.GetRawText();
+            }
+
+            var node = new RuleNode(
+              ruleId,
+              parentId,
+              dto.NodeType,
+              isGroup ? (dto.LogicalOperator ?? LogicalOperator.And) : (LogicalOperator?)null,
+              order > 0 ? (dto.LogicalJoinOperator ?? LogicalOperator.And) : (LogicalOperator?)null,
+              isGroup ? null : dto.FieldKey,
+              isGroup ? null : dto.Operator,
+              valueJson,
+              order
+            );
+            output.Add(node);
+
+            if (isGroup)
+                for (var i = 0; i < dto.Children.Count; i++)
+                    Flatten(dto.Children[i], ruleId, node.Id, i, output);
         }
     }
 
@@ -53,9 +109,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
         public static void Validate(RuleNodeDto root, RuleFormConfigDto config)
         {
-            if (root is null || root.NodeType != RuleNodeType.Group)
-                throw new RuleValidationException("The rule must start with a group.");
-
+         
             var allowed = config.Fields.ToDictionary(f => f.Key);
             Walk(root, allowed, config.AllowNestedGroups, isRoot: true);
         }
@@ -144,7 +198,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
             var value = n.Value.Value;
             var op = n.Operator.Value;
-            var isList = value.ValueKind == JsonValueKind.Array&&(n.Operator == RuleOperator.Contains || n.Operator == RuleOperator.NotContains || n.Operator == RuleOperator.Equal || n.Operator == RuleOperator.NotEqual);
+            var isList = value.ValueKind == JsonValueKind.Array && (n.Operator == RuleOperator.Contains || n.Operator == RuleOperator.NotContains || n.Operator == RuleOperator.Equal || n.Operator == RuleOperator.NotEqual);
 
 
             if (isList && (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() == 0))
