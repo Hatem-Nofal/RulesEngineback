@@ -1,4 +1,5 @@
 ﻿using RulesEngine.Common.Dtos;
+using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Lookups;
 using System;
 using System.Collections.Generic;
@@ -12,20 +13,22 @@ using Volo.Abp.Identity;
 
 namespace EhealthClaims.Lookups
 {
-    public class LookupAppServices : ApplicationService, ILookupServices
+    public class LookupAppService : ApplicationService, ILookupAppService
     {
         private readonly IRepository<ActivityType> _activityTypeRepository;
         private readonly IRepository<ActivitySubType> _activitySubTypeRepository;
 
         private readonly IRepository<Diagnosis> _diagnosisRepository;
         private readonly IRepository<Specialities> _specialitiesRepository;
+        private readonly IRepository<WorkFlow> _workFlowsRepository;
 
-        public LookupAppServices(IRepository<ActivityType> activityTypeRepository, IRepository<ActivitySubType> activitySubTypeRepository, IRepository<Diagnosis> diagnosisRepository, IRepository<Specialities> specialitiesRepository)
+        public LookupAppService(IRepository<ActivityType> activityTypeRepository, IRepository<ActivitySubType> activitySubTypeRepository, IRepository<Diagnosis> diagnosisRepository, IRepository<Specialities> specialitiesRepository, IRepository<WorkFlow> workFlowsRepository)
         {
             _activityTypeRepository = activityTypeRepository;
             _activitySubTypeRepository = activitySubTypeRepository;
             _diagnosisRepository = diagnosisRepository;
             _specialitiesRepository = specialitiesRepository;
+            _workFlowsRepository = workFlowsRepository;
         }
 
         public async Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownList(int? activityTypeId)
@@ -58,6 +61,13 @@ namespace EhealthClaims.Lookups
             var queryable = await _specialitiesRepository.GetQueryableAsync();
 
             return queryable.Select(x => new SelectedDropDownList(x.Id, x.Description, x.Code, false)).ToList();
+        }
+
+        public async Task<List<SelectedDropDownListByGuid>> GetWorkflowsDropDownList()
+        {
+            var queryable = await _workFlowsRepository.GetQueryableAsync();
+
+            return queryable.Select(x => new SelectedDropDownListByGuid(x.Id, x.Name, false)).ToList();
         }
     }
 }

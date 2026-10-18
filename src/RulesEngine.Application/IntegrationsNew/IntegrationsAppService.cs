@@ -14,7 +14,7 @@ using RulesEngine.Integrations;
 
 namespace RulesEngine.IntegrationsNew
 {
-    public class IntegrationsAppService : ApplicationService
+    public class IntegrationsAppService : ApplicationService, IIntegrationsAppService
     {
         private readonly IRulesValidationManager _rulesValidationManager;
         private readonly ILogger<IntegrationsAppService> _logger;

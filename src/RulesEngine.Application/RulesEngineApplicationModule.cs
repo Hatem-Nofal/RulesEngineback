@@ -1,8 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using EhealthClaims.Lookups;
+using Microsoft.Extensions.DependencyInjection;
 using RulesEngine.Integrations.RulesEngineManagers;
 using RulesEngine.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.WorkFlows.Rules.RuleExpressionBuilders;
 using Volo.Abp.Account;
+using Volo.Abp.Application.Services;
 using Volo.Abp.AutoMapper;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
@@ -37,9 +39,9 @@ public class RulesEngineApplicationModule : AbpModule
          context.Services.AddScoped<IRuleExpressionBuilder, RuleExpressionBuilder>();
          context.Services.AddScoped<IRuleExpressionStrategy, RuleExpressionStrategyBase>();
          context.Services.AddScoped<IFieldMapProvider, FieldMapProvider>();
-
+ 
          // Register rules engine manager used by IntegrationsAppService
          context.Services.AddScoped<IRulesEngineManager, RulesEngineManager>();
-     }
+      }
 
 }

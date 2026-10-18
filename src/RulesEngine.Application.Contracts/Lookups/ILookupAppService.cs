@@ -5,12 +5,13 @@ using Volo.Abp.Application.Services;
 
 namespace EhealthClaims.Lookups
 {
-    public interface ILookupServices : IApplicationService
+    public interface ILookupAppService : IApplicationService
     {
         Task<List<SelectedDropDownList>> GetActivityTypeDropDownList();
         Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownList(int? activityTypeId);
         Task<List<SelectedDropDownList>> GetDiagnosisDropDownList();
         Task<List<SelectedDropDownList>> GetSpecialitiesIdDropDownList();
+        Task<List<SelectedDropDownListByGuid>> GetWorkflowsDropDownList();
 
     }
 }
