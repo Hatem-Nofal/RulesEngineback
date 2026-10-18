@@ -69,6 +69,13 @@ public class RulesEngineDbContext :
     public DbSet<ActivitySubType> ActivitySubTypes => Set<ActivitySubType>();
     public DbSet<ActivityValidDate> ActivityValidDates => Set<ActivityValidDate>();
 
+    // These entities were already part of the model (reached through RuleDiagnosis / RuleFormConfigField),
+    // but ABP only registers IRepository<T> for entities exposed as a DbSet. Without these two lines,
+    // IRepository<Diagnosis> and IRepository<Specialities> cannot be resolved (LookupAppService, RulesValidationManager).
+    // No migration is needed: the model itself does not change.
+    public DbSet<Diagnosis> Diagnoses => Set<Diagnosis>();
+    public DbSet<Specialities> Specialities => Set<Specialities>();
+
     #endregion
 
     public RulesEngineDbContext(DbContextOptions<RulesEngineDbContext> options)

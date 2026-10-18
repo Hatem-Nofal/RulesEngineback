@@ -214,16 +214,16 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
         public static List<string> ValidateWitErrors(RuleNodeDto root, RuleFormConfigDto config)
         {
             var allowed = config.Fields.ToDictionary(f => f.Key);
-            WalkWitErrors(root, allowed, config.AllowNestedGroups, isRoot: true, out List<string> errors);
 
-            return errors;
+            return WalkWitErrors(root, allowed, config.AllowNestedGroups, isRoot: true);
+            
         }
 
 
 
-        private static void WalkWitErrors(RuleNodeDto n, Dictionary<string, RuleFormFieldDto> allowed, bool allowNested, bool isRoot, out List<string> errors)
+        private static List<string> WalkWitErrors(RuleNodeDto n, Dictionary<string, RuleFormFieldDto> allowed, bool allowNested, bool isRoot )
         {
-            errors = new List<string>();
+          var  errors = new List<string>();
             if (n.NodeType == RuleNodeType.Group)
             {
                 if (n.Children.Count == 0)
@@ -235,11 +235,11 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
                 {
                     if (i > 0 && n.Children[i].LogicalJoinOperator is null)
                         errors.Add("Choose AND / OR before every item after the first.");
-                    Walk(n.Children[i], allowed, allowNested, isRoot: false);
+
+                    errors.AddRange( WalkWitErrors(n.Children[i], allowed, allowNested, isRoot: false));
                 }
-                if (errors.Any())
-                    throw new RuleValidationException(string.Join(", ", errors));
-                return;
+
+                return errors;
             }
             bool isallowedfield = !allowed.TryGetValue(n.FieldKey, out var field);
 
@@ -275,7 +275,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
                 errors.Add($"Select at least one value for '{field.Label}'.");
             if (isList && !field.IsMultiple && value.ValueKind == JsonValueKind.Array)
                 errors.Add($"'{field.Label}' expects a single value.");
-
+            return errors;
 
         }
 

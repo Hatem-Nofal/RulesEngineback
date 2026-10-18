@@ -741,11 +741,15 @@ namespace RulesEngine.WorkFlows.Rules
                 row.Errors.AddRange( RuleTreeValidator.ValidateWitErrors(row.Dto.Root!, configdto));
 
                 if (!row.Errors.Any())
-                    await SaveRuleAsync(row.Dto!, row.ExistingId, row.Prepared);
+                   { await SaveRuleAsync(row.Dto!, row.ExistingId, row.Prepared); }
+                else
+                {
+                    row.Errors.Distinct();
+                }
 
             }
             if (rows.Any(x => x.Errors.Count > 0))
-                return BuildErrorWorkbook(wb, ws, lastRow, rows, fileContent.FileName);
+                return BuildErrorWorkbook(wb, ws, lastRow, rows, workflow.Name);
 
             return null;
         }
