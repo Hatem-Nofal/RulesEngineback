@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Office2010.Excel;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.EntityFrameworkCore;
@@ -30,13 +29,7 @@ IWorkFlowRepository
 
         public async Task<List<WorkFlow>> GetListAsync()
         {
-            var counts = await _context.Rules.AsNoTracking()
-                .GroupBy(x => x.WorkflowId)
-                .Select(g => new { WorkflowId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.WorkflowId, x => x.Count);
-            var list = await _context.WorkFlows.AsNoTracking().OrderBy(x => x.Name).ToListAsync();
-
-            return list.ToList();
+            return await _context.WorkFlows.AsNoTracking().OrderBy(x => x.Name).ToListAsync();
         }
 
         public async Task<WorkFlow> GetAsync(Guid id)
@@ -44,12 +37,12 @@ IWorkFlowRepository
             var w = await _context.WorkFlows
                 //.Include(x=>x.Rules)
                 //.Include(x=>x.Rules).ThenInclude(x=>x.Nodes)
-                .Include(x=>x.Ruleformconfig)
-                .ThenInclude(x=>x.RuleFormConfigFields)
-             //   .ThenInclude(x=>x.Rulefield)
+                .Include(x => x.Ruleformconfig)
+                .ThenInclude(x => x.RuleFormConfigFields)
+                //   .ThenInclude(x=>x.Rulefield)
                 .AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
                     ?? throw new KeyNotFoundException("Workflow not found.");
-          
+
             return w;
         }
 
@@ -90,8 +83,8 @@ IWorkFlowRepository
             if (name.Length > 200)
                 throw new RuleValidationException("Workflow name is too long (max 200).");
 
-            var lower = name.ToLower();
-            if (await _context.WorkFlows.AnyAsync(x => x.Id != currentId && x.Name.ToLower() == lower))
+            // Plain equality keeps the unique index on Name usable (SQL Server's default collation is case-insensitive anyway).
+            if (await _context.WorkFlows.AnyAsync(x => x.Id != currentId && x.Name == name))
                 throw new RuleValidationException($"A workflow named '{name}' already exists.");
 
             if (input.RuleformconfigId is { } cfgId
@@ -101,17 +94,26 @@ IWorkFlowRepository
 
         public async Task CreateRulesAsync(WorkFlow input)
         {
-            var  w = await _context.WorkFlows
-                
+            var w = await _context.WorkFlows
+
                 .AsNoTracking().FirstOrDefaultAsync(x => x.Id == input.Id)
                     ?? throw new KeyNotFoundException("Workflow not found.");
             w = input;
-          await  _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
         }
 
-        public async Task<IQueryable<WorkFlow>> GetAllForRuleEngine()
+        /// <summary>
+        /// Read-only source for the rules engine snapshot: no change tracking, and inactive rules are filtered in SQL
+        /// (the engine skips disabled rules anyway, so they would only cost transfer and memory).
+        /// </summary>
+        public Task<IQueryable<WorkFlow>> GetAllForRuleEngine()
         {
-          return  _context.WorkFlows.Include(x=>x.Rules).Where(x => x.IsActive);
+            IQueryable<WorkFlow> query = _context.WorkFlows
+                .AsNoTracking()
+                .Where(x => x.IsActive)
+                .Include(x => x.Rules.Where(r => r.IsActive));
+
+            return Task.FromResult(query);
         }
 
         public async Task<RulesFingerprint> GetRulesFingerprintAsync(CancellationToken cancellationToken = default)

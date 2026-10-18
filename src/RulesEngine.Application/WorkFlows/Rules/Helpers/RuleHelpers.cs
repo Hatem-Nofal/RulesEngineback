@@ -22,7 +22,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
     public static class RuleTreeMapper
     {
-        public static RuleNodeDto ToTree(List<RuleNode> flat,List<RuleFormConfigField> ruleFormConfigFields )
+        public static RuleNodeDto ToTree(List<RuleNode> flat, List<RuleFormConfigField> ruleFormConfigFields)
         {
             if (flat.Count == 0)
                 return new RuleNodeDto { NodeType = RuleNodeType.Group, LogicalOperator = LogicalOperator.And };
@@ -37,7 +37,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
                 var groupOp = n.LogicalOperator ?? LogicalOperator.And;
                 var children = byParent[n.Id].OrderBy(c => c.Order).ToList();
-                bool isMultiple = ruleFormConfigFields.FirstOrDefault(x => x.Rulefield.Key == n.FieldKey)?.IsMultiple??false;
+                bool isMultiple = ruleFormConfigFields.FirstOrDefault(x => x.Rulefield.Key == n.FieldKey)?.IsMultiple ?? false;
                 return new RuleNodeDto
                 {
                     Id = n.Id,
@@ -49,7 +49,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
                     Operator = n.Operator,
                     Value = value,
                     Children = children.Select((c, i) => Build(c, groupOp, i == 0)).ToList(),
-                    IsMultiple= isMultiple
+                    IsMultiple = isMultiple
 
                 };
             }
@@ -109,7 +109,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
         public static void Validate(RuleNodeDto root, RuleFormConfigDto config)
         {
-         
+
             var allowed = config.Fields.ToDictionary(f => f.Key);
             Walk(root, allowed, config.AllowNestedGroups, isRoot: true);
         }
@@ -216,14 +216,14 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
             var allowed = config.Fields.ToDictionary(f => f.Key);
 
             return WalkWitErrors(root, allowed, config.AllowNestedGroups, isRoot: true);
-            
+
         }
 
 
 
-        private static List<string> WalkWitErrors(RuleNodeDto n, Dictionary<string, RuleFormFieldDto> allowed, bool allowNested, bool isRoot )
+        private static List<string> WalkWitErrors(RuleNodeDto n, Dictionary<string, RuleFormFieldDto> allowed, bool allowNested, bool isRoot)
         {
-          var  errors = new List<string>();
+            var errors = new List<string>();
             if (n.NodeType == RuleNodeType.Group)
             {
                 if (n.Children.Count == 0)
@@ -236,18 +236,25 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
                     if (i > 0 && n.Children[i].LogicalJoinOperator is null)
                         errors.Add("Choose AND / OR before every item after the first.");
 
-                    errors.AddRange( WalkWitErrors(n.Children[i], allowed, allowNested, isRoot: false));
+                    errors.AddRange(WalkWitErrors(n.Children[i], allowed, allowNested, isRoot: false));
                 }
 
                 return errors;
             }
-            bool isallowedfield = !allowed.TryGetValue(n.FieldKey, out var field);
-
-            if (n.FieldKey is null || isallowedfield)
+            // Every check below dereferences what the previous one proved, so each failure returns immediately
+            // (the old version kept going and threw NullReferenceException / InvalidOperationException instead of
+            // reporting the problem).
+            if (n.FieldKey is null || !allowed.TryGetValue(n.FieldKey, out var field))
+            {
                 errors.Add($"Field '{n.FieldKey}' is not allowed for this workflow.");
+                return errors;
+            }
 
             if (n.Operator is null)
+            {
                 errors.Add($"Choose an operator for '{field.Label}'.");
+                return errors;
+            }
 
             RuleOperator[] ops;
             if (field.AllowedOperators is { Count: > 0 })
@@ -261,7 +268,10 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
             if (!n.Value.HasValue
                 || n.Value.Value.ValueKind == JsonValueKind.Null
                 || n.Value.Value.ValueKind == JsonValueKind.Undefined)
+            {
                 errors.Add($"Enter a value for '{field.Label}'.");
+                return errors;
+            }
 
             var value = n.Value.Value;
             var op = n.Operator.Value;

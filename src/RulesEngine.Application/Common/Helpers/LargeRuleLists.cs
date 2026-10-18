@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 
@@ -19,7 +20,18 @@ namespace RulesEngine.Common.Helpers
         public static string Encode(IEnumerable<string?> codes) => Convert.ToBase64String(
             JsonSerializer.SerializeToUtf8Bytes(codes.Select(c => c ?? "").Distinct(StringComparer.Ordinal)));
 
+        // First level: keyed by the string INSTANCE (reference equality). The encoded list is a constant inside the
+        // compiled rule expression, so every evaluation passes the same instance. A hit is lock-free and does not hash
+        // the (potentially huge) base64 text. Entries live exactly as long as the compiled rule keeps the string alive.
+        private static readonly ConditionalWeakTable<string, HashSet<string>> ByReference = new();
+        private static readonly ConditionalWeakTable<string, HashSet<string>>.CreateValueCallback DecodeShared = DecodeThroughContentCache;
+
         private static HashSet<string> Decode(string encoded)
+            => ByReference.TryGetValue(encoded, out var hit) ? hit : ByReference.GetValue(encoded, DecodeShared);
+
+        // Second level: keyed by content (bounded). Only reached once per string instance, e.g. after a rule reload
+        // that produced an equal list again.
+        private static HashSet<string> DecodeThroughContentCache(string encoded)
         {
             lock (CacheLock)
             {
@@ -27,7 +39,7 @@ namespace RulesEngine.Common.Helpers
                 var codes = new HashSet<string>(
                     JsonSerializer.Deserialize<string[]>(Convert.FromBase64String(encoded))!, StringComparer.Ordinal);
                 if (encoded.Length > MaxCachedCharacters) return codes;
-                while (Cache.Count >= MaxCachedLists || _cachedCharacters + encoded.Length > MaxCachedCharacters)
+                while (CacheOrder.Count > 0 && (Cache.Count >= MaxCachedLists || _cachedCharacters + encoded.Length > MaxCachedCharacters))
                 {
                     var oldest = CacheOrder.Dequeue();
                     Cache.Remove(oldest);
@@ -42,7 +54,15 @@ namespace RulesEngine.Common.Helpers
 
         public static bool ContainsCode(string encoded, string code) => Decode(encoded).Contains(code);
 
-        public static bool AnyCodes(IEnumerable<string> current, string encoded) => current.Any(Decode(encoded).Contains);
+        public static bool AnyCodes(IEnumerable<string> current, string encoded)
+        {
+            var codes = Decode(encoded);
+            foreach (var code in current)
+            {
+                if (codes.Contains(code)) return true;
+            }
+            return false;
+        }
 
         public static bool AllCodes(IEnumerable<string> current, string encoded) => Decode(encoded).IsSubsetOf(current);
 

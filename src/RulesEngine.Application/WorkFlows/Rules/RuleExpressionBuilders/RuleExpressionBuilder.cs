@@ -32,6 +32,11 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
     {
         var config = await _forms.GetByWorkflowAsync(rule.WorkflowId)
                     ?? throw new RuleValidationException("This workflow has no form config assigned.");
+        return await BuildForRuleAsync(rule, config);
+    }
+
+    public async Task<RuleExpressionResultDto> BuildForRuleAsync(RuleDto rule, RuleFormConfigDto config)
+    {
         RuleTreeValidator.Validate(rule.Root, config);
 
         var fields = config.Fields.ToDictionary(
@@ -46,7 +51,7 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
 
     public async Task<RuleExpressionResultDto> Build(RuleNodeDto root, string? strategyKey, IReadOnlyDictionary<string, FieldMapDto> fields)
     {
-      //  var strategy = factory.Get(strategyKey);
+        //  var strategy = factory.Get(strategyKey);
         var condition = Render(root, _strategy, fields, isRoot: true);
         return new RuleExpressionResultDto(_strategy.Key, condition, _strategy.Finalize(condition));
     }
@@ -73,36 +78,5 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
 
 
 
-    /// <summary>Validates the tree against the workflow's config, then builds the expression.</summary>
-    //public async Task<RuleExpressionResultDtoDto> BuildForRuleAsync(RuleDto rule)
-    //{
-    //    var config = await _forms.GetByWorkflowAsync(rule.WorkflowId)
-    //                 ?? throw new RuleValidationException("This workflow has no form config assigned.");
-    //    RuleTreeValidator.Validate(rule.Root, config);
-    //    var result = await Build(rule.Root, config.StrategyKey);
-    //    return new RuleExpressionResultDtoDto(result.StrategyKey, result.Condition, result.Expression);
 
-    //}
-
-    //public async Task<RuleExpressionResultDtoDto> Build(RuleNodeDto root, string? strategyKey)
-    //{
-    //    var condition = await Render(root, _strategy, isRoot: true);
-    //    return new RuleExpressionResultDtoDto(_strategy.Key, condition, _strategy.Finalize(condition));
-    //}
-
-    //private static async Task<string> Render(RuleNodeDto node, IRuleExpressionStrategy strategy, bool isRoot)
-    //{
-    //    if (node.NodeType == RuleNodeType.Condition)
-    //        return await strategy.RenderCondition(node);
-
-    //    var leaves = new List<string>();
-    //    foreach (var c in node.Children.Where(c => c.NodeType == RuleNodeType.Condition))
-    //        leaves.Add(await Render(c, strategy, isRoot: false));
-
-    //    var subGroups = new List<string>();
-    //    foreach (var c in node.Children.Where(c => c.NodeType == RuleNodeType.Group))
-    //        subGroups.Add(await Render(c, strategy, isRoot: false));
-
-    //    return strategy.RenderGroup(node, leaves, subGroups, isRoot);
-    //}
 }

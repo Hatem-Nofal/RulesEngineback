@@ -282,7 +282,9 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
     private async Task<WorkItemOutcome?> EvaluateWorkflowAsync(
         RulesEngine engine, WorkflowPlan plan, ClaimWorkItem claim, CancellationToken cancellationToken)
     {
-        if (plan.RequiresPatientDemographics && claim.Age == 0)
+        // Gender is empty only when the national id could not be read. Checking Age == 0 instead would also skip
+        // valid patients younger than one year.
+        if (plan.RequiresPatientDemographics && claim.Gender.Length == 0)
             return null;
 
         var outcome = new WorkItemOutcome();

@@ -30,7 +30,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
                  .ToListAsync();
         }
 
-  
+
 
         public async Task<RuleFormConfig?> GetByWorkflowAsync(Guid workflowId)
         {
@@ -40,48 +40,17 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
             var configId = workflow.RuleformconfigId;
             var config = await _context.RuleFormConfigs.AsNoTracking().Include(x => x.RuleFormConfigFields)
                 .FirstOrDefaultAsync(x => x.Id == configId && x.IsActive);
-            if (config is null) return null;
-
-            var ids = config.RuleFormConfigFields.Select(x => x.RulefieldId).ToList();
-            var catalog = await _context.RuleFields.AsNoTracking().Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id);
             return config;
-
-
         }
 
         public async Task<List<RuleFormConfig>> GetListAsync()
         {
-            var fieldCountRows = await _context.RuleFormConfigFields.AsNoTracking()
-                .GroupBy(x => x.RuleformConfigId)
-                .Select(g => new { Id = g.Key, Count = g.Count() })
-                .ToListAsync();
-            var fieldCounts = fieldCountRows.ToDictionary(x => x.Id, x => x.Count);
-
-            var workflowRows = await _context.WorkFlows.AsNoTracking()
-                .Where(x => x.RuleformconfigId != null)
-                .GroupBy(x => x.RuleformconfigId)
-                .Select(g => new { Id = g.Key, Count = g.Count() })
-                .ToListAsync();
-            var workflowCounts = workflowRows.ToDictionary(x => x.Id, x => x.Count);
-
-            var configs = await _context.RuleFormConfigs.AsNoTracking().OrderBy(x => x.Name).ToListAsync();
-            //return configs.Select(c => new FormConfigListDto
-            //{
-            //    Id = c.Id,
-            //    Name = c.Name,
-            //    Description = c.Description,
-            //    IsActive = c.IsActive,
-            //    AllowNestedGroups = c.AllowNestedGroups,
-            //    StrategyKey = c.StrategyKey,
-            //    FieldCount = fieldCounts.GetValueOrDefault(c.Id),
-            //    WorkflowCount = workflowCounts.GetValueOrDefault(c.Id)
-            //}).ToList();
-            return configs;
+            return await _context.RuleFormConfigs.AsNoTracking().OrderBy(x => x.Name).ToListAsync();
         }
 
         public async Task<RuleFormConfig> GetAsync(Guid id)
         {
-            var config = await _context.RuleFormConfigs.AsNoTracking().Include(x => x.RuleFormConfigFields).ThenInclude(x=>x.Rulefield)
+            var config = await _context.RuleFormConfigs.AsNoTracking().Include(x => x.RuleFormConfigFields).ThenInclude(x => x.Rulefield)
                         .FirstOrDefaultAsync(x => x.Id == id)
                     ?? throw new KeyNotFoundException("Form config not found.");
 
@@ -100,15 +69,15 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
             //            : JsonSerializer.Deserialize<List<int>>(x.AllowedOperatorsJson)
             //    }).ToList()
             //};
-             return config;
+            return config;
         }
 
         public async Task<RuleFormConfig> CreateAsync(RuleFormConfig input)
         {
             var catalog = await ValidateAsync(input, null);
 
-            var config = new RuleFormConfig(  input.Name?.Trim(), input.Description?.Trim());
-  
+            var config = new RuleFormConfig(input.Name?.Trim(), input.Description?.Trim());
+
 
             var fields = BuildFields(input, catalog);
             config.RuleFormConfigFields.AddRange(fields);
@@ -154,7 +123,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 
             await using var tx = await _context.Database.BeginTransactionAsync();
 
-           await _context.RuleFormConfigFields.Where(x => x.RuleformConfigId == id).ExecuteDeleteAsync();
+            await _context.RuleFormConfigFields.Where(x => x.RuleformConfigId == id).ExecuteDeleteAsync();
 
             config.Update(input.Name.Trim(), input.Description?.Trim(), input.IsActive, input.AllowNestedGroups);
 
@@ -191,11 +160,11 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
             {
                 if (!catalog.TryGetValue(f.RulefieldId, out var field))
                     throw new RuleValidationException($"Unknown field: {f.RulefieldId}");
-                 string? allowedJson = null;
+                string? allowedJson = null;
                 if (!string.IsNullOrEmpty(f.AllowedOperatorsJson))
                     allowedJson = JsonSerializer.Serialize(f.AllowedOperatorsJson);
 
-                var cfgField = new RuleFormConfigField(Guid.Empty, f.RulefieldId, order++, f.IsMultiple,f.IsDefault, allowedJson);
+                var cfgField = new RuleFormConfigField(Guid.Empty, f.RulefieldId, order++, f.IsMultiple, f.IsDefault, allowedJson);
                 list.Add(cfgField);
             }
 
@@ -225,6 +194,6 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
             return catalog;
         }
 
-        
+
     }
 }
