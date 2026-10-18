@@ -7,6 +7,7 @@ using RulesEngine.Repositories.WorkFlows;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp.Domain.Repositories.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore;
@@ -111,6 +112,26 @@ IWorkFlowRepository
         public async Task<IQueryable<WorkFlow>> GetAllForRuleEngine()
         {
           return  _context.WorkFlows.Include(x=>x.Rules).Where(x => x.IsActive);
+        }
+
+        public async Task<RulesFingerprint> GetRulesFingerprintAsync(CancellationToken cancellationToken = default)
+        {
+            var workflows = await _context.WorkFlows.AsNoTracking()
+                .Where(x => x.IsActive)
+                .GroupBy(_ => 1)
+                .Select(g => new { Count = g.Count(), Last = g.Max(x => x.LastModificationTime ?? x.CreationTime) })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var rules = await _context.Rules.AsNoTracking()
+                .GroupBy(_ => 1)
+                .Select(g => new { Count = g.Count(), Last = g.Max(x => x.LastModificationTime ?? x.CreationTime) })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            DateTime? last = workflows is null ? rules?.Last
+                : rules is null ? workflows.Last
+                : (workflows.Last > rules.Last ? workflows.Last : rules.Last);
+
+            return new RulesFingerprint(workflows?.Count ?? 0, rules?.Count ?? 0, last);
         }
     }
 }

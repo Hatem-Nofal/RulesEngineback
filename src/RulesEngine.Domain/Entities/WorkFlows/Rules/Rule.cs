@@ -17,8 +17,8 @@ namespace RulesEngine.Entities.WorkFlows.Rules
 
         public WorkFlow Workflow { get; private set; }
 
-        public string SuccessEvent { get; set; }
-        public string ErrorMessage { get; set; }
+        public string? SuccessEvent { get; set; }=string.Empty;
+        public string? ErrorMessage { get; set; } = string.Empty;
         public bool IsActive { get; private set; } = true;
         public string Expression { get; private set; }
 

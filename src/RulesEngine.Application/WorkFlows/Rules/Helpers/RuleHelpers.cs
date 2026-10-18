@@ -209,5 +209,76 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
             if (isList && !field.IsMultiple && value.ValueKind == JsonValueKind.Array)
                 throw new RuleValidationException($"'{field.Label}' expects a single value.");
         }
+
+
+        public static List<string> ValidateWitErrors(RuleNodeDto root, RuleFormConfigDto config)
+        {
+            var allowed = config.Fields.ToDictionary(f => f.Key);
+            WalkWitErrors(root, allowed, config.AllowNestedGroups, isRoot: true, out List<string> errors);
+
+            return errors;
+        }
+
+
+
+        private static void WalkWitErrors(RuleNodeDto n, Dictionary<string, RuleFormFieldDto> allowed, bool allowNested, bool isRoot, out List<string> errors)
+        {
+            errors = new List<string>();
+            if (n.NodeType == RuleNodeType.Group)
+            {
+                if (n.Children.Count == 0)
+                    errors.Add("A group cannot be empty.");
+                if (!allowNested && !isRoot)
+                    errors.Add("Nested groups are not allowed for this workflow.");
+
+                for (var i = 0; i < n.Children.Count; i++)
+                {
+                    if (i > 0 && n.Children[i].LogicalJoinOperator is null)
+                        errors.Add("Choose AND / OR before every item after the first.");
+                    Walk(n.Children[i], allowed, allowNested, isRoot: false);
+                }
+                if (errors.Any())
+                    throw new RuleValidationException(string.Join(", ", errors));
+                return;
+            }
+            bool isallowedfield = !allowed.TryGetValue(n.FieldKey, out var field);
+
+            if (n.FieldKey is null || isallowedfield)
+                errors.Add($"Field '{n.FieldKey}' is not allowed for this workflow.");
+
+            if (n.Operator is null)
+                errors.Add($"Choose an operator for '{field.Label}'.");
+
+            RuleOperator[] ops;
+            if (field.AllowedOperators is { Count: > 0 })
+                ops = field.AllowedOperators.Select(x => (RuleOperator)x).ToArray();
+            else
+                ops = DefaultOperators.TryGetValue(field.DataType, out var d) ? d : Array.Empty<RuleOperator>();
+
+            if (!ops.Contains(n.Operator.Value))
+                errors.Add($"Operator not allowed for '{field.Label}'.");
+
+            if (!n.Value.HasValue
+                || n.Value.Value.ValueKind == JsonValueKind.Null
+                || n.Value.Value.ValueKind == JsonValueKind.Undefined)
+                errors.Add($"Enter a value for '{field.Label}'.");
+
+            var value = n.Value.Value;
+            var op = n.Operator.Value;
+            var isList = value.ValueKind == JsonValueKind.Array && (n.Operator == RuleOperator.Contains || n.Operator == RuleOperator.NotContains || n.Operator == RuleOperator.Equal || n.Operator == RuleOperator.NotEqual);
+
+
+            if (isList && (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() == 0))
+                errors.Add($"Select at least one value for '{field.Label}'.");
+            // Collection operators take one value or several (any of / all of / none of)
+            if (isList && field.IsMultiple && value.ValueKind == JsonValueKind.Array && value.GetArrayLength() == 0)
+                errors.Add($"Select at least one value for '{field.Label}'.");
+            if (isList && !field.IsMultiple && value.ValueKind == JsonValueKind.Array)
+                errors.Add($"'{field.Label}' expects a single value.");
+
+
+        }
+
+
     }
 }
