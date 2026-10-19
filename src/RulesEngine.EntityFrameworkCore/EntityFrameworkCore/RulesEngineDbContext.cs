@@ -67,7 +67,6 @@ public class RulesEngineDbContext :
     public DbSet<RuleNode> RuleNodes => Set<RuleNode>();
     public DbSet<ActivityType> ActivityTypes => Set<ActivityType>();
     public DbSet<ActivitySubType> ActivitySubTypes => Set<ActivitySubType>();
-    public DbSet<ActivityValidDate> ActivityValidDates => Set<ActivityValidDate>();
 
     // These entities were already part of the model (reached through RuleDiagnosis / RuleFormConfigField),
     // but ABP only registers IRepository<T> for entities exposed as a DbSet. Without these two lines,
@@ -75,6 +74,11 @@ public class RulesEngineDbContext :
     // No migration is needed: the model itself does not change.
     public DbSet<Diagnosis> Diagnoses => Set<Diagnosis>();
     public DbSet<Specialities> Specialities => Set<Specialities>();
+    public DbSet<GenericDrug> GenericDrugs { get; set; }
+
+    public DbSet<ProcedureGroup> ProcedureGroup { get; set; }
+    public DbSet<DuplicateTherapyGroup> DuplicateTherapyGroups { get; set; }
+    public DbSet<MorbidityGroup> MorbidityGroups { get; set; }
 
     #endregion
 
@@ -129,7 +133,7 @@ public class RulesEngineDbContext :
                 .IsUnique();
 
             e.HasOne(x => x.RuleformConfig)
-                .WithMany(x=>x.RuleFormConfigFields)
+                .WithMany(x => x.RuleFormConfigFields)
                 .HasForeignKey(x => x.RuleformConfigId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -160,7 +164,7 @@ public class RulesEngineDbContext :
             .OnDelete(DeleteBehavior.Restrict);
 
             e.HasOne(x => x.Rule)
-            .WithMany(x=>x.Nodes)
+            .WithMany(x => x.Nodes)
             .HasForeignKey(x => x.RuleId)
             .OnDelete(DeleteBehavior.Restrict);
         });
