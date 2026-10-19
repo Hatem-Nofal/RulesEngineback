@@ -3,6 +3,7 @@ using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Lookups;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,85 +22,70 @@ namespace EhealthClaims.Lookups
     /// </summary>
     public class LookupAppService : ApplicationService, ILookupAppService
     {
-        private static readonly TimeSpan ReferenceDataTtl = TimeSpan.FromMinutes(10);
 
-        private static readonly TimedAsyncCache<List<SelectedDropDownList>> ActivityTypesCache = new(ReferenceDataTtl);
-        private static readonly TimedAsyncCache<List<ActivitySubTypeRow>> ActivitySubTypesCache = new(ReferenceDataTtl);
-        private static readonly TimedAsyncCache<List<SelectedDropDownList>> DiagnosesCache = new(ReferenceDataTtl);
-        private static readonly TimedAsyncCache<List<SelectedDropDownList>> SpecialitiesCache = new(ReferenceDataTtl);
 
         private readonly IRepository<ActivityType> _activityTypeRepository;
         private readonly IRepository<ActivitySubType> _activitySubTypeRepository;
         private readonly IRepository<Diagnosis> _diagnosisRepository;
         private readonly IRepository<Specialities> _specialitiesRepository;
         private readonly IRepository<WorkFlow> _workFlowsRepository;
+        private readonly IRepository<GenericDrug> _genericDrugsRepository;
+        private readonly IRepository<DuplicateTherapyGroup, int> _duplicateTherapyGroupRepository;
+        private readonly IRepository<MorbidityGroup, int> _morbidityGroupRepository;
 
         public LookupAppService(
             IRepository<ActivityType> activityTypeRepository,
             IRepository<ActivitySubType> activitySubTypeRepository,
             IRepository<Diagnosis> diagnosisRepository,
             IRepository<Specialities> specialitiesRepository,
-            IRepository<WorkFlow> workFlowsRepository)
+            IRepository<WorkFlow> workFlowsRepository,
+            IRepository<GenericDrug> genericDrugsRepository,
+            IRepository<DuplicateTherapyGroup, int> duplicateTherapyGroupRepository,
+            IRepository<MorbidityGroup, int> morbidityGroupRepository)
         {
             _activityTypeRepository = activityTypeRepository;
             _activitySubTypeRepository = activitySubTypeRepository;
             _diagnosisRepository = diagnosisRepository;
             _specialitiesRepository = specialitiesRepository;
             _workFlowsRepository = workFlowsRepository;
+            _genericDrugsRepository = genericDrugsRepository;
+            _duplicateTherapyGroupRepository = duplicateTherapyGroupRepository;
+            _morbidityGroupRepository = morbidityGroupRepository;
         }
 
         public async Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownList(int? activityTypeId)
         {
-            // The whole table is cached once and filtered in memory, so every activityTypeId shares one entry.
-            var rows = await ActivitySubTypesCache.GetOrCreateAsync(async () =>
-            {
-                var queryable = await _activitySubTypeRepository.GetQueryableAsync();
-                var query = queryable.Select(x => new ActivitySubTypeRow(x.Id, x.ActivityTypeId, x.IqviaCode, x.ShortDesc));
-                return await AsyncExecuter.ToListAsync(query);
-            });
-
-            var result = new List<SelectedDropDownList>(rows.Count);
-            foreach (var row in rows)
-            {
-                if (activityTypeId.HasValue && row.ActivityTypeId != activityTypeId.Value)
-                    continue;
-
-                // Same output as before: Name = IqviaCode, Code = ShortDesc.
-                result.Add(new SelectedDropDownList(row.Id, row.IqviaCode, row.ShortDesc, false));
-            }
-
-            return result;
+            var queryable = await _activitySubTypeRepository.GetQueryableAsync();
+            var query = queryable.Select(x => new SelectedDropDownList(x.Id, x.iqvia_code, x.Short_Desc, false));
+            return await AsyncExecuter.ToListAsync(query);
         }
 
-        public Task<List<SelectedDropDownList>> GetActivityTypeDropDownList()
-            => ActivityTypesCache.GetOrCreateAsync(async () =>
-            {
-                var queryable = await _activityTypeRepository.GetQueryableAsync();
-                var rows = await AsyncExecuter.ToListAsync(
-                    queryable.Select(x => new { x.Id, x.Description, x.IsActive }));
+        public async Task<List<SelectedDropDownList>> GetActivityTypeDropDownList()
+        {
+            var queryable = await _activityTypeRepository.GetQueryableAsync();
+            var rows = await AsyncExecuter.ToListAsync(
+                queryable.Select(x => new { x.Id, x.Description, x.IsActive }));
 
-                return rows.Select(x => new SelectedDropDownList(x.Id, x.Description, x.IsActive)).ToList();
-            });
+            return rows.Select(x => new SelectedDropDownList(x.Id, x.Description, x.IsActive)).ToList();
+        }
 
-        public Task<List<SelectedDropDownList>> GetDiagnosisDropDownList()
-            => DiagnosesCache.GetOrCreateAsync(async () =>
-            {
-                var queryable = await _diagnosisRepository.GetQueryableAsync();
-                var rows = await AsyncExecuter.ToListAsync(
-                    queryable.Select(x => new { x.Id, x.ShortDesc, x.IqviaCode }));
+        public async Task<List<SelectedDropDownList>> GetDiagnosisDropDownList()
+        {
+            var queryable = await _diagnosisRepository.GetQueryableAsync();
+            var rows = await AsyncExecuter.ToListAsync(
+                queryable.Select(x => new { x.Id, x.Short_Desc, x.iqvia_code }));
 
-                return rows.Select(x => new SelectedDropDownList(x.Id, x.ShortDesc, x.IqviaCode, false)).ToList();
-            });
+            return rows.Select(x => new SelectedDropDownList(x.Id, x.Short_Desc, x.iqvia_code, false)).ToList();
+        }
 
-        public Task<List<SelectedDropDownList>> GetSpecialitiesIdDropDownList()
-            => SpecialitiesCache.GetOrCreateAsync(async () =>
-            {
-                var queryable = await _specialitiesRepository.GetQueryableAsync();
-                var rows = await AsyncExecuter.ToListAsync(
-                    queryable.Select(x => new { x.Id, x.Description, x.Code }));
+        public async Task<List<SelectedDropDownList>> GetSpecialitiesIdDropDownList()
+        {
+            var queryable = await _specialitiesRepository.GetQueryableAsync();
+            var rows = await AsyncExecuter.ToListAsync(
+                queryable.Select(x => new { x.Id, x.Description, x.Code }));
 
-                return rows.Select(x => new SelectedDropDownList(x.Id, x.Description, x.Code, false)).ToList();
-            });
+            return rows.Select(x => new SelectedDropDownList(x.Id, x.Description, x.Code, false)).ToList();
+        }
 
         public async Task<List<SelectedDropDownListByGuid>> GetWorkflowsDropDownList()
         {
@@ -108,6 +94,42 @@ namespace EhealthClaims.Lookups
                 queryable.Select(x => new { x.Id, x.Name }));
 
             return rows.Select(x => new SelectedDropDownListByGuid(x.Id, x.Name, false)).ToList();
+        }
+
+        public async Task<List<SelectedDropDownList>> GetGenericDrugsDropDownList()  
+        {
+            var queryable = await _genericDrugsRepository.GetQueryableAsync();
+            var rows = await AsyncExecuter.ToListAsync(
+                queryable.Select(x => new { x.Id, x.GenericName, x.SystemCode }));
+
+            return rows.Select(x => new SelectedDropDownList(x.Id, x.GenericName, x.SystemCode, false)).ToList();
+        }
+
+        public async Task<List<SelectedDropDownList>> GetProcedureGroupsDropDownList()  
+        {
+            var queryable = await _genericDrugsRepository.GetQueryableAsync();
+            var rows = await AsyncExecuter.ToListAsync(
+                queryable.Select(x => new { x.Id, x.GenericName, x.SystemCode }));
+
+            return rows.Select(x => new SelectedDropDownList(x.Id, x.GenericName, x.SystemCode, false)).ToList();
+        }
+
+        public async Task<List<SelectedDropDownList>> GetDuplicateTherapyGroupsDropDownList()  
+        {
+            var queryable = await _duplicateTherapyGroupRepository.GetQueryableAsync();
+            var rows = await AsyncExecuter.ToListAsync(
+                queryable.Select(x => new { x.Id, x.DtGroupName, x.DtgSystemCode }));
+
+            return rows.Select(x => new SelectedDropDownList(x.Id, x.DtGroupName, x.DtgSystemCode, false)).ToList();
+        }
+
+        public async Task<List<SelectedDropDownList>> GetMorbidityGroupsDropDownList()  
+        {
+            var queryable = await _morbidityGroupRepository.GetQueryableAsync();
+            var rows = await AsyncExecuter.ToListAsync(
+                queryable.Select(x => new { x.Id, x.MorbidityGroupName, x.MorbidityGroupSystemCode }));
+
+            return rows.Select(x => new SelectedDropDownList(x.Id, x.MorbidityGroupName, x.MorbidityGroupSystemCode, false)).ToList();
         }
 
         private sealed record ActivitySubTypeRow(long Id, int ActivityTypeId, string IqviaCode, string ShortDesc);

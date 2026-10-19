@@ -2,33 +2,48 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi;
 using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
+using RulesEngine.Entities.WorkFlows;
 using RulesEngine.EntityFrameworkCore;
+using RulesEngine.HandelError;
 using RulesEngine.HealthChecks;
+using RulesEngine.MiddleWares;
 using RulesEngine.MultiTenancy;
+using RulesEngine.Notifications;
+using Serilog;
+using Serilog.Events;
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
+using Volo.Abp.AspNetCore.ExceptionHandling;
 using Volo.Abp.AspNetCore.MultiTenancy;
 using Volo.Abp.AspNetCore.Mvc;
+using Volo.Abp.AspNetCore.Mvc.AntiForgery;
 using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
+using Volo.Abp.AspNetCore.SignalR;
+using Volo.Abp.Auditing;
 using Volo.Abp.Autofac;
 using Volo.Abp.Data;
+using Volo.Abp.Domain.Entities.Caching;
 using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.Security.Claims;
@@ -37,6 +52,7 @@ using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.UI.Navigation.Urls;
 using Volo.Abp.VirtualFileSystem;
+using static OpenIddict.Server.OpenIddictServerEvents;
 
 namespace RulesEngine;
 
@@ -125,6 +141,34 @@ public class RulesEngineHttpApiHostModule : AbpModule
         ConfigureSwagger(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
+        ConfigureSerilog(configuration, hostingEnvironment);
+        ConfigureSignalR(context);
+
+        Configure<AbpAuditingOptions>(options =>
+        {
+            options.IsEnabled = false; // Disable auditing globally
+        });
+        Configure<AbpExceptionHandlingOptions>(options =>
+        {
+            options.SendExceptionsDetailsToClients = true;
+            options.SendStackTraceToClients = false;
+
+        });
+  
+        Configure<AbpAntiForgeryOptions>(options =>
+        {
+            
+            options.AutoValidateFilter = type =>
+                !(new[] { "RuleApplication", "Identity" })
+                    .Any(ns => type.Namespace?.Contains(ns, StringComparison.OrdinalIgnoreCase) ?? false);
+        });
+        context.Services.AddEntityCache<WorkFlow, Guid>(
+         new DistributedCacheEntryOptions
+         {
+             AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
+             SlidingExpiration = TimeSpan.FromMinutes(10)
+         });
+
     }
 
     private void ConfigureStudio(IHostEnvironment hostingEnvironment)
@@ -250,7 +294,108 @@ public class RulesEngineHttpApiHostModule : AbpModule
     {
         context.Services.AddRulesEngineHealthChecks();
     }
+    private void ConfigureSerilog(IConfiguration configuration, IWebHostEnvironment env)
+    {
+        Serilog.Debugging.SelfLog.Enable(msg =>
+           Console.Error.WriteLine("SERILOG ERROR: " + msg));
 
+        // 🌍 Environment + Seq URL
+        string seqUrl = configuration["seqURL"] ?? "http://seq-service.seq.svc.cluster.local:5341";
+        string environmentName = configuration["environmentName"] ?? "Dev";
+
+        // 📝 Configure Serilog pipeline
+        Log.Logger = new LoggerConfiguration()
+
+#if DEBUG
+            .MinimumLevel.Debug()
+#else
+        .MinimumLevel.Information()
+#endif
+
+            // Override noisy namespaces
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+            .MinimumLevel.Override("Volo.Abp", LogEventLevel.Warning)
+         // Explicitly ensure Warning logs are included
+         .MinimumLevel.Warning()
+            // Enrichers
+            .Enrich.FromLogContext()
+            .Enrich.WithProperty("Project", "RulesEngine")
+            .Enrich.WithProperty("Environment", environmentName)
+
+            // File sink (daily rolling, 100 MB limit, 31 retained files)
+            .WriteTo.Async(a => a.File(
+                Path.Combine("Logs", "Log-.txt"),
+                rollingInterval: RollingInterval.Day,
+                rollOnFileSizeLimit: true,
+                fileSizeLimitBytes: 100 * 1024 * 1024,
+                retainedFileCountLimit: 31,
+                buffered: false,
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] ({SourceContext}) {Message:lj}{NewLine}{@Exception}"
+            ), bufferSize: 10 * 1024 * 1024)
+
+            // Console sink
+            .WriteTo.Async(a => a.Console(), bufferSize: 1 * 1024 * 1024)
+
+            // Optional Seq sink
+            .WriteTo.Seq(seqUrl,
+                batchPostingLimit: 25,
+                period: TimeSpan.FromSeconds(1),
+                bufferSizeLimitBytes: 2 * 1024 * 1024,
+                eventBodyLimitBytes: 256 * 1024)
+
+            // Filters: include only errors or specific HTTP methods
+            .Filter.ByIncludingOnly(evt =>
+                evt.Level >= LogEventLevel.Warning ||
+                evt.Exception != null ||
+                (evt.Properties.ContainsKey("HttpRequestInfo") &&
+                 new[] { "POST", "PUT", "DELETE" }
+                     .Contains(((StructureValue)evt.Properties["HttpRequestInfo"])
+                     .Properties.First(p => p.Name == "Method").Value.ToString().Trim('"'))) ||
+                (evt.Properties.ContainsKey("HttpResponseInfo") &&
+                 (new[] { "POST", "PUT", "DELETE" }
+                     .Contains(((StructureValue)evt.Properties["HttpResponseInfo"])
+                     .Properties.First(p => p.Name == "Method").Value.ToString().Trim('"')) ||
+                 (((StructureValue)evt.Properties["HttpResponseInfo"]).Properties.Any(p =>
+                     p.Name == "StatusCode" &&
+                     int.TryParse(p.Value.ToString().Trim('"'), out var code) && code >= 400) &&
+                  ((StructureValue)evt.Properties["HttpResponseInfo"])
+                     .Properties.First(p => p.Name == "Method").Value.ToString().Trim('"') == "GET"))))
+
+            // Filters: exclude Microsoft noise
+            .Filter.ByExcluding(evt =>
+                evt.Properties.ContainsKey("SourceContext") &&
+                (evt.Properties["SourceContext"].ToString().StartsWith("Microsoft") ||
+                 evt.Properties["SourceContext"].ToString().StartsWith("Microsoft.EntityFrameworkCore")))
+
+            .CreateLogger();
+
+
+    }
+
+    private void ConfigureSignalR(ServiceConfigurationContext context)
+    {
+
+        context.Services.AddSignalR();
+
+        // Configure SignalR options
+        Configure<AbpSignalROptions>(options =>
+        {
+            options.Hubs.AddOrUpdate(
+                typeof(NotificationHub), // Your SignalR Hub type
+                config =>
+                {
+                    config.RoutePattern = "/signalr"; // basic route for the SignalR Hub
+
+                    // Configure additional options
+                    config.ConfigureActions.Add(hubOptions =>
+                    {
+                        // Long-polling timeout configuration
+                        hubOptions.LongPolling.PollTimeout = TimeSpan.FromSeconds(45);
+                    });
+                });
+        });
+    }
     public override async Task OnApplicationInitializationAsync(ApplicationInitializationContext context)
     {
 
@@ -267,6 +412,8 @@ public class RulesEngineHttpApiHostModule : AbpModule
 
             await dataSeeder.SeedAsync();
         }
+        app.UseMiddleware<CorrelationIdMiddleware>();
+
         app.UseForwardedHeaders();
 
         if (env.IsDevelopment())
@@ -297,7 +444,14 @@ public class RulesEngineHttpApiHostModule : AbpModule
         app.UseUnitOfWork();
         app.UseDynamicClaims();
         app.UseAuthorization();
+        app.Use((context, next) =>
+        {
+            context.Request.EnableBuffering();
+            return next();
+        });
 
+        app.UseMiddleware<RequestLoggingMiddleware>();
+        app.UseMiddleware<ResponseLoggingMiddleware>();
         app.UseSwagger();
         app.UseAbpSwaggerUI(options =>
         {

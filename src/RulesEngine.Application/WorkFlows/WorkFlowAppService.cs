@@ -1,4 +1,5 @@
-﻿using RulesEngine.Entities.WorkFlows;
+﻿using DocumentFormat.OpenXml.Bibliography;
+using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.Repositories.WorkFlows;
@@ -45,18 +46,27 @@ namespace RulesEngine.WorkFlows
         public override async Task<WorkflowDto> GetAsync(Guid id)
         {
             var workflow = await _workFlowRepository.GetAsync(id);
+            var rule =await _ruleRepository.GetAsync(x => x.WorkflowId == id);
             var configs = (await _ruleFormConfigRepository.GetListAsync()).ToDictionary(x => x.Id, x => x.Name);
             var count = await _ruleRepository.CountAsync(x => x.WorkflowId == id);
-
+            workflow.AddRule(rule);
             return Map(workflow, configs, new Dictionary<Guid, int> { [id] = count });
 
         }
 
         public override async Task<WorkflowDto> CreateAsync(SaveWorkflowDto input)
         {
-            var workflow = new WorkFlow(input.Name, input.RuleFormConfigId, input.RejectionLevel);
+            var workflow = new WorkFlow(input.Name, input.RuleFormConfigId, input.RejectionLevel, input.HasCustomeRule);
             workflow.SetId(null);
 
+
+            if (input.HasCustomeRule)
+            {
+                if (string.IsNullOrEmpty( input.RuleExpression))
+                    throw new RuleValidationException($"If WorkFlow HasCustomeRule , RuleExpression is require !");
+
+                workflow.AddRule(new Rule(Guid.CreateVersion7(),"Rule-"+ workflow.Name+"-1", workflow.Id, input.RuleExpression));
+             }
             await _workFlowRepository.InsertAsync(workflow);
 
             return Map(workflow, new Dictionary<Guid, string>(), new Dictionary<Guid, int> { [workflow.Id] = 0 });
@@ -67,6 +77,22 @@ namespace RulesEngine.WorkFlows
             var workflow = await _workFlowRepository.GetAsync(id);
             workflow.UpdateName(input.Name);
             workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
+            workflow.SetHasCustomeRule(input.HasCustomeRule);
+            if (input.HasCustomeRule)
+            {
+                if (string.IsNullOrEmpty(input.RuleExpression))
+                    throw new RuleValidationException($"If WorkFlow HasCustomeRule , RuleExpression is require !");
+                if (workflow.Rules.Any())
+                {
+                    workflow.Rules.FirstOrDefault().UpdateExpression(input.RuleExpression);
+                }
+                else
+                {
+                    workflow.AddRule(new Rule(Guid.CreateVersion7(), "Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression));
+
+                }
+            }
+
 
             await _workFlowRepository.UpdateAsync(workflow);
 
@@ -88,7 +114,11 @@ namespace RulesEngine.WorkFlows
             Name = w.Name,
             RuleFormConfigId = w.RuleformconfigId,
             RuleFormConfigName = w.RuleformconfigId is { } c ? configs.GetValueOrDefault(c) : null,
-            RuleCount = counts.GetValueOrDefault(w.Id)
+            RuleCount = counts.GetValueOrDefault(w.Id),
+            HasCustomeRule=w.HasCustomeRule,
+            RejectionLevel=w.RejectionLevel,
+            RuleExpression=w.HasCustomeRule?w.Rules.FirstOrDefault()?.Expression:string.Empty
+
         };
         private static WorkflowDto Map(WorkflowDto w, Dictionary<Guid, string> configs, Dictionary<Guid, int> counts) => new()
         {
@@ -96,7 +126,10 @@ namespace RulesEngine.WorkFlows
             Name = w.Name,
             RuleFormConfigId = w.RuleFormConfigId,
             RuleFormConfigName = w.RuleFormConfigId is { } c ? configs.GetValueOrDefault(c) : null,
-            RuleCount = counts.GetValueOrDefault(w.Id)
+            RuleCount = counts.GetValueOrDefault(w.Id),
+            HasCustomeRule = w.HasCustomeRule,
+            RejectionLevel = w.RejectionLevel,
+            RuleExpression = w.RuleExpression  
         };
 
     }

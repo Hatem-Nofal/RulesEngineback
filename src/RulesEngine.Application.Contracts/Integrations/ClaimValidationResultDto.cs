@@ -14,5 +14,6 @@ namespace RulesEngine.Integrations
         public List<string>? MatchedActivityCodes { get; set; }
         public ClaimDto? Claim { get; set; }
         public string? NormalizedWorkFlowName { get; set; }
+        public decimal? MaxDailyQuantity { get; set; }
     }
 }

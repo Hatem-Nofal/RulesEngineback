@@ -8,12 +8,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Linq;
+using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace RulesEngine.IntegrationsNew.RulesEngineManagers;
 
@@ -25,19 +27,19 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
     private readonly ILogger<RulesValidationManager> _logger;
     private readonly IRulesEngineManager _rulesEngineManager;
     private readonly IRepository<Diagnosis> _diagnosisRepository;
+    private readonly IRepository<ActivitySubType> _activitySubTypeRepository;
     private readonly IAsyncQueryableExecuter _asyncExecuter;
 
-    public RulesValidationManager(
-        ILogger<RulesValidationManager> logger,
-        IRulesEngineManager rulesEngineManager,
-        IRepository<Diagnosis> diagnosisRepository,
-        IAsyncQueryableExecuter asyncExecuter)
+    public RulesValidationManager(ILogger<RulesValidationManager> logger, IRulesEngineManager rulesEngineManager, IRepository<Diagnosis> diagnosisRepository, IRepository<ActivitySubType> activitySubTypeRepository, IAsyncQueryableExecuter asyncExecuter)
     {
         _logger = logger;
         _rulesEngineManager = rulesEngineManager;
         _diagnosisRepository = diagnosisRepository;
+        _activitySubTypeRepository = activitySubTypeRepository;
         _asyncExecuter = asyncExecuter;
     }
+
+
 
     // =============================================================================================
     // Public API
@@ -66,6 +68,26 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
         var plans = ResolveWorkflows(snapshot, workflowIds, workflownames);
 
         var today = DateTime.Today;
+        var activitiesMissingGeneric = claims.SelectMany(x => x.Activities)
+             .Where(a => string.IsNullOrWhiteSpace(a.GenericCode))
+            .Select(a => a.ActivityCode)
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (activitiesMissingGeneric.Any())
+        {
+            claims = await LoadGenericDrug(claims, activitiesMissingGeneric);
+        }
+
+        var allDiagnosisCodes = claims
+              .SelectMany(c => c.DiagnosisCodes)
+              .Distinct(StringComparer.OrdinalIgnoreCase)
+              .ToList();
+        if (allDiagnosisCodes.Any())
+        {
+            claims = await LoadDiagnosisCodes(claims, allDiagnosisCodes);
+
+        }
         var claimItems = claims.ConvertAll(claim => ClaimWorkItem.Create(claim, today));
 
         await EnsureDiagnosisCodesExistAsync(claimItems, cancellationToken);
@@ -87,40 +109,76 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
             : new ClaimValidationResponse { Success = "No Violation Found!" };
     }
 
-    /// <summary>Egyptian national id (14 digits) to age and gender; (0, "") when it cannot be read.</summary>
-    public static (int Age, string Gender) ExtractAgeAndGenderFromNationalId(string? nationalId)
-        => ExtractAgeAndGenderFromNationalId(nationalId, DateTime.Today);
 
-    internal static (int Age, string Gender) ExtractAgeAndGenderFromNationalId(string? nationalId, DateTime today)
+    private async Task<List<ClaimValidationByCodeRequestExtended>> LoadGenericDrug(List<ClaimValidationByCodeRequestExtended> claims, List<string> activitiesMissingGeneric)
     {
-        const NumberStyles Digits = NumberStyles.None;
-        var invalid = (0, string.Empty);
 
-        if (string.IsNullOrWhiteSpace(nationalId) || nationalId.Length != 14)
-            return invalid;
+        var genericCodesByActivityCode = (await _activitySubTypeRepository.WithDetailsAsync(x => x.GenericDrug))
 
-        var id = nationalId.AsSpan();
+            .Where(a => activitiesMissingGeneric.Contains(a.iqvia_code) && a.GenericDrug != null)
+            .Select(a => new
+            {
+                ActivityCode = a.iqvia_code,
+                GenericCode = a.GenericDrug.GenericCode
+            })
+            .ToList()
+            .GroupBy(x => x.ActivityCode, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                g => g.Key,
+                g => g.First().GenericCode,
+                StringComparer.OrdinalIgnoreCase);
 
-        if (!int.TryParse(id[..1], Digits, CultureInfo.InvariantCulture, out var centuryDigit) || centuryDigit is not (2 or 3) ||
-            !int.TryParse(id.Slice(1, 2), Digits, CultureInfo.InvariantCulture, out var yearPart) ||
-            !int.TryParse(id.Slice(3, 2), Digits, CultureInfo.InvariantCulture, out var month) ||
-            !int.TryParse(id.Slice(5, 2), Digits, CultureInfo.InvariantCulture, out var day) ||
-            !int.TryParse(id.Slice(12, 1), Digits, CultureInfo.InvariantCulture, out var genderDigit))
+        foreach (var normalizedClaim in claims)
         {
-            return invalid;
+            foreach (var activity in normalizedClaim.Activities)
+            {
+                if (!string.IsNullOrWhiteSpace(activity.GenericCode))
+                    continue;
+
+                if (genericCodesByActivityCode.TryGetValue(
+                        activity.ActivityCode,
+                        out var genericCode)
+                    && !string.IsNullOrWhiteSpace(genericCode))
+                {
+                    activity.GenericCode = genericCode.Trim().ToUpperInvariant();
+                }
+            }
         }
 
-        var year = (centuryDigit == 2 ? 1900 : 2000) + yearPart;
-        if (month is < 1 or > 12 || day < 1 || day > DateTime.DaysInMonth(year, month))
-            return invalid;
+        return claims;
 
-        var birthDate = new DateTime(year, month, day);
 
-        var age = today.Year - birthDate.Year;
-        if (birthDate.Date > today.AddYears(-age)) age--;
-
-        return (age, genderDigit % 2 == 0 ? "Female" : "Male");
     }
+    private async Task<List<ClaimValidationByCodeRequestExtended>> LoadDiagnosisCodes(List<ClaimValidationByCodeRequestExtended> claims, List<string> allDiagnosisCodes)
+    {
+
+        var foundDiag = (await _diagnosisRepository.GetListAsync())
+                  .Where(d => allDiagnosisCodes.Contains(d.iqvia_code))
+                  .Select(d => d.iqvia_code)
+                  .ToList();
+
+        var foundSet = new HashSet<string>(
+            foundDiag.Select(x => x?.Trim().ToUpperInvariant() ?? string.Empty),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var nc in claims)
+        {
+            var invalid = nc.DiagnosisCodes.Where(c => !foundSet.Contains(c)).Distinct().ToList();
+            if (invalid.Count > 0)
+            {
+                _logger.LogWarning(
+                    "Invalid diagnosis codes for claim (ClaimNumber: {ClaimNumber}): {InvalidCodes}",
+                    nc.ClaimNumber, string.Join(", ", invalid));
+                throw new UserFriendlyException(
+                    $"Invalid diagnosis codes for claim (ClaimNumber: {nc.ClaimNumber}): {string.Join(", ", invalid)}");
+            }
+        }
+
+        return claims;
+
+
+    }
+
 
     // =============================================================================================
     // Step 1: which workflows run
@@ -207,8 +265,8 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
 
         var codes = requested.ToList();
         var query = (await _diagnosisRepository.GetQueryableAsync())
-            .Where(d => codes.Contains(d.IqviaCode))
-            .Select(d => d.IqviaCode);   // projection: only the code is read, nothing is tracked
+            .Where(d => codes.Contains(d.iqvia_code))
+            .Select(d => d.iqvia_code);   // projection: only the code is read, nothing is tracked
 
         var found = new HashSet<string>(
             (await _asyncExecuter.ToListAsync(query, cancellationToken)).Select(c => c?.Trim().ToUpperInvariant() ?? string.Empty),
@@ -407,4 +465,6 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
     [LoggerMessage(EventId = 9, Level = LogLevel.Error,
         Message = "Extended validation completed with errors in {Ms}ms for {ClaimCount} claim(s). Failed: {Failed}, Errors: {Errors}. Details: {ErrorDetails}")]
     private partial void LogCompletedWithErrors(long ms, int claimCount, int failed, int errors, string errorDetails);
+
+
 }

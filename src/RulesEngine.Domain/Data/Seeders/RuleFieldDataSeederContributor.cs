@@ -42,8 +42,7 @@ namespace RulesEngine.Data.Seeders
                 new RuleField("ActivitiesQuantities", "Activities Quantities", DataTypes.Number),
                 new RuleField("ActivityQuantity", "Activity Quantity", DataTypes.Number),
                 new RuleField("DiagnosisCounts", "Diagnosis Counts", DataTypes.Number),
-                new RuleField("PrimaryActivity", "Primary Activity", DataTypes.List),
-                new RuleField("SecondaryActivity", "Secondary Activity", DataTypes.List),
+                new RuleField("Activity", "Activity", DataTypes.List),
                 new RuleField("NationalId", "National ID", DataTypes.Number),
                 new RuleField("Age", "Age", DataTypes.Number),
                 new RuleField("Gender", "Gender", DataTypes.Enum, JsonSerializer.Serialize(new[] { "Male", "Female" })),
@@ -56,7 +55,11 @@ namespace RulesEngine.Data.Seeders
                 new RuleField("BatchType", "Batch Type", DataTypes.Enum, JsonSerializer.Serialize(new[] { "outpatient", "inpatient", "ER","prostheticDevices","CommercialPharmacy"})),
                 new RuleField("BatchServiceMonth", "Batch Service Month", DataTypes.Number),
                 new RuleField("BatchServiceYear", "Batch Service Year", DataTypes.Number),
-                new RuleField("ClaimTags", "Claim Tags", DataTypes.List)
+                new RuleField("ClaimTags", "Claim Tags", DataTypes.List),
+                new RuleField("Claimspeccode", "Claimspeccode", DataTypes.List),
+                new RuleField("PrimaryGenericsGroup", "Generic Group", DataTypes.List),
+                new RuleField("GenericsGroups", "Generics Groups", DataTypes.List),
+                new RuleField("DiagnosisGroupCodes", "Diagnosis Groups", DataTypes.List),
             });
         }
     }

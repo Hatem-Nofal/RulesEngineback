@@ -204,8 +204,8 @@ namespace RulesEngine.Integrations.RulesEngineManagers
 
             if (allDiagnosisCodes.Count > 0)
             {
-                var foundDiag = (await _diagnosisRepository.GetListAsync(d => allDiagnosisCodes.Contains(d.IqviaCode)))
-                    .Select(d => d.IqviaCode)
+                var foundDiag = (await _diagnosisRepository.GetListAsync(d => allDiagnosisCodes.Contains(d.iqvia_code)))
+                    .Select(d => d.iqvia_code)
                     .ToList();
 
                 var foundSet = new HashSet<string>(

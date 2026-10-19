@@ -50,6 +50,12 @@ namespace RulesEngine.Entities.WorkFlows.Rules
             Expression = expression;
 
         }
+        public  void UpdateExpression( string expression)
+        {
+    
+            Expression = expression;
+
+        }
 
         public void AddNode(RuleNode node)
         {

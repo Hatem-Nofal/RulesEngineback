@@ -3,6 +3,8 @@ using RulesEngine.Models;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace RulesEngine.IntegrationsNew.RulesEngineManagers;
@@ -16,6 +18,8 @@ internal sealed class ClaimWorkItem
     // Same bound as before: caching "all other activities" per code is O(n^2) memory for large claims.
     private const int MaxCachedOtherActivities = 64;
     private const string NullCodeKey = "\0<null>";
+    private readonly string? _claimspeccode;
+    private readonly string? _primaryGenericsGroup;
 
     private readonly ClaimValidationByCodeRequestExtended _claim;
     private readonly List<string> _diagnosisCodes;
@@ -25,6 +29,9 @@ internal sealed class ClaimWorkItem
     private readonly Dictionary<string, decimal> _quantitiesByCode;
     private readonly Dictionary<int, string?> _activityCodeById;
     private readonly List<string> _claimTags;
+    private readonly Dictionary<string, int> _dtgCodeCounts;
+    private readonly List<string> _genericsGroups;
+    private readonly List<string> _diagnosisGroupCodes;
     private readonly ConcurrentDictionary<string, List<ClaimActivityRequestDto>>? _otherActivitiesByCode;
     private RuleParameter[]? _claimLevelArgs;   // benign race: both candidates are equivalent
 
@@ -49,6 +56,30 @@ internal sealed class ClaimWorkItem
 
         if (Activities.Count is > 0 and <= MaxCachedOtherActivities)
             _otherActivitiesByCode = new ConcurrentDictionary<string, List<ClaimActivityRequestDto>>(StringComparer.Ordinal);
+        _claimspeccode = claim.Claimspeccode;
+        var activities = claim.Activities.ToList() ?? new List<ClaimActivityRequestDto>();
+
+        _dtgCodeCounts = CountCodes(
+                        activities
+                            .SelectMany(a => (a.DtgCodes ?? new List<string>())
+                                .Where(x => !string.IsNullOrWhiteSpace(x))
+                                .Select(x => x.Trim().ToUpperInvariant())
+                                .Distinct())
+                            .ToList());
+
+         _genericsGroups = Activities
+            .Where(a => !string.IsNullOrWhiteSpace(a.GenericCode))
+            .Select(a => a.GenericCode!.Trim().ToUpperInvariant())
+            .ToList();
+
+        _diagnosisGroupCodes = claim.DiagnosisGroupCodes ?? new List<string>()
+                  .Where(x => !string.IsNullOrWhiteSpace(x))
+                  .Select(x => x.Trim().ToUpperInvariant())
+                  .ToList();
+
+
+       
+
     }
 
     public string? ClaimNumber => _claim.ClaimNumber;
@@ -59,8 +90,7 @@ internal sealed class ClaimWorkItem
 
     public static ClaimWorkItem Create(ClaimValidationByCodeRequestExtended claim, DateTime today)
     {
-        var (age, gender) = RulesValidationManager.ExtractAgeAndGenderFromNationalId(claim.Patientnid, today);
-        return new ClaimWorkItem(claim, age, gender, today);
+        return new ClaimWorkItem(claim, claim.Age, claim.Gender, today);
     }
 
     // ---- rule parameters --------------------------------------------------------------------------
@@ -71,7 +101,6 @@ internal sealed class ClaimWorkItem
         {
             Diagnoses = _diagnosisCodes,
             DiagnosisCounts = _diagnosisCounts,
-            PrimaryActivity = _activityCodes,
             ActivitiesQuantities = _activityCodeCounts,
             NationalId = _claim.Patientnid,
             ClaimedNet = _claim.ClaimedNet,
@@ -86,7 +115,9 @@ internal sealed class ClaimWorkItem
             ClaimTags = _claimTags,
             Age = Age,
             Gender = Gender,
-            Activities = Activities
+            Activities = Activities,
+            Claimspeccode=_claimspeccode,
+            DtgCodeCounts=_dtgCodeCounts
         })
     };
 
@@ -111,7 +142,13 @@ internal sealed class ClaimWorkItem
             ClaimTags = _claimTags,
             Age = Age,
             Gender = Gender,
-            Activities = GetOtherActivities(activity)
+            Activities = GetOtherActivities(activity),
+            Claimspeccode=_claimspeccode,
+            PrimaryGenericsGroup=activity.GenericCode,
+            GenericsGroups=_genericsGroups,
+            DiagnosisGroupCodes=_diagnosisGroupCodes,
+            DtgCodeCounts=_dtgCodeCounts
+
         })
     };
 
@@ -121,7 +158,7 @@ internal sealed class ClaimWorkItem
         {
             Diagnoses = _diagnosisCodes,
             DiagnosisCounts = _diagnosisCounts,
-            CurrentMedications = new List<string?> { _activityCodeById[activity.ActivityId] },
+            PrimaryActivity =_activityCodeById[activity.ActivityId],
             MedicationCounts = _activityCodeCounts,
             NID = _claim.Patientnid,
             ClaimedNet = _claim.ClaimedNet,
@@ -138,7 +175,13 @@ internal sealed class ClaimWorkItem
             PatientGender = Gender,
             Activities = new List<ClaimActivityRequestDto> { activity },
             ActivityQuantity = activity.Quantity,
-            MedicationQuantities = _quantitiesByCode
+            MedicationQuantities = _quantitiesByCode,
+            Claimspeccode=_claimspeccode,
+            PrimaryGenericsGroup=activity.GenericCode,
+            GenericsGroups=_genericsGroups,
+            DiagnosisGroupCodes=_diagnosisGroupCodes,
+            DtgCodeCounts=_dtgCodeCounts
+
         })
     };
 

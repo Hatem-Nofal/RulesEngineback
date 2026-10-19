@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RulesEngine.Entities.Lookups;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
@@ -79,6 +80,7 @@ public class RulesEngineDbContext :
     public DbSet<ProcedureGroup> ProcedureGroup { get; set; }
     public DbSet<DuplicateTherapyGroup> DuplicateTherapyGroups { get; set; }
     public DbSet<MorbidityGroup> MorbidityGroups { get; set; }
+    public DbSet<ActivitySubTypeDtg> ActivitySubTypeDtgs { get; set; }
 
     #endregion
 

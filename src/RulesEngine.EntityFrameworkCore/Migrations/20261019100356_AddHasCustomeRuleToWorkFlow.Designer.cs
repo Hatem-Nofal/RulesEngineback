@@ -13,8 +13,8 @@ using Volo.Abp.EntityFrameworkCore;
 namespace RulesEngine.Migrations
 {
     [DbContext(typeof(RulesEngineDbContext))]
-    [Migration("20261005114825_Initial")]
-    partial class Initial
+    [Migration("20261019100356_AddHasCustomeRuleToWorkFlow")]
+    partial class AddHasCustomeRuleToWorkFlow
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -22,10 +22,794 @@ namespace RulesEngine.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("_Abp_DatabaseProvider", EfCoreDatabaseProvider.SqlServer)
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("RulesEngine.Entities.Lookups.ActivitySubTypeDtg", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("ActivitySubTypeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("DuplicateTherapyGroupId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivitySubTypeId");
+
+                    b.HasIndex("DuplicateTherapyGroupId");
+
+                    b.ToTable("ActivitySubTypeDtgs", "Lookups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.Rule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Expression")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("SuccessEvent")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("WorkflowId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkflowId");
+
+                    b.ToTable("Rules");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleActivitySubType", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("ActivitySubTypeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool?>("IsSecondary")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivitySubTypeId");
+
+                    b.HasIndex("RuleId");
+
+                    b.ToTable("RuleActivitySubTypes");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleField", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OptionsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.ToTable("RuleFields", "RuleBuilders");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AllowNestedGroups")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("StrategyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("RuleFormConfigs", "RuleBuilders");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfigField", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AllowedOperatorsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<bool>("IsMultiple")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("RulefieldId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RuleformConfigId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RulefieldId");
+
+                    b.HasIndex("RuleformConfigId", "RulefieldId")
+                        .IsUnique();
+
+                    b.ToTable("RuleFormConfigFields", "RuleBuilders");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleNode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("FieldKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<int?>("LogicalJoinOperator")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("LogicalOperator")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NodeType")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Operator")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ValueJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("RuleId");
+
+                    b.ToTable("RuleNodes", "RuleBuilders");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleDiagnosis", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("DiagnosisId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool?>("IsSecondary")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DiagnosisId");
+
+                    b.HasIndex("RuleId");
+
+                    b.ToTable("RuleDiagnosis");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleSpecialities", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("SpecialitiesId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RuleId");
+
+                    b.HasIndex("SpecialitiesId");
+
+                    b.ToTable("RuleSpecialities");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.WorkFlow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<bool>("HasCustomeRule")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("RejectionLevel")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("RuleformconfigId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("RuleformconfigId");
+
+                    b.ToTable("Workflows");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.ActivitySubType", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid?>("AbpCreatedBy_Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Activity_id")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Create_timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("GenericDrugId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsCapitation")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPreAuthorization")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsProtocol")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("ItemSubCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("LastUpdatedBy_Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LastUpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Medium_Desc")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("OccurrenceCount")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("ProcedureGroupId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Short_Desc")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SystemCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("UhiaId")
+                        .HasMaxLength(9)
+                        .HasColumnType("nvarchar(9)");
+
+                    b.Property<DateTime>("Update_timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Valid_DateId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("iqvia_code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("iqvia_type")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AbpCreatedBy_Id");
+
+                    b.HasIndex("Activity_id");
+
+                    b.HasIndex("GenericDrugId");
+
+                    b.HasIndex("LastUpdatedBy_Id");
+
+                    b.HasIndex("ProcedureGroupId");
+
+                    b.ToTable("Activity_sub_types", "Lookups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.ActivityType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Create_timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("Update_timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Activity_types", "Lookups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.Diagnosis", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("Create_timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Medium_Desc")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Short_Desc")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Update_timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("iqvia_code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("iqvia_type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Diagnoses", "Lookups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.DuplicateTherapyGroup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DtGroupName")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DtgSystemCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DuplicateTherapyGroups", "Lookups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.GenericDrug", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("GenericCode")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("GenericName")
+                        .IsRequired()
+                        .HasMaxLength(1500)
+                        .HasColumnType("nvarchar(1500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("SystemCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatorId");
+
+                    b.HasIndex("LastModifierId");
+
+                    b.ToTable("GenericDrugs", "Lookups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.MorbidityGroup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MorbidityGroupName")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("MorbidityGroupSystemCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MorbidityGroups", "Lookups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.ProcedureGroup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ProcedureGroupName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProcedureGroupSystemCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ProcedureGroup", "Lookups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.Specialities", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Specialities", "Lookups");
+                });
 
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLog", b =>
                 {
@@ -1992,6 +2776,190 @@ namespace RulesEngine.Migrations
                     b.ToTable("AbpTenantConnectionStrings", (string)null);
                 });
 
+            modelBuilder.Entity("RulesEngine.Entities.Lookups.ActivitySubTypeDtg", b =>
+                {
+                    b.HasOne("RulesEngine.Lookups.ActivitySubType", "ActivitySubType")
+                        .WithMany("DuplicateTherapyGroups")
+                        .HasForeignKey("ActivitySubTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RulesEngine.Lookups.DuplicateTherapyGroup", "DuplicateTherapyGroup")
+                        .WithMany()
+                        .HasForeignKey("DuplicateTherapyGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ActivitySubType");
+
+                    b.Navigation("DuplicateTherapyGroup");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.Rule", b =>
+                {
+                    b.HasOne("RulesEngine.Entities.WorkFlows.WorkFlow", "Workflow")
+                        .WithMany("Rules")
+                        .HasForeignKey("WorkflowId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Workflow");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleActivitySubType", b =>
+                {
+                    b.HasOne("RulesEngine.Lookups.ActivitySubType", "Activity_Sub_Type")
+                        .WithMany()
+                        .HasForeignKey("ActivitySubTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.Rule", "Rule")
+                        .WithMany("RuleActivitySubTypes")
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Activity_Sub_Type");
+
+                    b.Navigation("Rule");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfigField", b =>
+                {
+                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleField", "Rulefield")
+                        .WithMany()
+                        .HasForeignKey("RulefieldId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", "RuleformConfig")
+                        .WithMany("RuleFormConfigFields")
+                        .HasForeignKey("RuleformConfigId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Rulefield");
+
+                    b.Navigation("RuleformConfig");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleNode", b =>
+                {
+                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleNode", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.Rule", "Rule")
+                        .WithMany("Nodes")
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Parent");
+
+                    b.Navigation("Rule");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleDiagnosis", b =>
+                {
+                    b.HasOne("RulesEngine.Lookups.Diagnosis", "Diagnosis")
+                        .WithMany()
+                        .HasForeignKey("DiagnosisId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.Rule", "Rule")
+                        .WithMany("RuleDiagnosis")
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Diagnosis");
+
+                    b.Navigation("Rule");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleSpecialities", b =>
+                {
+                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.Rule", "Rule")
+                        .WithMany("RuleSpecialities")
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RulesEngine.Lookups.Specialities", "Specialitiy")
+                        .WithMany()
+                        .HasForeignKey("SpecialitiesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Rule");
+
+                    b.Navigation("Specialitiy");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.WorkFlow", b =>
+                {
+                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", "Ruleformconfig")
+                        .WithMany()
+                        .HasForeignKey("RuleformconfigId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Ruleformconfig");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.ActivitySubType", b =>
+                {
+                    b.HasOne("Volo.Abp.Identity.IdentityUser", "Createdby")
+                        .WithMany()
+                        .HasForeignKey("AbpCreatedBy_Id");
+
+                    b.HasOne("RulesEngine.Lookups.ActivityType", "ActivityType")
+                        .WithMany()
+                        .HasForeignKey("Activity_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RulesEngine.Lookups.GenericDrug", "GenericDrug")
+                        .WithMany()
+                        .HasForeignKey("GenericDrugId");
+
+                    b.HasOne("Volo.Abp.Identity.IdentityUser", "LastUpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("LastUpdatedBy_Id");
+
+                    b.HasOne("RulesEngine.Lookups.ProcedureGroup", "ProcedureGroup")
+                        .WithMany()
+                        .HasForeignKey("ProcedureGroupId");
+
+                    b.Navigation("ActivityType");
+
+                    b.Navigation("Createdby");
+
+                    b.Navigation("GenericDrug");
+
+                    b.Navigation("LastUpdatedBy");
+
+                    b.Navigation("ProcedureGroup");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.GenericDrug", b =>
+                {
+                    b.HasOne("Volo.Abp.Identity.IdentityUser", "CreatorBy")
+                        .WithMany()
+                        .HasForeignKey("CreatorId");
+
+                    b.HasOne("Volo.Abp.Identity.IdentityUser", "LastModifiedBy")
+                        .WithMany()
+                        .HasForeignKey("LastModifierId");
+
+                    b.Navigation("CreatorBy");
+
+                    b.Navigation("LastModifiedBy");
+                });
+
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLogAction", b =>
                 {
                     b.HasOne("Volo.Abp.AuditLogging.AuditLog", null)
@@ -2197,6 +3165,32 @@ namespace RulesEngine.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.Rule", b =>
+                {
+                    b.Navigation("Nodes");
+
+                    b.Navigation("RuleActivitySubTypes");
+
+                    b.Navigation("RuleDiagnosis");
+
+                    b.Navigation("RuleSpecialities");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", b =>
+                {
+                    b.Navigation("RuleFormConfigFields");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.WorkFlow", b =>
+                {
+                    b.Navigation("Rules");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.ActivitySubType", b =>
+                {
+                    b.Navigation("DuplicateTherapyGroups");
                 });
 
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLog", b =>

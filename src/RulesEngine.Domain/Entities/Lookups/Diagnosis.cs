@@ -9,24 +9,25 @@ namespace RulesEngine.Lookups
     [Table("Diagnoses", Schema = "Lookups")]
     public class Diagnosis : Entity<long>
     {
-        public string IqviaCode { get; private set; }
-        public string ShortDesc { get; private set; }
-        public string MediumDesc { get; private set; }
-        public int Status { get; private set; }
+        public string iqvia_code { get; set; }
+        public string Short_Desc { get; set; }
+        public string Medium_Desc { get; set; }
+        public int Status { get; set; }
 
-        public string IqviaType { get; private set; }
+        public string iqvia_type { get; set; }
 
-        public DateTime Create_timestamp { get; private set; }
 
-        public DateTime Update_timestamp { get; private set; }
+        public DateTime Create_timestamp { get; set; }
+
+        public DateTime Update_timestamp { get; set; }
 
         private Diagnosis() { }
 
         public Diagnosis(long id, string iqviaCode, string shortDesc, int status)
         {
             Id = id;
-            IqviaCode = iqviaCode;
-            ShortDesc = shortDesc;
+            iqviaCode = iqviaCode;
+            Short_Desc = shortDesc;
             Status = status;
             Create_timestamp = DateTime.UtcNow;
             Update_timestamp = Create_timestamp;
@@ -34,8 +35,8 @@ namespace RulesEngine.Lookups
 
         public void UpdateDescription(string shortDesc, string mediumDesc)
         {
-            ShortDesc = shortDesc;
-            MediumDesc = mediumDesc;
+            Short_Desc = shortDesc;
+            Medium_Desc = mediumDesc;
             Update_timestamp = DateTime.UtcNow;
         }
     }

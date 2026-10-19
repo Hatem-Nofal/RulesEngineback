@@ -12,7 +12,9 @@ namespace RulesEngine.WorkFlows.Dtos
         public Guid? RuleFormConfigId { get; set; }
         public string? RuleFormConfigName { get; set; }
         public int RuleCount { get; set; }
-        public RejectionLevel RejectionLevel { get; private set; }
+        public RejectionLevel RejectionLevel { get;  set; }
+        public bool HasCustomeRule { get; set; } = false;
+        public string? RuleExpression { get;  set; }
 
     }
 }

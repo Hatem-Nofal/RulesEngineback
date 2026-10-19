@@ -8,8 +8,10 @@ namespace RulesEngine.WorkFlows.Dtos
     public class SaveWorkflowDto
     {
         public string Name { get; set; } = default!;
-        public Guid RuleFormConfigId { get; set; }
-        public RejectionLevel RejectionLevel { get; private set; }
+        public Guid? RuleFormConfigId { get; set; }
+        public RejectionLevel RejectionLevel { get;  set; }
+        public bool HasCustomeRule { get; set; } = false;
+        public string RuleExpression { get;  set; }
 
     }
 }

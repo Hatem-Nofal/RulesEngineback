@@ -87,16 +87,17 @@ namespace RulesEngine.WorkFlows.Rules
         {
             var rule = await _ruleRepository.GetAsync(id)
                        ?? throw new KeyNotFoundException("Rule not found.");
-            var ruleFormConfigFields = rule.Workflow.Ruleformconfig.RuleFormConfigFields.ToList();
-            var nodes = rule.Nodes.OrderBy(x => x.Order).ToList();
-
+          
+ 
             return new RuleDto
             {
                 Id = rule.Id,
                 Name = rule.Name,
                 WorkflowId = rule.WorkflowId,
                 IsActive = rule.IsActive,
-                Root = RuleTreeMapper.ToTree(nodes, ruleFormConfigFields)
+                Root = !rule.Workflow.HasCustomeRule? RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.Ruleformconfig.RuleFormConfigFields.ToList()):new RuleNodeDto(),
+                Expression=rule.Expression,
+                WorkflowHasCustomeRule= rule.Workflow.HasCustomeRule
             };
         }
 

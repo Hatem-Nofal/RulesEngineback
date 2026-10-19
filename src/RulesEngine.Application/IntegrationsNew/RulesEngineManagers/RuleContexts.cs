@@ -22,13 +22,15 @@ public abstract class RuleContextBase
     public int? BatchServiceMonth { get; init; }
     public int? BatchServiceYear { get; init; }
     public List<string> ClaimTags { get; init; } = new();
+    public string? Claimspeccode { get; set; }
+    public Dictionary<string, int> DtgCodeCounts { get; set; }
+
 }
 
 /// <summary>Context for workflows with RejectionLevel.Claim.</summary>
 public sealed class ClaimRuleContext : RuleContextBase
 {
-    public List<string> PrimaryActivity { get; init; } = new();
-    public Dictionary<string, int> ActivitiesQuantities { get; init; } = new();
+     public Dictionary<string, int> ActivitiesQuantities { get; init; } = new();
     public string? NationalId { get; init; }
     public int Age { get; init; }
     public string Gender { get; init; } = string.Empty;
@@ -44,12 +46,19 @@ public sealed class AllActivityRuleContext : RuleContextBase
     public int Age { get; init; }
     public string Gender { get; init; } = string.Empty;
     public List<ClaimActivityRequestDto> Activities { get; init; } = new();
+    public string? PrimaryGenericsGroup { get; init; }
+    public List<string> GenericsGroups { get; init; } = new();
+    public List<string> DiagnosisGroupCodes { get; init; } = new();
 }
 
 /// <summary>Context for workflows with RejectionLevel.Activity (Activities = just the current one).</summary>
 public sealed class ActivityRuleContext : RuleContextBase
 {
-    public List<string?> CurrentMedications { get; init; } = new();
+    public string? PrimaryActivity { get; init; }
+    public string? PrimaryGenericsGroup { get; init; }
+    public List<string> GenericsGroups { get; init; } = new();
+    public List<string> DiagnosisGroupCodes { get; init; } = new();
+
     public Dictionary<string, int> MedicationCounts { get; init; } = new();
     public string? NID { get; init; }
     public int PatientAge { get; init; }
@@ -57,6 +66,7 @@ public sealed class ActivityRuleContext : RuleContextBase
     public List<ClaimActivityRequestDto> Activities { get; init; } = new();
     public decimal? ActivityQuantity { get; init; }
     public Dictionary<string, decimal> MedicationQuantities { get; init; } = new();
+
 }
 
 public static class RuleContextTypes
