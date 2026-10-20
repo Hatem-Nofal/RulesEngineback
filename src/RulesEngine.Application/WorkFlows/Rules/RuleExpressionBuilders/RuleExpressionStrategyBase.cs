@@ -53,56 +53,7 @@ public sealed class RuleExpressionStrategyBase : IRuleExpressionStrategy
     
     }
 
-    //public  async System.Threading.Tasks.Task<string> RenderCondition(RuleNodeDto node)
-    //{
-    //    var fields = await _maps.GetAsync();
-    //    if (node.FieldKey is null || !fields.TryGetValue(node.FieldKey, out var field))
-    //        throw new RuleValidationException(
-    //            $"Field '{node.FieldKey}' is not supported by the '{Key}' expression strategy.");
-    //    if (node.Operator is null)
-    //        throw new RuleValidationException($"Missing operator for '{node.FieldKey}'.");
-    //    if (!node.Value.HasValue)
-    //        throw new RuleValidationException($"Missing value for '{node.FieldKey}'.");
-
-    //    var op = node.Operator.Value;
-    //    var value = node.Value.Value;
-
-    //    return field.Kind switch
-    //    {
-    //        FieldKind.List when node.IsMultiple => RenderMultipleSelect(field, op, value),
-    //        FieldKind.List => RenderCollection(field, op, value),
-    //        FieldKind.Number => RenderNumber(field, op, value),
-    //        FieldKind.Text => RenderText(field, op, value),
-    //        FieldKind.Decimal => RenderDecimal(field, op, value),
-    //        FieldKind.DateTime => RenderDateTime(field, op, value),
-    //        _ => throw new RuleValidationException($"Unsupported field kind for '{node.FieldKey}'.")
-    //    };
-    //}
-
-    /// <summary>
-    /// Rules:
-    ///  - every nested group is wrapped in ( ... ), even with a single condition;
-    ///  - when a group has BOTH direct conditions and nested groups, its conditions form one ( ... ) block
-    ///    that comes first, then each nested group, all joined with the group's own &amp;&amp; / ||;
-    ///  - the root group is not wrapped here (Finalize wraps it).
-    /// Regrouping conditions that share the group's operator never changes the logical result.
-    /// </summary>
-    //public  string RenderGroup(RuleNodeDto group, IReadOnlyList<string> leaves,
-    //    IReadOnlyList<string> subGroups, bool isRoot)
-    //{
-    //    var glue = group.LogicalOperator == LogicalOperator.Or ? " || " : " && ";
-
-    //    var parts = new List<string>();
-    //    if (leaves.Count > 0)
-    //    {
-    //        var block = string.Join(glue, leaves);
-    //        parts.Add(subGroups.Count > 0 ? $"({block})" : block);
-    //    }
-    //    parts.AddRange(subGroups);
-
-    //    var joined = string.Join(glue, parts);
-    //    return isRoot ? joined : $"({joined})";
-    //}
+   
     public  string RenderGroup(RuleNodeDto group, IReadOnlyList<RenderedItem> items, bool isRoot)
     {
         var runs = new List<List<string>>();

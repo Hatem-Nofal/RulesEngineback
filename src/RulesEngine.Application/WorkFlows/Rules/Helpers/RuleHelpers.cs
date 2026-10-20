@@ -2,6 +2,7 @@ using RulesEngine.Common.Consts;
 using RulesEngine.Common.Enums;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
+using RulesEngine.Lookups;
 using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
 using RulesEngine.WorkFlows.Dtos.RulesDtos;
 using System;
@@ -9,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Volo.Abp.Domain.Repositories;
 
 namespace RulesEngine.WorkFlows.Rules.Helpers
 {
@@ -23,39 +25,83 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
     public static class RuleTreeMapper
     {
 
-        public static RuleNodeDto ToTree(List<RuleNode> flat, List<RuleFormConfigField> ruleFormConfigFields)
+        public static async Task<RuleNodeDto> ToTree(
+    List<RuleNode> flat,
+    List<RuleFormConfigField> ruleFormConfigFields,
+    IRepository<ActivitySubType> activitySubTypeRepository)
         {
             if (flat.Count == 0)
-                return new RuleNodeDto { NodeType = RuleNodeType.Group, LogicalOperator = LogicalOperator.And };
+            {
+                return new RuleNodeDto
+                {
+                    NodeType = RuleNodeType.Group,
+                    LogicalOperator = LogicalOperator.And
+                };
+            }
 
             var byParent = flat.ToLookup(x => x.ParentId);
 
-            RuleNodeDto Build(RuleNode n, LogicalOperator? parentGroupOp, bool isFirst)
+            async Task<RuleNodeDto> Build(
+                RuleNode n,
+                LogicalOperator? parentGroupOp,
+                bool isFirst)
             {
                 JsonElement? value = null;
+
                 if (n.ValueJson is not null)
+                {
                     value = JsonSerializer.Deserialize<JsonElement>(n.ValueJson);
+                }
 
                 var groupOp = n.LogicalOperator ?? LogicalOperator.And;
-                var children = byParent[n.Id].OrderBy(c => c.Order).ToList();
-                bool isMultiple = ruleFormConfigFields.FirstOrDefault(x => x.Rulefield.Key == n.FieldKey)?.IsMultiple ?? false;
+
+                var children = byParent[n.Id]
+                    .OrderBy(c => c.Order)
+                    .ToList();
+
+                bool isMultiple = ruleFormConfigFields
+                    .FirstOrDefault(x => x.Rulefield.Key == n.FieldKey)?
+                    .IsMultiple ?? false;
+
+                var activitycodes = value.HasValue
+                    ? Strings(value.Value)
+                    : new List<string>();
+
+                var typeId = activitycodes.Count > 0
+                    ? await activitySubTypeRepository.FirstOrDefaultAsync(
+                        x => activitycodes.Contains(x.iqvia_code))
+                    : null;
+
+                var childDtos = new List<RuleNodeDto>();
+
+                for (int i = 0; i < children.Count; i++)
+                {
+                    childDtos.Add(
+                        await Build(children[i], groupOp, i == 0));
+                }
+
                 return new RuleNodeDto
                 {
                     Id = n.Id,
                     NodeType = n.NodeType,
                     LogicalOperator = n.LogicalOperator,
-                    // Rules saved before per-item connectors used ONE operator per group: every child joins with it.
-                    LogicalJoinOperator = isFirst ? (LogicalOperator?)null : n.LogicalJoinOperator ?? parentGroupOp ?? LogicalOperator.And,
+
+                    LogicalJoinOperator = isFirst
+                        ? (LogicalOperator?)null
+                        : n.LogicalJoinOperator
+                            ?? parentGroupOp
+                            ?? LogicalOperator.And,
+
                     FieldKey = n.FieldKey,
                     Operator = n.Operator,
                     Value = value,
-                    Children = children.Select((c, i) => Build(c, groupOp, i == 0)).ToList(),
-                    IsMultiple = isMultiple
-
+                    Children = childDtos,
+                    IsMultiple = isMultiple,
+                    ActivityTypeId = typeId?.ActivityType_id
                 };
             }
 
-            return Build(byParent[null].Single(), null, true);
+            return await Build(byParent[null].Single(), null, true);
         }
 
 
@@ -88,6 +134,14 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
                 for (var i = 0; i < dto.Children.Count; i++)
                     Flatten(dto.Children[i], ruleId, node.Id, i, output);
         }
+        public static List<string> Strings(JsonElement v)
+        {
+            var items = v.ValueKind == JsonValueKind.Array ? v.EnumerateArray().ToList() : new List<JsonElement> { v };
+            if (items.Count == 0 || items.Any(i => i.ValueKind != JsonValueKind.String))
+                throw new RuleValidationException("Expected one or more text values.");
+            return items.Select(i => i.GetString()!).ToList();
+        }
+
     }
 
     public static class RuleTreeValidator
@@ -115,49 +169,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
             Walk(root, allowed, config.AllowNestedGroups, isRoot: true);
         }
 
-        //private static void Walk(RuleNodeDto n, Dictionary<string, RuleFormFieldDto> allowed, bool allowNested, bool isRoot)
-        //{
-        //    if (n.NodeType == RuleNodeType.Group)
-        //    {
-        //        if (n.LogicalOperator is null)
-        //            throw new RuleValidationException("Each group needs AND / OR.");
-        //        if (n.Children.Count == 0)
-        //            throw new RuleValidationException("A group cannot be empty.");
-        //        if (!allowNested && !isRoot)
-        //            throw new RuleValidationException("Nested groups are not allowed for this workflow.");
 
-        //        foreach (var c in n.Children) Walk(c, allowed, allowNested, isRoot: false);
-        //        return;
-        //    }
-
-        //    if (n.FieldKey is null || !allowed.TryGetValue(n.FieldKey, out var field))
-        //        throw new RuleValidationException($"Field '{n.FieldKey}' is not allowed for this workflow.");
-
-        //    if (n.Operator is null)
-        //        throw new RuleValidationException($"Choose an operator for '{field.Label}'.");
-
-        //    RuleOperator[] ops;
-        //    if (field.AllowedOperators is { Count: > 0 })
-        //        ops = field.AllowedOperators.Select(x => (RuleOperator)x).ToArray();
-        //    else
-        //        ops = DefaultOperators.TryGetValue(field.DataType, out var d) ? d : Array.Empty<RuleOperator>();
-
-        //    if (!ops.Contains(n.Operator.Value))
-        //        throw new RuleValidationException($"Operator not allowed for '{field.Label}'.");
-
-        //    if (!n.Value.HasValue
-        //        || n.Value.Value.ValueKind == JsonValueKind.Null
-        //        || n.Value.Value.ValueKind == JsonValueKind.Undefined)
-        //        throw new RuleValidationException($"Enter a value for '{field.Label}'.");
-
-        //    var value = n.Value.Value;
-        //    var isList = n.Operator == RuleOperator.Contains || n.Operator == RuleOperator.NotContains;
-
-        //    if (isList && (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() == 0))
-        //        throw new RuleValidationException($"Select at least one value for '{field.Label}'.");
-        //    if (!isList && value.ValueKind == JsonValueKind.Array)
-        //        throw new RuleValidationException($"'{field.Label}' expects a single value.");
-        //}
 
         private static void Walk(RuleNodeDto n, Dictionary<string, RuleFormFieldDto> allowed, bool allowNested, bool isRoot)
         {

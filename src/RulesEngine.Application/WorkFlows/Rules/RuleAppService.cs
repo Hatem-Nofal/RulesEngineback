@@ -4,6 +4,7 @@ using RulesEngine.Common.Extensions;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.IntegrationsNew.RulesEngineManagers;
+using RulesEngine.Lookups;
 using RulesEngine.Repositories.WorkFlows;
 using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
 using RulesEngine.WorkFlows.Dtos.RulesDtos;
@@ -26,12 +27,12 @@ namespace RulesEngine.WorkFlows.Rules
     public class RuleAppService : CrudAppService<Rule, RuleDto, RuleListItemDto, Guid, PagedAndSortedResultRequestDto, CreateRuleDto, CreateRuleDto>, IRuleAppService
     {
         private readonly IRepository<RuleNode, Guid> _ruleNodeRepository;
-        private readonly IRepository<RuleFormConfigField, Guid> _ruleFormConfigFieldRepository;
         private readonly IWorkFlowRepository _workflowRepository;
-        private readonly IRepository<RuleFormConfig, Guid> _formConfigRepository;
         private readonly IRepository<RuleField, Guid> _ruleFieldRepository;
         private readonly IRuleExpressionBuilder _expressionsBuilder;
         private readonly IRuleRepository _ruleRepository;
+        private readonly IRepository<ActivitySubType> _activitySubTypeRepository;
+
 
         private IRulesEngineManager EngineManager => LazyServiceProvider.LazyGetRequiredService<IRulesEngineManager>();
 
@@ -39,19 +40,17 @@ namespace RulesEngine.WorkFlows.Rules
             IRepository<Rule, Guid> repository,
             IRepository<RuleNode, Guid> ruleNodeRepository,
            IWorkFlowRepository workflowRepository,
-            IRepository<RuleFormConfig, Guid> formConfigRepository,
              IRuleExpressionBuilder expressionsBuilder,
-            IRepository<RuleFormConfigField, Guid> ruleFormConfigFieldRepository,
             IRuleRepository ruleRepository,
-            IRepository<RuleField, Guid> ruleFieldRepository) : base(repository)
+            IRepository<RuleField, Guid> ruleFieldRepository,
+            IRepository<ActivitySubType> activitySubTypeRepository) : base(repository)
         {
             _ruleNodeRepository = ruleNodeRepository;
             _workflowRepository = workflowRepository;
-            _formConfigRepository = formConfigRepository;
             _expressionsBuilder = expressionsBuilder;
-            _ruleFormConfigFieldRepository = ruleFormConfigFieldRepository;
             _ruleRepository = ruleRepository;
             _ruleFieldRepository = ruleFieldRepository;
+            _activitySubTypeRepository = activitySubTypeRepository;
         }
 
         public override async Task<PagedResultDto<RuleListItemDto>> GetListAsync(PagedAndSortedResultRequestDto input)
@@ -95,7 +94,7 @@ namespace RulesEngine.WorkFlows.Rules
                 Name = rule.Name,
                 WorkflowId = rule.WorkflowId,
                 IsActive = rule.IsActive,
-                Root = !rule.Workflow.HasCustomeRule? RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.Ruleformconfig.RuleFormConfigFields.ToList()):new RuleNodeDto(),
+                Root = !rule.Workflow.HasCustomeRule? await RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.Ruleformconfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) :new RuleNodeDto(),
                 Expression=rule.Expression,
                 WorkflowHasCustomeRule= rule.Workflow.HasCustomeRule
             };
