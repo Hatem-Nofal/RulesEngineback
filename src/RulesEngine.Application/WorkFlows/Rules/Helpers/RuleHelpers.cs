@@ -22,6 +22,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
     public static class RuleTreeMapper
     {
+
         public static RuleNodeDto ToTree(List<RuleNode> flat, List<RuleFormConfigField> ruleFormConfigFields)
         {
             if (flat.Count == 0)

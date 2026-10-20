@@ -6,7 +6,7 @@ namespace EhealthClaims.Lookups
 {
     public interface ILookupAppService
     {
-        Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownList(int? activityTypeId);
+        Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownList(int? activityType);
         Task<List<SelectedDropDownList>> GetActivityTypeDropDownList();
         Task<List<SelectedDropDownList>> GetDiagnosisDropDownList();
         Task<List<SelectedDropDownList>> GetSpecialitiesIdDropDownList();

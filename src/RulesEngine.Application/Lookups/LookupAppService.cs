@@ -56,9 +56,10 @@ namespace EhealthClaims.Lookups
         public async Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownList(int? activityTypeId)
         {
             var queryable = await _activitySubTypeRepository.GetQueryableAsync();
-            var query = queryable.Select(x => new SelectedDropDownList(x.Id, x.iqvia_code, x.Short_Desc, false));
+            var query = queryable.WhereIf(activityTypeId.HasValue,x=>x.ActivityType_id==activityTypeId).Select(x => new SelectedDropDownList(x.Id, x.iqvia_code, x.Short_Desc, false));
             return await AsyncExecuter.ToListAsync(query);
         }
+
 
         public async Task<List<SelectedDropDownList>> GetActivityTypeDropDownList()
         {

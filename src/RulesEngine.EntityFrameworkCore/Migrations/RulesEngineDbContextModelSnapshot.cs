@@ -502,7 +502,7 @@ namespace RulesEngine.Migrations
                     b.Property<Guid?>("AbpCreatedBy_Id")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("Activity_id")
+                    b.Property<int>("ActivityType_id")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("Create_timestamp")
@@ -575,7 +575,7 @@ namespace RulesEngine.Migrations
 
                     b.HasIndex("AbpCreatedBy_Id");
 
-                    b.HasIndex("Activity_id");
+                    b.HasIndex("ActivityType_id");
 
                     b.HasIndex("GenericDrugId");
 
@@ -2915,7 +2915,7 @@ namespace RulesEngine.Migrations
 
                     b.HasOne("RulesEngine.Lookups.ActivityType", "ActivityType")
                         .WithMany()
-                        .HasForeignKey("Activity_id")
+                        .HasForeignKey("ActivityType_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

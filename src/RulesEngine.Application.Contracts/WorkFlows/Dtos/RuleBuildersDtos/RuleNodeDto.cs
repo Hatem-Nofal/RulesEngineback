@@ -16,7 +16,7 @@ namespace RulesEngine.WorkFlows.Dtos.RuleBuildersDtos
         public RuleOperator? Operator { get; set; }
         public JsonElement? Value { get; set; }
         public bool IsMultiple { get; set; }
-
+        public int? Type { get; set; }
         public List<RuleNodeDto> Children { get; set; } = new();
     }
 }
