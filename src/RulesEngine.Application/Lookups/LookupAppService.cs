@@ -1,4 +1,5 @@
 ﻿using RulesEngine.Common.Dtos;
+using RulesEngine.Entities.Lookups;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Lookups;
 using System;
@@ -32,6 +33,7 @@ namespace EhealthClaims.Lookups
         private readonly IRepository<GenericDrug> _genericDrugsRepository;
         private readonly IRepository<DuplicateTherapyGroup, int> _duplicateTherapyGroupRepository;
         private readonly IRepository<MorbidityGroup, int> _morbidityGroupRepository;
+        private readonly IRepository<BatchType, int> _batchTypeRepository;
 
         public LookupAppService(
             IRepository<ActivityType> activityTypeRepository,
@@ -41,7 +43,8 @@ namespace EhealthClaims.Lookups
             IRepository<WorkFlow> workFlowsRepository,
             IRepository<GenericDrug> genericDrugsRepository,
             IRepository<DuplicateTherapyGroup, int> duplicateTherapyGroupRepository,
-            IRepository<MorbidityGroup, int> morbidityGroupRepository)
+            IRepository<MorbidityGroup, int> morbidityGroupRepository,
+            IRepository<BatchType, int> batchTypeRepository)
         {
             _activityTypeRepository = activityTypeRepository;
             _activitySubTypeRepository = activitySubTypeRepository;
@@ -51,6 +54,7 @@ namespace EhealthClaims.Lookups
             _genericDrugsRepository = genericDrugsRepository;
             _duplicateTherapyGroupRepository = duplicateTherapyGroupRepository;
             _morbidityGroupRepository = morbidityGroupRepository;
+            _batchTypeRepository = batchTypeRepository;
         }
 
         public async Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownList(int? activityTypeId)
@@ -83,9 +87,9 @@ namespace EhealthClaims.Lookups
         {
             var queryable = await _specialitiesRepository.GetQueryableAsync();
             var rows = await AsyncExecuter.ToListAsync(
-                queryable.Select(x => new { x.Id, x.Description, x.Code }));
+                queryable.Select(x => new { x.Id, x.SpecialityDescription, x.SpecialityCode }));
 
-            return rows.Select(x => new SelectedDropDownList(x.Id, x.Description, x.Code, false)).ToList();
+            return rows.Select(x => new SelectedDropDownList(x.Id, x.SpecialityDescription, x.SpecialityCode, false)).ToList();
         }
 
         public async Task<List<SelectedDropDownListByGuid>> GetWorkflowsDropDownList()
@@ -131,6 +135,15 @@ namespace EhealthClaims.Lookups
                 queryable.Select(x => new { x.Id, x.MorbidityGroupName, x.MorbidityGroupSystemCode }));
 
             return rows.Select(x => new SelectedDropDownList(x.Id, x.MorbidityGroupName, x.MorbidityGroupSystemCode, false)).ToList();
+        }
+
+        public async Task<List<SelectedDropDownList>> GetBatchTypesDropDownList()
+        {
+            var queryable = await _batchTypeRepository.GetQueryableAsync();
+            var rows = await AsyncExecuter.ToListAsync(
+                queryable.Select(x => new { x.Id, x.Name, x.Code }));
+
+            return rows.Select(x => new SelectedDropDownList(x.Id, x.Name, x.Code, false)).ToList();
         }
 
         private sealed record ActivitySubTypeRow(long Id, int ActivityTypeId, string IqviaCode, string ShortDesc);

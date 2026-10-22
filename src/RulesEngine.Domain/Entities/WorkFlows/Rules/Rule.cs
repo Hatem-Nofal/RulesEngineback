@@ -1,7 +1,9 @@
-﻿using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
+﻿using RulesEngine.Common.Enums;
+using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Threading.Tasks;
 using Volo.Abp.Domain.Entities.Auditing;
 
 namespace RulesEngine.Entities.WorkFlows.Rules
@@ -11,14 +13,14 @@ namespace RulesEngine.Entities.WorkFlows.Rules
     {
         public string Name { get; private set; }
 
-        public Guid WorkflowId { get; private  set; }
+        public Guid WorkflowId { get; private set; }
 
         [ForeignKey(nameof(WorkflowId))]
 
         public WorkFlow Workflow { get; private set; }
 
-        public string? SuccessEvent { get; set; }=string.Empty;
-        public string? ErrorMessage { get; set; } = string.Empty;
+        public ViolationType ViolationType { get; set; } = ViolationType.Error;
+        public string? ViolationMessage { get; set; } = string.Empty;
         public bool IsActive { get; private set; } = true;
         public string Expression { get; private set; }
 
@@ -28,31 +30,38 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         [NotMapped]
         public IReadOnlyCollection<RuleNode> _Nodes => Nodes.AsReadOnly();
 
-        public  ICollection<RuleDiagnosis> RuleDiagnosis { get; private set; } = new List<RuleDiagnosis>();
-        public  ICollection<RuleActivitySubType> RuleActivitySubTypes { get; private set; } = new List<RuleActivitySubType>();
-        public  ICollection<RuleSpecialities> RuleSpecialities { get; private set; } = new List<RuleSpecialities>();
+        public ICollection<RuleDiagnosis> RuleDiagnosis { get; private set; } = new List<RuleDiagnosis>();
+        public ICollection<RuleActivitySubType> RuleActivitySubTypes { get; private set; } = new List<RuleActivitySubType>();
+        public ICollection<RuleSpecialities> RuleSpecialities { get; private set; } = new List<RuleSpecialities>();
 
         public Rule()
         {
-            
+
         }
-        public Rule(Guid id, string name, Guid workflowId, string expression)
+        public Rule(Guid id, Guid workflowId, string expression)
         {
             Id = id;
-            Name = name ?? throw new ArgumentNullException(nameof(name));
             WorkflowId = workflowId;
             Expression = expression;
         }
-        public  void Update(string name, Guid workflowId, string expression)
+        public static Rule CreateRuleForCustomeWorkflow( Guid id, string name, Guid workflowId, string expression)
         {
-            Name = name ?? throw new ArgumentNullException(nameof(name));
+            var rule = new Rule();
+            rule.Id = id;
+            rule.WorkflowId = workflowId;
+            rule.Expression = expression;
+            rule.Name = name;
+            return rule;
+        }
+        public void Update(Guid workflowId, string expression)
+        {
             WorkflowId = workflowId;
             Expression = expression;
 
         }
-        public  void UpdateExpression( string expression)
+        public void UpdateExpression(string expression)
         {
-    
+
             Expression = expression;
 
         }
@@ -64,7 +73,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         }
         public void AddNodes(List<RuleNode> nodes)
         {
-             Nodes.AddRange(nodes);
+            Nodes.AddRange(nodes);
         }
 
         public void RemoveNode(RuleNode node)
@@ -97,6 +106,12 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         {
             if (speciality == null) throw new ArgumentNullException(nameof(speciality));
             RuleSpecialities.Add(speciality);
+        }
+
+        public void GenerateUniqueNameAsync(int count,string workflowName)
+        {
+
+            Name= $"{workflowName}-Rule-{count + 1}";
         }
     }
 }

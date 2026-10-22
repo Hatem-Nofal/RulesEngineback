@@ -13,7 +13,7 @@ using Volo.Abp.EntityFrameworkCore;
 namespace RulesEngine.Migrations
 {
     [DbContext(typeof(RulesEngineDbContext))]
-    [Migration("20261019090555_Init")]
+    [Migration("20261021105618_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -48,6 +48,50 @@ namespace RulesEngine.Migrations
                     b.HasIndex("DuplicateTherapyGroupId");
 
                     b.ToTable("ActivitySubTypeDtgs", "Lookups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.Lookups.DiagnosisMorbidityGroup", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("DiagnosisId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("MorbidityGroupId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DiagnosisId");
+
+                    b.HasIndex("MorbidityGroupId");
+
+                    b.ToTable("DiagnosisMorbidityGroups", "Lookups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.Lookups.PrescriptionDuration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DiagnosisGroup")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("DurationDays")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PrescriptionDurations", "Lookups");
                 });
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.Rule", b =>
@@ -449,6 +493,9 @@ namespace RulesEngine.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("ExtraProperties");
 
+                    b.Property<bool>("HasCustomeRule")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -478,7 +525,7 @@ namespace RulesEngine.Migrations
                     b.Property<int>("RejectionLevel")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("RuleformconfigId")
+                    b.Property<Guid?>("RuleformconfigId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -502,7 +549,7 @@ namespace RulesEngine.Migrations
                     b.Property<Guid?>("AbpCreatedBy_Id")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("Activity_id")
+                    b.Property<int>("ActivityType_id")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("Create_timestamp")
@@ -575,7 +622,7 @@ namespace RulesEngine.Migrations
 
                     b.HasIndex("AbpCreatedBy_Id");
 
-                    b.HasIndex("Activity_id");
+                    b.HasIndex("ActivityType_id");
 
                     b.HasIndex("GenericDrugId");
 
@@ -624,9 +671,21 @@ namespace RulesEngine.Migrations
                     b.Property<DateTime>("Create_timestamp")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("DiagnosisFlag")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsUncovered")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Medium_Desc")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("PrescriptionDurationId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Short_Desc")
                         .IsRequired()
@@ -647,6 +706,8 @@ namespace RulesEngine.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PrescriptionDurationId");
 
                     b.ToTable("Diagnoses", "Lookups");
                 });
@@ -2792,6 +2853,25 @@ namespace RulesEngine.Migrations
                     b.Navigation("DuplicateTherapyGroup");
                 });
 
+            modelBuilder.Entity("RulesEngine.Entities.Lookups.DiagnosisMorbidityGroup", b =>
+                {
+                    b.HasOne("RulesEngine.Lookups.Diagnosis", "Diagnosis")
+                        .WithMany("DiagnosisMorbidityGroups")
+                        .HasForeignKey("DiagnosisId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RulesEngine.Lookups.MorbidityGroup", "MorbidityGroup")
+                        .WithMany()
+                        .HasForeignKey("MorbidityGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Diagnosis");
+
+                    b.Navigation("MorbidityGroup");
+                });
+
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.Rule", b =>
                 {
                     b.HasOne("RulesEngine.Entities.WorkFlows.WorkFlow", "Workflow")
@@ -2902,8 +2982,7 @@ namespace RulesEngine.Migrations
                     b.HasOne("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", "Ruleformconfig")
                         .WithMany()
                         .HasForeignKey("RuleformconfigId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Ruleformconfig");
                 });
@@ -2916,7 +2995,7 @@ namespace RulesEngine.Migrations
 
                     b.HasOne("RulesEngine.Lookups.ActivityType", "ActivityType")
                         .WithMany()
-                        .HasForeignKey("Activity_id")
+                        .HasForeignKey("ActivityType_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -2941,6 +3020,15 @@ namespace RulesEngine.Migrations
                     b.Navigation("LastUpdatedBy");
 
                     b.Navigation("ProcedureGroup");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.Diagnosis", b =>
+                {
+                    b.HasOne("RulesEngine.Entities.Lookups.PrescriptionDuration", "PrescriptionDuration")
+                        .WithMany("Diagnoses")
+                        .HasForeignKey("PrescriptionDurationId");
+
+                    b.Navigation("PrescriptionDuration");
                 });
 
             modelBuilder.Entity("RulesEngine.Lookups.GenericDrug", b =>
@@ -3165,6 +3253,11 @@ namespace RulesEngine.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("RulesEngine.Entities.Lookups.PrescriptionDuration", b =>
+                {
+                    b.Navigation("Diagnoses");
+                });
+
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.Rule", b =>
                 {
                     b.Navigation("Nodes");
@@ -3189,6 +3282,11 @@ namespace RulesEngine.Migrations
             modelBuilder.Entity("RulesEngine.Lookups.ActivitySubType", b =>
                 {
                     b.Navigation("DuplicateTherapyGroups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Lookups.Diagnosis", b =>
+                {
+                    b.Navigation("DiagnosisMorbidityGroups");
                 });
 
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLog", b =>

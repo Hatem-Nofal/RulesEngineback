@@ -1,4 +1,6 @@
-﻿using System;
+﻿using RulesEngine.Common.Enums;
+using RulesEngine.Entities.Lookups;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
@@ -20,6 +22,17 @@ namespace RulesEngine.Lookups
         public DateTime Create_timestamp { get; set; }
 
         public DateTime Update_timestamp { get; set; }
+
+   
+        public bool IsUncovered { get; set; } = false; 
+        public DiagnosisFlag? DiagnosisFlag { get; set; }
+        public int? PrescriptionDurationId { get; set; }
+        [ForeignKey(nameof(PrescriptionDurationId))] public PrescriptionDuration? PrescriptionDuration { get; set; }
+        public bool IsActive { get; set; } = false; public List<DiagnosisMorbidityGroup> DiagnosisMorbidityGroups { get; set; } = new();
+
+
+
+
 
         private Diagnosis() { }
 

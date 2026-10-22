@@ -52,7 +52,7 @@ namespace RulesEngine.Data.Seeders
                 new RuleField("EnteredGross", "Entered Gross", DataTypes.Decimal),
                 new RuleField("ClaimStartDate", "Claim Start Date", DataTypes.DateTime),
                 new RuleField("ClaimEndDate", "Claim End Date", DataTypes.DateTime),
-                new RuleField("BatchType", "Batch Type", DataTypes.Enum, JsonSerializer.Serialize(new[] { "outpatient", "inpatient", "ER","prostheticDevices","CommercialPharmacy"})),
+                new RuleField("BatchType", "Batch Type", DataTypes.List),
                 new RuleField("BatchServiceMonth", "Batch Service Month", DataTypes.Number),
                 new RuleField("BatchServiceYear", "Batch Service Year", DataTypes.Number),
                 new RuleField("ClaimTags", "Claim Tags", DataTypes.List),

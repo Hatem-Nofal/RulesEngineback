@@ -65,7 +65,7 @@ namespace RulesEngine.WorkFlows
                 if (string.IsNullOrEmpty( input.RuleExpression))
                     throw new RuleValidationException($"If WorkFlow HasCustomeRule , RuleExpression is require !");
 
-                workflow.AddRule(new Rule(Guid.CreateVersion7(),"Rule-"+ workflow.Name+"-1", workflow.Id, input.RuleExpression));
+                workflow.AddRule( Rule.CreateRuleForCustomeWorkflow(Guid.CreateVersion7(),"Rule-"+ workflow.Name+"-1", workflow.Id, input.RuleExpression));
              }
             await _workFlowRepository.InsertAsync(workflow);
 
@@ -88,7 +88,7 @@ namespace RulesEngine.WorkFlows
                 }
                 else
                 {
-                    workflow.AddRule(new Rule(Guid.CreateVersion7(), "Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression));
+                    workflow.AddRule(Rule.CreateRuleForCustomeWorkflow(Guid.CreateVersion7(), "Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression));
 
                 }
             }

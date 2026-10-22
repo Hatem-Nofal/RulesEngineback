@@ -12,16 +12,19 @@ namespace RulesEngine.Lookups
     public class Specialities : Entity<int>
     {
 
-        public string Description { get; private set; }
-        public string? Code { get; private set; }
+        public string SpecialityCode { get; set; }
+        public string? SpecialityDisplay { get; set; }
+        public string? SpecialityDescription { get; set; }
+        public string? Group { get; set; }
 
         private Specialities() {}
 
-        public Specialities(int id, string description, string code)
+        public Specialities(int id, string description, string code, string? group)
         {
             Id = id;
-            Description = description;
-            Code = code;
+            SpecialityDescription = description;
+            SpecialityCode = code;
+            Group = group;
         }
     }
 }

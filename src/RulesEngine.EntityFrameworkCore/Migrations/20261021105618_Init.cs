@@ -491,26 +491,6 @@ namespace RulesEngine.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Diagnoses",
-                schema: "Lookups",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    iqvia_code = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Short_Desc = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Medium_Desc = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    iqvia_type = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Create_timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Update_timestamp = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Diagnoses", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "DuplicateTherapyGroups",
                 schema: "Lookups",
                 columns: table => new
@@ -603,6 +583,21 @@ namespace RulesEngine.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_OpenIddictScopes", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PrescriptionDurations",
+                schema: "Lookups",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DiagnosisGroup = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    DurationDays = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PrescriptionDurations", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -1031,6 +1026,36 @@ namespace RulesEngine.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Diagnoses",
+                schema: "Lookups",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    iqvia_code = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Short_Desc = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Medium_Desc = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    iqvia_type = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Create_timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Update_timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsUncovered = table.Column<bool>(type: "bit", nullable: false),
+                    DiagnosisFlag = table.Column<int>(type: "int", nullable: true),
+                    PrescriptionDurationId = table.Column<int>(type: "int", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Diagnoses", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Diagnoses_PrescriptionDurations_PrescriptionDurationId",
+                        column: x => x.PrescriptionDurationId,
+                        principalSchema: "Lookups",
+                        principalTable: "PrescriptionDurations",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RuleFormConfigFields",
                 schema: "RuleBuilders",
                 columns: table => new
@@ -1077,8 +1102,9 @@ namespace RulesEngine.Migrations
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     NormalizedName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RejectionLevel = table.Column<int>(type: "int", nullable: false),
-                    RuleformconfigId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RuleformconfigId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    HasCustomeRule = table.Column<bool>(type: "bit", nullable: false),
                     ExtraProperties = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ConcurrencyStamp = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1134,7 +1160,7 @@ namespace RulesEngine.Migrations
                     iqvia_code = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Short_Desc = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Medium_Desc = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Activity_id = table.Column<int>(type: "int", nullable: false),
+                    ActivityType_id = table.Column<int>(type: "int", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     OccurrenceCount = table.Column<int>(type: "int", nullable: false),
                     iqvia_type = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -1169,8 +1195,8 @@ namespace RulesEngine.Migrations
                         principalTable: "AbpUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_Activity_sub_types_Activity_types_Activity_id",
-                        column: x => x.Activity_id,
+                        name: "FK_Activity_sub_types_Activity_types_ActivityType_id",
+                        column: x => x.ActivityType_id,
                         principalSchema: "Lookups",
                         principalTable: "Activity_types",
                         principalColumn: "Id",
@@ -1221,6 +1247,35 @@ namespace RulesEngine.Migrations
                         column: x => x.AuthorizationId,
                         principalTable: "OpenIddictAuthorizations",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DiagnosisMorbidityGroups",
+                schema: "Lookups",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DiagnosisId = table.Column<long>(type: "bigint", nullable: false),
+                    MorbidityGroupId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DiagnosisMorbidityGroups", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DiagnosisMorbidityGroups_Diagnoses_DiagnosisId",
+                        column: x => x.DiagnosisId,
+                        principalSchema: "Lookups",
+                        principalTable: "Diagnoses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_DiagnosisMorbidityGroups_MorbidityGroups_MorbidityGroupId",
+                        column: x => x.MorbidityGroupId,
+                        principalSchema: "Lookups",
+                        principalTable: "MorbidityGroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1659,10 +1714,10 @@ namespace RulesEngine.Migrations
                 column: "AbpCreatedBy_Id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Activity_sub_types_Activity_id",
+                name: "IX_Activity_sub_types_ActivityType_id",
                 schema: "Lookups",
                 table: "Activity_sub_types",
-                column: "Activity_id");
+                column: "ActivityType_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Activity_sub_types_GenericDrugId",
@@ -1693,6 +1748,24 @@ namespace RulesEngine.Migrations
                 schema: "Lookups",
                 table: "ActivitySubTypeDtgs",
                 column: "DuplicateTherapyGroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Diagnoses_PrescriptionDurationId",
+                schema: "Lookups",
+                table: "Diagnoses",
+                column: "PrescriptionDurationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosisMorbidityGroups_DiagnosisId",
+                schema: "Lookups",
+                table: "DiagnosisMorbidityGroups",
+                column: "DiagnosisId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosisMorbidityGroups_MorbidityGroupId",
+                schema: "Lookups",
+                table: "DiagnosisMorbidityGroups",
+                column: "MorbidityGroupId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_GenericDrugs_CreatorId",
@@ -1917,7 +1990,7 @@ namespace RulesEngine.Migrations
                 schema: "Lookups");
 
             migrationBuilder.DropTable(
-                name: "MorbidityGroups",
+                name: "DiagnosisMorbidityGroups",
                 schema: "Lookups");
 
             migrationBuilder.DropTable(
@@ -1963,6 +2036,10 @@ namespace RulesEngine.Migrations
                 schema: "Lookups");
 
             migrationBuilder.DropTable(
+                name: "MorbidityGroups",
+                schema: "Lookups");
+
+            migrationBuilder.DropTable(
                 name: "OpenIddictAuthorizations");
 
             migrationBuilder.DropTable(
@@ -2000,6 +2077,10 @@ namespace RulesEngine.Migrations
 
             migrationBuilder.DropTable(
                 name: "ProcedureGroup",
+                schema: "Lookups");
+
+            migrationBuilder.DropTable(
+                name: "PrescriptionDurations",
                 schema: "Lookups");
 
             migrationBuilder.DropTable(

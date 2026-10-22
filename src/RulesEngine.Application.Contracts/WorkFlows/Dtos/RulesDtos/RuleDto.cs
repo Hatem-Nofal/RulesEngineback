@@ -1,4 +1,5 @@
-﻿using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
+﻿using RulesEngine.Common.Enums;
+using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -14,6 +15,7 @@ namespace RulesEngine.WorkFlows.Dtos.RulesDtos
         public bool IsMultiple { get; set; }
         public string? Expression { get; set; }
         public bool WorkflowHasCustomeRule { get;   set; } = false;
+        public ViolationType ViolationType { get; set; }  
 
         public RuleNodeDto Root { get; set; } = default!;
     }

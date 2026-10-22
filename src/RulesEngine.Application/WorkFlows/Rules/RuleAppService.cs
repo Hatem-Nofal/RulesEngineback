@@ -86,17 +86,17 @@ namespace RulesEngine.WorkFlows.Rules
         {
             var rule = await _ruleRepository.GetAsync(id)
                        ?? throw new KeyNotFoundException("Rule not found.");
-          
- 
+
+
             return new RuleDto
             {
                 Id = rule.Id,
                 Name = rule.Name,
                 WorkflowId = rule.WorkflowId,
                 IsActive = rule.IsActive,
-                Root = !rule.Workflow.HasCustomeRule? await RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.Ruleformconfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) :new RuleNodeDto(),
-                Expression=rule.Expression,
-                WorkflowHasCustomeRule= rule.Workflow.HasCustomeRule
+                Root = !rule.Workflow.HasCustomeRule ? await RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.Ruleformconfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto(),
+                Expression = rule.Expression,
+                WorkflowHasCustomeRule = rule.Workflow.HasCustomeRule
             };
         }
 
@@ -176,8 +176,7 @@ namespace RulesEngine.WorkFlows.Rules
         /// </summary>
         private async Task<PreparedRule> PrepareRuleAsync(CreateRuleDto input, RuleFormConfigDto? formConfig = null)
         {
-            if (string.IsNullOrWhiteSpace(input.Name))
-                throw new RuleValidationException("Rule name is required.");
+
 
             formConfig ??= await LoadFormConfigAsync(input.WorkflowId);
 
@@ -197,15 +196,20 @@ namespace RulesEngine.WorkFlows.Rules
             var ruleDto = prepared.Dto;
 
             var ruleId = id ?? Guid.CreateVersion7();
-            var name = input.Name.Trim();
 
-            var rule = new Rule(ruleId, name, input.WorkflowId, prepared.Expression);
+            var rule = new Rule(ruleId, input.WorkflowId, prepared.Expression);
             if (id.HasValue)
             {
-                rule.Update(name, input.WorkflowId, prepared.Expression);
+                rule.Update(input.WorkflowId, prepared.Expression);
 
                 // Replace the whole tree: one set-based DELETE instead of loading and deleting every node separately.
                 await _ruleNodeRepository.DeleteDirectAsync(n => n.RuleId == ruleId);
+            }
+            else
+            {
+                var workflow = await _workflowRepository.GetAsync(input.WorkflowId);
+                var count = await _ruleRepository.CountAsync(x => x.WorkflowId == input.WorkflowId);
+                rule.GenerateUniqueNameAsync(count, workflow.Name);
             }
 
             if (input.IsActive) rule.Activate(); else rule.Deactivate();
@@ -508,7 +512,7 @@ namespace RulesEngine.WorkFlows.Rules
             );
         }
 
-            /// <summary>
+        /// <summary>
         /// Imports rules from an Excel sheet (see <see cref="GetRulesSampleAsync"/>).
         /// Every row is validated first and nothing is saved unless ALL rows are valid.
         /// Returns null on success; when any row has a problem, returns the same workbook with the problems
@@ -679,7 +683,7 @@ namespace RulesEngine.WorkFlows.Rules
 
                 if (row.Errors.Count > 0) continue;   // cell-level problems found: no point validating the whole rule
 
-                row.Dto = new CreateRuleDto { Name = ruleName.Trim(), WorkflowId = workflowId, IsActive = isActive, Root = root };
+                row.Dto = new CreateRuleDto {   WorkflowId = workflowId, IsActive = isActive, Root = root };
 
                 // Report every problem of the row at once, so the user can fix the whole row in a single pass.
                 var treeErrors = RuleTreeValidator.ValidateWitErrors(root, formConfigDto);
@@ -719,7 +723,7 @@ namespace RulesEngine.WorkFlows.Rules
             foreach (var row in rows)
                 await SaveRuleAsync(row.Dto!, row.ExistingId, row.Prepared, saveChanges: false);
 
-            if(rows.Count>0&&rows.Any(x=>x.Errors.Count()>0))
+            if (rows.Count > 0 && rows.Any(x => x.Errors.Count() > 0))
                 await CurrentUnitOfWork.SaveChangesAsync();
 
             return null;
@@ -742,7 +746,7 @@ namespace RulesEngine.WorkFlows.Rules
             public List<string> Errors { get; } = new();
         }
 
-    
+
         /// <summary>Writes each row's problems (comma separated) into an "Errors" column after the last used column.</summary>
         private static IRemoteStreamContent BuildErrorWorkbook(
             XLWorkbook wb, IXLWorksheet ws, int lastRow, List<UploadRow> rows, string? originalFileName)

@@ -62,8 +62,7 @@ internal static class RulesEngineSnapshotFactory
             {
                 RuleName = r.Name,
                 Enabled = r.IsActive,
-                SuccessEvent = r.SuccessEvent,
-                ErrorMessage = r.ErrorMessage,
+                 ErrorMessage = r.ViolationMessage,
                 Expression = r.Expression
             });
         }

@@ -81,6 +81,7 @@ public class RulesEngineDbContext :
     public DbSet<DuplicateTherapyGroup> DuplicateTherapyGroups { get; set; }
     public DbSet<MorbidityGroup> MorbidityGroups { get; set; }
     public DbSet<ActivitySubTypeDtg> ActivitySubTypeDtgs { get; set; }
+    public DbSet<BatchType> BatchTypes { get; set; }
 
     #endregion
 
