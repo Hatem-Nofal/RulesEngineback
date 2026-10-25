@@ -39,12 +39,19 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
     {
         RuleTreeValidator.Validate(rule.Root, config);
 
-        var fields = config.Fields.ToDictionary(
-            f => f.Key,
-            f => new FieldMapDto(
+        var fields = config.Fields
+    .GroupBy(f => f.Key)
+    .ToDictionary(
+        g => g.Key,
+        g =>
+        {
+            var f = g.Last();
+
+            return new FieldMapDto(
                 f.Key ?? throw new RuleValidationException(
                     $"Field '{f.Label}' has no context path in form config '{config.Name}'."),
-                FieldMapDto.KindOf(f.DataType)));
+                FieldMapDto.KindOf(f.DataType));
+        });
 
         return await Build(rule.Root, config.StrategyKey, fields);
     }

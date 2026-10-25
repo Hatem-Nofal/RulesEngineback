@@ -12,6 +12,8 @@ namespace RulesEngine.WorkFlows.Dtos.RuleBuildersDtos
 
         public bool IsMultiple { get;  set; }
         public bool IsDefault { get;  set; }
+        public bool IsDeleted { get; set; }
+
 
 
     }

@@ -16,5 +16,7 @@ namespace RulesEngine.Lookups
         Task<List<SelectedDropDownList>> GetDuplicateTherapyGroupsDropDownList();
         Task<List<SelectedDropDownList>> GetMorbidityGroupsDropDownList();
         Task<List<SelectedDropDownList>> GetBatchTypesDropDownList();
+        Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownListPaged(int activityTypeId, string searchTerm);
+        Task<List<SelectedDropDownList>> GetDiagnosisDropDownListPaged(string searchTerm);
       }
 }

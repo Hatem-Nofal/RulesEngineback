@@ -132,8 +132,7 @@ public class RulesEngineDbContext :
 
         builder.Entity<RuleFormConfigField>(e =>
         {
-            e.HasIndex(x => new { x.RuleformConfigId, x.RulefieldId })
-                .IsUnique();
+            e.HasIndex(x => new { x.RuleformConfigId, x.RulefieldId });
 
             e.HasOne(x => x.RuleformConfig)
                 .WithMany(x => x.RuleFormConfigFields)

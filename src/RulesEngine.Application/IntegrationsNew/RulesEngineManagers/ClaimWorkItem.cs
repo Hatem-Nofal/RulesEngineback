@@ -18,7 +18,7 @@ internal sealed class ClaimWorkItem
     // Same bound as before: caching "all other activities" per code is O(n^2) memory for large claims.
     private const int MaxCachedOtherActivities = 64;
     private const string NullCodeKey = "\0<null>";
-    private readonly string? _claimspeccode;
+    private readonly string? _specialitiesCode;
     private readonly string? _primaryGenericsGroup;
 
     private readonly ClaimValidationByCodeRequestExtended _claim;
@@ -56,7 +56,7 @@ internal sealed class ClaimWorkItem
 
         if (Activities.Count is > 0 and <= MaxCachedOtherActivities)
             _otherActivitiesByCode = new ConcurrentDictionary<string, List<ClaimActivityRequestDto>>(StringComparer.Ordinal);
-        _claimspeccode = claim.Claimspeccode;
+        _specialitiesCode = claim.Claimspeccode;
         var activities = claim.Activities.ToList() ?? new List<ClaimActivityRequestDto>();
 
         _dtgCodeCounts = CountCodes(
@@ -116,7 +116,7 @@ internal sealed class ClaimWorkItem
             Age = Age,
             Gender = Gender,
             Activities = Activities,
-            Claimspeccode=_claimspeccode,
+            SpecialitiesCode=_specialitiesCode,
             DtgCodeCounts=_dtgCodeCounts
         })
     };
@@ -143,7 +143,7 @@ internal sealed class ClaimWorkItem
             Age = Age,
             Gender = Gender,
             Activities = GetOtherActivities(activity),
-            Claimspeccode=_claimspeccode,
+            SpecialitiesCode=_specialitiesCode,
             PrimaryGenericsGroup=activity.GenericCode,
             GenericsGroups=_genericsGroups,
             DiagnosisGroupCodes=_diagnosisGroupCodes,
@@ -176,7 +176,7 @@ internal sealed class ClaimWorkItem
             Activities = new List<ClaimActivityRequestDto> { activity },
             ActivityQuantity = activity.Quantity,
             MedicationQuantities = _quantitiesByCode,
-            Claimspeccode=_claimspeccode,
+            SpecialitiesCode=_specialitiesCode,
             PrimaryGenericsGroup=activity.GenericCode,
             GenericsGroups=_genericsGroups,
             DiagnosisGroupCodes=_diagnosisGroupCodes,

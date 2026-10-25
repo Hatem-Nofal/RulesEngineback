@@ -11,7 +11,9 @@ namespace RulesEngine.Repositories.WorkFlows
     {
         Task<List<Rule>> GetListAsync();
         Task<Rule> GetAsync(Guid id);
-       
+        Task<Rule> GetForUpdateAsync(Guid id);
+
+
      }
 }
  

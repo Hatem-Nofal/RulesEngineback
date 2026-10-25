@@ -76,7 +76,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
         {
             var catalog = await ValidateAsync(input, null);
 
-            var config = new RuleFormConfig(input.Name?.Trim(), input.Description?.Trim());
+            var config = new RuleFormConfig(input.Name?.Trim(), input.AllowNestedGroups, input.Description?.Trim());
 
 
             var fields = BuildFields(input, catalog);
@@ -123,7 +123,6 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 
             await using var tx = await _context.Database.BeginTransactionAsync();
 
-            await _context.RuleFormConfigFields.Where(x => x.RuleformConfigId == id).ExecuteDeleteAsync();
 
             config.Update(input.Name.Trim(), input.Description?.Trim(), input.IsActive, input.AllowNestedGroups);
 
@@ -184,11 +183,11 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
                 throw new RuleValidationException($"A form config named '{name}' already exists.");
 
             var ids = input.RuleFormConfigFields.Select(f => f.RulefieldId).ToList();
-            if (ids.Count != ids.Distinct().Count())
-                throw new RuleValidationException("Duplicate fields are not allowed.");
+            
 
             var catalog = await _context.RuleFields.Where(f => ids.Contains(f.Id)).ToDictionaryAsync(f => f.Id);
-            if (catalog.Count != ids.Count)
+
+            if (catalog.Count != ids.Count&&catalog.Any(x=>!ids.Contains(x.Value.Id)))
                 throw new RuleValidationException("Some selected fields do not exist.");
 
             return catalog;

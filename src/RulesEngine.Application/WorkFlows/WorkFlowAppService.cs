@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Bibliography;
-using RulesEngine.Entities.WorkFlows;
+﻿using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.Repositories.WorkFlows;
@@ -46,7 +45,7 @@ namespace RulesEngine.WorkFlows
         public override async Task<WorkflowDto> GetAsync(Guid id)
         {
             var workflow = await _workFlowRepository.GetAsync(id);
-            var rule =await _ruleRepository.GetAsync(x => x.WorkflowId == id);
+            var rule = await _ruleRepository.GetAsync(x => x.WorkflowId == id);
             var configs = (await _ruleFormConfigRepository.GetListAsync()).ToDictionary(x => x.Id, x => x.Name);
             var count = await _ruleRepository.CountAsync(x => x.WorkflowId == id);
             workflow.AddRule(rule);
@@ -62,11 +61,11 @@ namespace RulesEngine.WorkFlows
 
             if (input.HasCustomeRule)
             {
-                if (string.IsNullOrEmpty( input.RuleExpression))
+                if (string.IsNullOrEmpty(input.RuleExpression))
                     throw new RuleValidationException($"If WorkFlow HasCustomeRule , RuleExpression is require !");
 
-                workflow.AddRule( Rule.CreateRuleForCustomeWorkflow(Guid.CreateVersion7(),"Rule-"+ workflow.Name+"-1", workflow.Id, input.RuleExpression));
-             }
+                workflow.AddRule(Rule.CreateRuleForCustomeWorkflow(Guid.CreateVersion7(), "Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression));
+            }
             await _workFlowRepository.InsertAsync(workflow);
 
             return Map(workflow, new Dictionary<Guid, string>(), new Dictionary<Guid, int> { [workflow.Id] = 0 });
@@ -115,9 +114,9 @@ namespace RulesEngine.WorkFlows
             RuleFormConfigId = w.RuleformconfigId,
             RuleFormConfigName = w.RuleformconfigId is { } c ? configs.GetValueOrDefault(c) : null,
             RuleCount = counts.GetValueOrDefault(w.Id),
-            HasCustomeRule=w.HasCustomeRule,
-            RejectionLevel=w.RejectionLevel,
-            RuleExpression=w.HasCustomeRule?w.Rules.FirstOrDefault()?.Expression:string.Empty
+            HasCustomeRule = w.HasCustomeRule,
+            RejectionLevel = w.RejectionLevel,
+            RuleExpression = w.HasCustomeRule ? w.Rules.FirstOrDefault()?.Expression : string.Empty
 
         };
         private static WorkflowDto Map(WorkflowDto w, Dictionary<Guid, string> configs, Dictionary<Guid, int> counts) => new()
@@ -129,7 +128,7 @@ namespace RulesEngine.WorkFlows
             RuleCount = counts.GetValueOrDefault(w.Id),
             HasCustomeRule = w.HasCustomeRule,
             RejectionLevel = w.RejectionLevel,
-            RuleExpression = w.RuleExpression  
+            RuleExpression = w.RuleExpression
         };
 
     }

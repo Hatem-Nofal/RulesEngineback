@@ -10,7 +10,6 @@ namespace RulesEngine.WorkFlows.Dtos.RuleBuildersDtos
         public string Name { get; set; } = default!;
         public bool AllowNestedGroups { get; set; }
         public string? StrategyKey { get; set; }
- 
         public List<RuleFormFieldDto> Fields { get; set; } = new();
     }
 }

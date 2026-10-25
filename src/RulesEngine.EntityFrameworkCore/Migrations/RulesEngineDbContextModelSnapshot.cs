@@ -353,8 +353,7 @@ namespace RulesEngine.Migrations
 
                     b.HasIndex("RulefieldId");
 
-                    b.HasIndex("RuleformConfigId", "RulefieldId")
-                        .IsUnique();
+                    b.HasIndex("RuleformConfigId", "RulefieldId");
 
                     b.ToTable("RuleFormConfigFields", "RuleBuilders");
                 });

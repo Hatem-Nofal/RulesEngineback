@@ -64,7 +64,7 @@ namespace RulesEngine.Entities.WorkFlows
         public void UpdateRule(Rule rule)
         {
             if (rule == null) throw new ArgumentNullException(nameof(rule));
-            Rules.FirstOrDefault(x => x.Id == rule.Id).Update( rule.WorkflowId, rule.Expression);
+            Rules.FirstOrDefault(x => x.Id == rule.Id).Update( rule.WorkflowId, rule.Expression,rule.ViolationMessage);
         }
 
         public void RemoveRule(Rule rule)

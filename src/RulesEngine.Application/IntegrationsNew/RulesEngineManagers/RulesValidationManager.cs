@@ -402,7 +402,8 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                         ClaimNumber = claim.ClaimNumber,
                         WorkFlowName = plan.Name,
                         NormalizedWorkFlowName = plan.NormalizedName,
-                        Rule = ruleName
+                        Rule = ruleName,
+
                     });
                 }
             }
@@ -432,7 +433,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
     // Logging (source-generated: no boxing/formatting cost when the level is disabled)
     // =============================================================================================
 
-    [LoggerMessage(EventId = 1, Level = LogLevel.Information,
+    [LoggerMessage(EventId = 1, Level = LogLevel.Warning,
         Message = "Starting extended validation for {ClaimCount} claim(s). WorkflowIds: {WorkflowIds}, WorkflowNames: {WorkflowNames}")]
     private partial void LogStarting(int claimCount, string workflowIds, string workflowNames);
 
@@ -458,7 +459,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
         Message = "Workflow {WorkflowName} batch {BatchIndex} for claim {ClaimNumber} activity {ActivityId} failed")]
     private partial void LogBatchFailed(Exception exception, string workflowName, int batchIndex, string? claimNumber, int? activityId);
 
-    [LoggerMessage(EventId = 8, Level = LogLevel.Information,
+    [LoggerMessage(EventId = 8, Level = LogLevel.Warning,
         Message = "Extended validation completed in {Ms}ms for {ClaimCount} claim(s). Failed: {Failed}")]
     private partial void LogCompleted(long ms, int claimCount, int failed);
 

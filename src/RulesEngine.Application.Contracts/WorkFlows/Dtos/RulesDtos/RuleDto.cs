@@ -15,7 +15,8 @@ namespace RulesEngine.WorkFlows.Dtos.RulesDtos
         public bool IsMultiple { get; set; }
         public string? Expression { get; set; }
         public bool WorkflowHasCustomeRule { get;   set; } = false;
-        public ViolationType ViolationType { get; set; }  
+        public ViolationType ViolationType { get; set; }
+        public string? ViolationMessage { get; set; } = string.Empty;
 
         public RuleNodeDto Root { get; set; } = default!;
     }

@@ -12,7 +12,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
         public string Name { get; private set; }
         public string? Description { get; private set; }
         public bool IsActive { get; private set; } = true;
-        public bool AllowNestedGroups { get; private set; } = true;
+        public bool AllowNestedGroups { get; private set; } = false;
         public string? StrategyKey { get; private set; }
 
         // EF mapping property - kept as list with private setter
@@ -22,12 +22,13 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
         public IReadOnlyCollection<RuleFormConfigField> _RuleFormConfigFields => RuleFormConfigFields.AsReadOnly();
 
  
-        public RuleFormConfig(  string name, string? description = null)
+        public RuleFormConfig(  string name, bool allowNestedGroups, string? description = null)
         {
             Id = Guid.NewGuid();
             Name = name ?? throw new ArgumentNullException(nameof(name));
             Description = description;
             StrategyKey = name.NormalizeSpace();
+            AllowNestedGroups = allowNestedGroups;
         }
 
         public void AddField(RuleFormConfigField field)
@@ -51,7 +52,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
         {
              RuleFormConfigFields=new();
         }
-        public void Update(string name, string? description = null, bool isActive = true, bool allowNestedGroups = true)
+        public void Update(string name, string? description , bool allowNestedGroups, bool isActive = true )
         {
             Name = name ?? throw new ArgumentNullException(nameof(name));
             Description = description;

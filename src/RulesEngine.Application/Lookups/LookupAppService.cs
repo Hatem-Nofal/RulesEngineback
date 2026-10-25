@@ -60,10 +60,83 @@ namespace EhealthClaims.Lookups
         public async Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownList(int? activityTypeId)
         {
             var queryable = await _activitySubTypeRepository.GetQueryableAsync();
-            var query = queryable.WhereIf(activityTypeId.HasValue,x=>x.ActivityType_id==activityTypeId).Select(x => new SelectedDropDownList(x.Id, x.iqvia_code, x.Short_Desc, false));
+            var query = queryable.WhereIf(activityTypeId.HasValue,x=>x.ActivityType_id==activityTypeId).Select(x => new SelectedDropDownList(x.Id, x.Short_Desc, x.iqvia_code,  false));
             return await AsyncExecuter.ToListAsync(query);
         }
 
+        public async Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownListPaged(int activityTypeId, string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
+                return new List<SelectedDropDownList>();
+
+            _activitySubTypeRepository.DisableTracking();
+
+            string lowerSearchTerm = searchTerm.ToLower();
+
+ 
+            var rawMatches = await _activitySubTypeRepository.GetListAsync(x =>
+                x.ActivityType_id == activityTypeId
+
+                && (x.Medium_Desc.ToLower().Contains(lowerSearchTerm) || x.Short_Desc.ToLower().Contains(lowerSearchTerm))
+            );
+
+            var matches = rawMatches
+                .Select(x => new
+                {
+                    Item =  new SelectedDropDownList(
+                        x.Id,
+                        x.Short_Desc, x.iqvia_code, false// <-- concatenated display text
+                    ),
+                    Priority = x.Short_Desc.ToLower().StartsWith(lowerSearchTerm) ? 0 :
+                               x.Medium_Desc.ToLower().StartsWith(lowerSearchTerm) ? 1 :
+                               x.Short_Desc.ToLower().Contains(lowerSearchTerm) ? 2 : 3
+                })
+                .OrderBy(x => x.Priority)
+                .ThenBy(x => x.Item.Name)
+                .Select(x => x.Item)
+                .DistinctBy(x => x.Id)
+                .Take(15)
+                .ToList();
+
+            return matches;
+        }
+        public async Task<List<SelectedDropDownList>> GetDiagnosisDropDownListPaged(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return new List<SelectedDropDownList>();
+
+            string normalizedSearch = searchTerm.ToLowerInvariant();
+
+            _diagnosisRepository.DisableTracking();
+
+            var allMatches = await _diagnosisRepository.GetListAsync(
+                x => x.Medium_Desc.ToLower().Contains(normalizedSearch) ||
+                     x.Short_Desc.ToLower().Contains(normalizedSearch) ||
+                     x.iqvia_code.ToLower().Contains(normalizedSearch)
+            );
+
+            var orderedResults = allMatches
+                .Select(x => new
+                {
+                    Item = new SelectedDropDownList(
+                        x.Id,
+                        x.Short_Desc, x.iqvia_code, false// <-- concatenated display text
+                    ),
+                    Priority =
+                        x.Medium_Desc.Equals(searchTerm, StringComparison.OrdinalIgnoreCase) ? 0 :
+                        x.Short_Desc.StartsWith(searchTerm, StringComparison.OrdinalIgnoreCase) ? 1 :
+                        x.iqvia_code.StartsWith(searchTerm, StringComparison.OrdinalIgnoreCase) ? 1 :
+                        2
+                })
+                .OrderBy(x => x.Priority)
+                .ThenBy(x => x.Item.Name)
+                .Select(x => x.Item)
+                .DistinctBy(x => x.Id)
+                .Take(15)
+                .ToList();
+
+            return orderedResults;
+        }
 
         public async Task<List<SelectedDropDownList>> GetActivityTypeDropDownList()
         {

@@ -56,7 +56,7 @@ namespace RulesEngine.Data.Seeders
                 new RuleField("BatchServiceMonth", "Batch Service Month", DataTypes.Number),
                 new RuleField("BatchServiceYear", "Batch Service Year", DataTypes.Number),
                 new RuleField("ClaimTags", "Claim Tags", DataTypes.List),
-                new RuleField("Claimspeccode", "Claimspeccode", DataTypes.List),
+                new RuleField("SpecialitiesCode", "Specialities", DataTypes.List),
                 new RuleField("PrimaryGenericsGroup", "Generic Group", DataTypes.List),
                 new RuleField("GenericsGroups", "Generics Groups", DataTypes.List),
                 new RuleField("DiagnosisGroupCodes", "Diagnosis Groups", DataTypes.List),

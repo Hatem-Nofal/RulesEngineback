@@ -36,7 +36,14 @@ IRuleRepository
 
         public async Task<Rule> GetAsync(Guid id)
         {
-            var w = await _context.Rules.Include(x=>x.Nodes).Include(x=>x.Workflow).ThenInclude(x=>x.Ruleformconfig).ThenInclude(x=>x.RuleFormConfigFields).ThenInclude(x=>x.Rulefield).AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
+            var w = await _context.Rules.AsNoTracking().Include(x=>x.Nodes).Include(x=>x.Workflow).ThenInclude(x=>x.Ruleformconfig).ThenInclude(x=>x.RuleFormConfigFields).ThenInclude(x=>x.Rulefield).FirstOrDefaultAsync(x => x.Id == id)
+                    ?? throw new KeyNotFoundException("Workflow not found.");
+            
+            return w;
+        }
+        public async Task<Rule> GetForUpdateAsync(Guid id)
+        {
+            var w = await _context.Rules.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
                     ?? throw new KeyNotFoundException("Workflow not found.");
             
             return w;

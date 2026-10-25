@@ -165,7 +165,9 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
         public static void Validate(RuleNodeDto root, RuleFormConfigDto config)
         {
 
-            var allowed = config.Fields.ToDictionary(f => f.Key);
+            var allowed = config.Fields
+    .GroupBy(f => f.Key)
+    .ToDictionary(g => g.Key, g => g.First());
             Walk(root, allowed, config.AllowNestedGroups, isRoot: true);
         }
 

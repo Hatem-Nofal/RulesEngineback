@@ -38,11 +38,12 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         {
 
         }
-        public Rule(Guid id, Guid workflowId, string expression)
+        public Rule(Guid id, Guid workflowId, string expression, string? violationMessage)
         {
             Id = id;
             WorkflowId = workflowId;
             Expression = expression;
+            ViolationMessage = violationMessage;
         }
         public static Rule CreateRuleForCustomeWorkflow( Guid id, string name, Guid workflowId, string expression)
         {
@@ -53,10 +54,11 @@ namespace RulesEngine.Entities.WorkFlows.Rules
             rule.Name = name;
             return rule;
         }
-        public void Update(Guid workflowId, string expression)
+        public void Update(Guid workflowId, string expression, string? violationMessage)
         {
             WorkflowId = workflowId;
             Expression = expression;
+            ViolationMessage = violationMessage;
 
         }
         public void UpdateExpression(string expression)

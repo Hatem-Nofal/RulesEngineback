@@ -107,7 +107,7 @@ namespace RulesEngine.WorkFlows.Rules
 
         public override async Task<RuleDto> UpdateAsync(Guid id, CreateRuleDto input)
         {
-            return await SaveRuleAsync(input, id);
+            return await UpdarteRuleAsync(input, id);
         }
 
         public override async Task DeleteAsync(Guid id)
@@ -190,27 +190,53 @@ namespace RulesEngine.WorkFlows.Rules
         /// <param name="saveChanges">
         /// true (default): flush right away. Bulk import passes false and flushes once after the last rule.
         /// </param>
-        private async Task<RuleDto> SaveRuleAsync(CreateRuleDto input, Guid? id, PreparedRule? prepared = null, bool saveChanges = true)
+        private async Task<RuleDto> SaveRuleAsync(CreateRuleDto input, PreparedRule? prepared = null, bool saveChanges = true)
         {
             prepared ??= await PrepareRuleAsync(input);
             var ruleDto = prepared.Dto;
 
-            var ruleId = id ?? Guid.CreateVersion7();
+            var ruleId = Guid.CreateVersion7();
 
-            var rule = new Rule(ruleId, input.WorkflowId, prepared.Expression);
-            if (id.HasValue)
-            {
-                rule.Update(input.WorkflowId, prepared.Expression);
+            var rule = new Rule(ruleId, input.WorkflowId, prepared.Expression, input.ViolationMessage);
 
-                // Replace the whole tree: one set-based DELETE instead of loading and deleting every node separately.
-                await _ruleNodeRepository.DeleteDirectAsync(n => n.RuleId == ruleId);
-            }
-            else
+            var workflow = await _workflowRepository.GetAsync(input.WorkflowId);
+            var count = await _ruleRepository.CountAsync(x => x.WorkflowId == input.WorkflowId);
+
+
+            if (input.IsActive) rule.Activate(); else rule.Deactivate();
+
+            var flatNodes = new List<RuleNode>();
+            RuleTreeMapper.Flatten(input.Root, rule.Id, null, 0, flatNodes);
+            rule.AddNodes(flatNodes);
+            rule.GenerateUniqueNameAsync(count, workflow.Name);
+
+            await _ruleRepository.InsertAsync(rule);
+
+
+            if (rule.Nodes.Count > 0)
             {
-                var workflow = await _workflowRepository.GetAsync(input.WorkflowId);
-                var count = await _ruleRepository.CountAsync(x => x.WorkflowId == input.WorkflowId);
-                rule.GenerateUniqueNameAsync(count, workflow.Name);
+                await _ruleNodeRepository.InsertManyAsync(rule.Nodes);
+                if (saveChanges)
+                    await CurrentUnitOfWork.SaveChangesAsync();
             }
+
+            await EngineManager.ReloadAfterCommitAsync();   // once per unit of work, even for bulk uploads
+            return ruleDto;
+        }
+        private async Task<RuleDto> UpdarteRuleAsync(CreateRuleDto input, Guid id, PreparedRule? prepared = null, bool saveChanges = true)
+        {
+            prepared ??= await PrepareRuleAsync(input);
+            var ruleDto = prepared.Dto;
+
+            _ruleRepository.DisableTracking();
+            var rule = await _ruleRepository.GetForUpdateAsync(id);
+
+
+            rule.Update(input.WorkflowId, prepared.Expression, input.ViolationMessage);
+
+            // Replace the whole tree: one set-based DELETE instead of loading and deleting every node separately.
+            await _ruleNodeRepository.DeleteDirectAsync(n => n.RuleId == rule.Id);
+
 
             if (input.IsActive) rule.Activate(); else rule.Deactivate();
 
@@ -218,10 +244,8 @@ namespace RulesEngine.WorkFlows.Rules
             RuleTreeMapper.Flatten(input.Root, rule.Id, null, 0, flatNodes);
             rule.AddNodes(flatNodes);
 
-            if (!id.HasValue)
-                await _ruleRepository.InsertAsync(rule);
-            else
-                await _ruleRepository.UpdateAsync(rule);
+
+            await _ruleRepository.UpdateAsync(rule);
 
             if (rule.Nodes.Count > 0)
             {
@@ -683,7 +707,7 @@ namespace RulesEngine.WorkFlows.Rules
 
                 if (row.Errors.Count > 0) continue;   // cell-level problems found: no point validating the whole rule
 
-                row.Dto = new CreateRuleDto {   WorkflowId = workflowId, IsActive = isActive, Root = root };
+                row.Dto = new CreateRuleDto { WorkflowId = workflowId, IsActive = isActive, Root = root };
 
                 // Report every problem of the row at once, so the user can fix the whole row in a single pass.
                 var treeErrors = RuleTreeValidator.ValidateWitErrors(root, formConfigDto);
@@ -721,7 +745,18 @@ namespace RulesEngine.WorkFlows.Rules
 
             // ---- Phase 2: everything is valid; save. All rows are written in one flush (one transaction). ----
             foreach (var row in rows)
-                await SaveRuleAsync(row.Dto!, row.ExistingId, row.Prepared, saveChanges: false);
+            {
+                if (row.ExistingId.HasValue)
+                {
+                    await UpdarteRuleAsync(row.Dto!, row.ExistingId.Value, row.Prepared, saveChanges: false);
+
+                }
+                else
+                {
+                    await SaveRuleAsync(row.Dto!, row.Prepared, saveChanges: false);
+
+                }
+            }
 
             if (rows.Count > 0 && rows.Any(x => x.Errors.Count() > 0))
                 await CurrentUnitOfWork.SaveChangesAsync();

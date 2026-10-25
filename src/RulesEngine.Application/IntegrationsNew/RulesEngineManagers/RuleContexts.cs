@@ -22,7 +22,7 @@ public abstract class RuleContextBase
     public int? BatchServiceMonth { get; init; }
     public int? BatchServiceYear { get; init; }
     public List<string> ClaimTags { get; init; } = new();
-    public string? Claimspeccode { get; set; }
+    public string? SpecialitiesCode { get; set; }
     public Dictionary<string, int> DtgCodeCounts { get; set; }
 
 }
