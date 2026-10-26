@@ -1,11 +1,13 @@
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Volo.Abp.Domain.Repositories;
 
 namespace RulesEngine.Application.Repositories.WorkFlows
 {
-    public interface IRuleFormConfigRepository
+    public interface IRuleFormConfigRepository:IRepository
     {
         Task<List<RuleFormConfig>> GetConfigsAsync();
          Task<RuleFormConfig?> GetByWorkflowAsync(Guid workflowId);
@@ -15,5 +17,6 @@ namespace RulesEngine.Application.Repositories.WorkFlows
         Task<RuleFormConfig> UpdateAsync(Guid id, RuleFormConfig input);
         Task DeleteAsync(Guid id);
 
+        Task<IQueryable<RuleFormConfig>> GetQueryableAsync();
     }
 }

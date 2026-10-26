@@ -17,6 +17,18 @@ namespace RulesEngine.Mappers.RuleFormConfigMapper
 
         public override partial FormConfigListDto ReverseMap(RuleFormConfig source);
 
-        public override partial void ReverseMap(RuleFormConfig source, FormConfigListDto destination);
+        public override void ReverseMap(RuleFormConfig source, FormConfigListDto destination)
+        {
+            destination.AllowNestedGroups = source.AllowNestedGroups;
+            destination.Description = source.Description;
+            destination.FieldCount = source._RuleFormConfigFields.Count;
+            destination.WorkflowCount = source._WorkFlows.Count;
+            destination.Name = source.Name;
+            destination.StrategyKey = source.StrategyKey;
+            destination.IsActive = source.IsActive;
+            destination.Id = source.Id;
+
+
+        }
     }
 }

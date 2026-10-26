@@ -9,12 +9,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Repositories.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore;
 
 namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 {
-    public class RuleFormConfigRepository : EfCoreRepository<RulesEngineDbContext, RuleFormConfig, Guid>, IRuleFormConfigRepository
+    public class RuleFormConfigRepository : EfCoreRepository<RulesEngineDbContext, RuleFormConfig, Guid>, IRuleFormConfigRepository, IRepository
     {
         private readonly RulesEngineDbContext _context;
         public RuleFormConfigRepository(IDbContextProvider<RulesEngineDbContext> dbContextProvider, RulesEngineDbContext context) : base(dbContextProvider)
@@ -46,6 +47,10 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
         public async Task<List<RuleFormConfig>> GetListAsync()
         {
             return await _context.RuleFormConfigs.AsNoTracking().OrderBy(x => x.Name).ToListAsync();
+        }
+        public async Task<IQueryable<RuleFormConfig>> GetQueryableAsync()
+        {
+            return  _context.RuleFormConfigs.Include(x=>x.WorkFlows).Include(x=>x.RuleFormConfigFields).AsNoTracking().OrderBy(x => x.Name);
         }
 
         public async Task<RuleFormConfig> GetAsync(Guid id)

@@ -18,8 +18,13 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
         // EF mapping property - kept as list with private setter
         public List<RuleFormConfigField> RuleFormConfigFields { get; private set; } = new();
 
+        public List<WorkFlow> WorkFlows { get; private set; } = new();
+
         [NotMapped]
         public IReadOnlyCollection<RuleFormConfigField> _RuleFormConfigFields => RuleFormConfigFields.AsReadOnly();
+
+        [NotMapped]
+        public IReadOnlyCollection<WorkFlow> _WorkFlows => WorkFlows.AsReadOnly();
 
  
         public RuleFormConfig(  string name, bool allowNestedGroups, string? description = null)

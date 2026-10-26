@@ -1,3 +1,4 @@
+using Duende.IdentityModel;
 using RulesEngine.Application.Repositories.WorkFlows;
 using RulesEngine.Common.Extensions;
 using RulesEngine.Entities.WorkFlows;
@@ -23,17 +24,19 @@ namespace RuleBuilder.Api;
 public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormConfigDto, FormConfigListDto, Guid, PagedAndSortedResultRequestDto, CreateFormConfigEditDto, CreateFormConfigEditDto>, IRuleFormConfigAppService 
 {
      private readonly IRuleFormConfigRepository _ruleFormConfigsRepository;
+    private readonly IRepository<RuleFormConfig, Guid> _ruleFormConfig;
     private readonly IRepository<RuleField, Guid> _ruleFieldsRepository;
     private readonly IRepository<RuleFormConfigField, Guid> _ruleFormConfigFieldRepository;
     private readonly IWorkFlowRepository _workFlowRepository;
 
 
-    public RuleFormConfigAppService(IRepository<RuleFormConfig, Guid> repository, IRuleFormConfigRepository ruleFormConfigsRepository, IWorkFlowRepository workFlowRepository, IRepository<RuleField, Guid> ruleFieldsRepository, IRepository<RuleFormConfigField, Guid> ruleFormConfigFieldRepository) : base(repository)
+    public RuleFormConfigAppService(IRepository<RuleFormConfig, Guid> repository, IRuleFormConfigRepository ruleFormConfigsRepository, IWorkFlowRepository workFlowRepository, IRepository<RuleField, Guid> ruleFieldsRepository, IRepository<RuleFormConfigField, Guid> ruleFormConfigFieldRepository, IRepository<RuleFormConfig, Guid> ruleFormConfig) : base(repository)
     {
         _ruleFormConfigsRepository = ruleFormConfigsRepository;
         _workFlowRepository = workFlowRepository;
         _ruleFieldsRepository = ruleFieldsRepository;
         _ruleFormConfigFieldRepository = ruleFormConfigFieldRepository;
+        _ruleFormConfig = ruleFormConfig;
     }
 
     public async Task<List<LookupDto>> GetConfigsAsync() =>(await _ruleFormConfigsRepository.GetConfigsAsync()).Select(x => new LookupDto(x.Id, x.Name)).ToList();
@@ -119,7 +122,25 @@ public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormC
     {
         input.Sorting ??= "CreationTime desc";
 
-        return await base.GetListAsync(input);
+        var query = await _ruleFormConfig.WithDetailsAsync(x => x.WorkFlows, x => x.RuleFormConfigFields);
+        var totalCount = await AsyncExecuter.CountAsync(query);
+
+        var entities = new List<RuleFormConfig>();
+        var entityDtos = new List<FormConfigListDto>();
+
+        if (totalCount > 0)
+        {
+            query = ApplySorting(query, input);
+            query = ApplyPaging(query, input);
+
+            entities = await AsyncExecuter.ToListAsync(query);
+            entityDtos = await MapToGetListOutputDtosAsync(entities);
+        }
+
+        return new PagedResultDto<FormConfigListDto>(
+            totalCount,
+            entityDtos
+        );
     }
 
     public override async Task<RuleFormConfigDto> CreateAsync(CreateFormConfigEditDto input)
