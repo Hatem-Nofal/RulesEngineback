@@ -87,7 +87,7 @@ public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormC
         var workflow = await _workFlowRepository.GetAsync(workflowId);
 
 
-        var configId = workflow.RuleformconfigId;
+        var configId = workflow.RuleformConfigId;
         var config = await _ruleFormConfigsRepository.GetAsync(configId.Value);
          if (config is null) return null;
 

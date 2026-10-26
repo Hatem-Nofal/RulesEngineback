@@ -31,6 +31,7 @@ namespace EhealthClaims.Lookups
         private readonly IRepository<Specialities> _specialitiesRepository;
         private readonly IRepository<WorkFlow> _workFlowsRepository;
         private readonly IRepository<GenericDrug> _genericDrugsRepository;
+ 
         private readonly IRepository<DuplicateTherapyGroup, int> _duplicateTherapyGroupRepository;
         private readonly IRepository<MorbidityGroup, int> _morbidityGroupRepository;
         private readonly IRepository<BatchType, int> _batchTypeRepository;
@@ -44,7 +45,8 @@ namespace EhealthClaims.Lookups
             IRepository<GenericDrug> genericDrugsRepository,
             IRepository<DuplicateTherapyGroup, int> duplicateTherapyGroupRepository,
             IRepository<MorbidityGroup, int> morbidityGroupRepository,
-            IRepository<BatchType, int> batchTypeRepository)
+            IRepository<BatchType, int> batchTypeRepository
+            )
         {
             _activityTypeRepository = activityTypeRepository;
             _activitySubTypeRepository = activitySubTypeRepository;
@@ -55,12 +57,12 @@ namespace EhealthClaims.Lookups
             _duplicateTherapyGroupRepository = duplicateTherapyGroupRepository;
             _morbidityGroupRepository = morbidityGroupRepository;
             _batchTypeRepository = batchTypeRepository;
-        }
+         }
 
         public async Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownList(int? activityTypeId)
         {
             var queryable = await _activitySubTypeRepository.GetQueryableAsync();
-            var query = queryable.WhereIf(activityTypeId.HasValue,x=>x.ActivityType_id==activityTypeId).Select(x => new SelectedDropDownList(x.Id, x.Short_Desc, x.iqvia_code,  false));
+            var query = queryable.WhereIf(activityTypeId.HasValue, x => x.ActivityType_id == activityTypeId).Select(x => new SelectedDropDownList(x.Id, x.Short_Desc, x.iqvia_code, false));
             return await AsyncExecuter.ToListAsync(query);
         }
 
@@ -73,7 +75,7 @@ namespace EhealthClaims.Lookups
 
             string lowerSearchTerm = searchTerm.ToLower();
 
- 
+
             var rawMatches = await _activitySubTypeRepository.GetListAsync(x =>
                 x.ActivityType_id == activityTypeId
 
@@ -83,7 +85,7 @@ namespace EhealthClaims.Lookups
             var matches = rawMatches
                 .Select(x => new
                 {
-                    Item =  new SelectedDropDownList(
+                    Item = new SelectedDropDownList(
                         x.Id,
                         x.Short_Desc, x.iqvia_code, false// <-- concatenated display text
                     ),
@@ -156,13 +158,51 @@ namespace EhealthClaims.Lookups
             return rows.Select(x => new SelectedDropDownList(x.Id, x.Short_Desc, x.iqvia_code, false)).ToList();
         }
 
-        public async Task<List<SelectedDropDownList>> GetSpecialitiesIdDropDownList()
+        public async Task<List<SelectedDropDownList>> GetSpecialitiesIdDropDownList(string searchTerm)
         {
-            var queryable = await _specialitiesRepository.GetQueryableAsync();
-            var rows = await AsyncExecuter.ToListAsync(
-                queryable.Select(x => new { x.Id, x.SpecialityDescription, x.SpecialityCode }));
+            //var queryable = await _specialitiesRepository.GetQueryableAsync();
+            //var rows = await AsyncExecuter.ToListAsync(
+            //    queryable.Select(x => new { x.Id, x.SpecialityDescription, x.SpecialityCode }));
 
-            return rows.Select(x => new SelectedDropDownList(x.Id, x.SpecialityDescription, x.SpecialityCode, false)).ToList();
+            //return rows.Select(x => new SelectedDropDownList(x.Id, x.SpecialityDescription, x.SpecialityCode, false)).ToList();
+
+
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return new List<SelectedDropDownList>();
+
+            string normalizedSearch = searchTerm.ToLowerInvariant();
+
+            _specialitiesRepository.DisableTracking();
+
+            var allMatches = await _specialitiesRepository.GetListAsync(
+                x => x.SpecialityDisplay.ToLower().Contains(normalizedSearch) ||
+                     x.SpecialityDescription.ToLower().Contains(normalizedSearch) ||
+                     x.SpecialityCode.ToLower().Contains(normalizedSearch)
+            );
+
+            var orderedResults = allMatches
+                .Select(x => new
+                {
+                    Item = new SelectedDropDownList(
+                        x.Id,
+                        x.SpecialityDisplay, x.SpecialityCode, false// <-- concatenated display text
+                    ),
+                    Priority =
+                        x.SpecialityDisplay.Equals(searchTerm, StringComparison.OrdinalIgnoreCase) ? 0 :
+                        x.SpecialityDescription.StartsWith(searchTerm, StringComparison.OrdinalIgnoreCase) ? 1 :
+                        x.SpecialityCode.StartsWith(searchTerm, StringComparison.OrdinalIgnoreCase) ? 1 :
+                        2
+                })
+                .OrderBy(x => x.Priority)
+                .ThenBy(x => x.Item.Name)
+                .Select(x => x.Item)
+                .DistinctBy(x => x.Id)
+                .Take(15)
+                .ToList();
+
+            return orderedResults;
+
+
         }
 
         public async Task<List<SelectedDropDownListByGuid>> GetWorkflowsDropDownList()
@@ -174,40 +214,134 @@ namespace EhealthClaims.Lookups
             return rows.Select(x => new SelectedDropDownListByGuid(x.Id, x.Name, false)).ToList();
         }
 
-        public async Task<List<SelectedDropDownList>> GetGenericDrugsDropDownList()  
+        public async Task<List<SelectedDropDownList>> GetGenericDrugsDropDownList(string searchTerm)
         {
-            var queryable = await _genericDrugsRepository.GetQueryableAsync();
-            var rows = await AsyncExecuter.ToListAsync(
-                queryable.Select(x => new { x.Id, x.GenericName, x.SystemCode }));
+            //var queryable = await _genericDrugsRepository.GetQueryableAsync();
+            //var rows = await AsyncExecuter.ToListAsync(
+            //    queryable.Select(x => new { x.Id, x.GenericName, x.SystemCode }));
 
-            return rows.Select(x => new SelectedDropDownList(x.Id, x.GenericName, x.SystemCode, false)).ToList();
+            //return rows.Select(x => new SelectedDropDownList(x.Id, x.GenericName, x.SystemCode, false)).ToList();
+
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return new List<SelectedDropDownList>();
+
+            string normalizedSearch = searchTerm.ToLowerInvariant();
+
+            _genericDrugsRepository.DisableTracking();
+
+            var allMatches = await _genericDrugsRepository.GetListAsync(
+                x => x.GenericName.ToLower().Contains(normalizedSearch) ||
+                      x.GenericCode.ToLower().Contains(normalizedSearch)
+            );
+
+            var orderedResults = allMatches
+                .Select(x => new
+                {
+                    Item = new SelectedDropDownList(
+                        x.Id,
+                        x.GenericName, x.GenericCode, false// <-- concatenated display text
+                    ),
+                    Priority =
+                        x.GenericName.Equals(searchTerm, StringComparison.OrdinalIgnoreCase) ? 0 :
+                        x.GenericCode.StartsWith(searchTerm, StringComparison.OrdinalIgnoreCase) ? 1 :
+                         2
+                })
+                .OrderBy(x => x.Priority)
+                .ThenBy(x => x.Item.Name)
+                .Select(x => x.Item)
+                .DistinctBy(x => x.Id)
+                .Take(15)
+                .ToList();
+
+            return orderedResults;
         }
 
-        public async Task<List<SelectedDropDownList>> GetProcedureGroupsDropDownList()  
-        {
-            var queryable = await _genericDrugsRepository.GetQueryableAsync();
-            var rows = await AsyncExecuter.ToListAsync(
-                queryable.Select(x => new { x.Id, x.GenericName, x.SystemCode }));
 
-            return rows.Select(x => new SelectedDropDownList(x.Id, x.GenericName, x.SystemCode, false)).ToList();
+         
+
+        public async Task<List<SelectedDropDownList>> GetDuplicateTherapyGroupsDropDownList(string searchTerm)
+        {
+            //var queryable = await _duplicateTherapyGroupRepository.GetQueryableAsync();
+            //var rows = await AsyncExecuter.ToListAsync(
+            //    queryable.Select(x => new { x.Id, x.DtGroupName, x.DtgSystemCode }));
+
+            //return rows.Select(x => new SelectedDropDownList(x.Id, x.DtGroupName, x.DtgSystemCode, false)).ToList();
+
+
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return new List<SelectedDropDownList>();
+
+            string normalizedSearch = searchTerm.ToLowerInvariant();
+
+            _duplicateTherapyGroupRepository.DisableTracking();
+
+            var allMatches = await _duplicateTherapyGroupRepository.GetListAsync(
+                x => x.DtGroupName.ToLower().Contains(normalizedSearch) ||
+                      x.DtgSystemCode.ToLower().Contains(normalizedSearch)
+            );
+
+            var orderedResults = allMatches
+                .Select(x => new
+                {
+                    Item = new SelectedDropDownList(
+                        x.Id,
+                        x.DtGroupName, x.DtgSystemCode, false// <-- concatenated display text
+                    ),
+                    Priority =
+                        x.DtGroupName.Equals(searchTerm, StringComparison.OrdinalIgnoreCase) ? 0 :
+                        x.DtgSystemCode.StartsWith(searchTerm, StringComparison.OrdinalIgnoreCase) ? 1 :
+                         2
+                })
+                .OrderBy(x => x.Priority)
+                .ThenBy(x => x.Item.Name)
+                .Select(x => x.Item)
+                .DistinctBy(x => x.Id)
+                .Take(15)
+                .ToList();
+
+            return orderedResults;
         }
 
-        public async Task<List<SelectedDropDownList>> GetDuplicateTherapyGroupsDropDownList()  
+        public async Task<List<SelectedDropDownList>> GetMorbidityGroupsDropDownList(string searchTerm)
         {
-            var queryable = await _duplicateTherapyGroupRepository.GetQueryableAsync();
-            var rows = await AsyncExecuter.ToListAsync(
-                queryable.Select(x => new { x.Id, x.DtGroupName, x.DtgSystemCode }));
+            //var queryable = await _morbidityGroupRepository.GetQueryableAsync();
+            //var rows = await AsyncExecuter.ToListAsync(
+            //    queryable.Select(x => new { x.Id, x.MorbidityGroupName, x.MorbidityGroupSystemCode }));
 
-            return rows.Select(x => new SelectedDropDownList(x.Id, x.DtGroupName, x.DtgSystemCode, false)).ToList();
-        }
+            //return rows.Select(x => new SelectedDropDownList(x.Id, x.MorbidityGroupName, x.MorbidityGroupSystemCode, false)).ToList();
 
-        public async Task<List<SelectedDropDownList>> GetMorbidityGroupsDropDownList()  
-        {
-            var queryable = await _morbidityGroupRepository.GetQueryableAsync();
-            var rows = await AsyncExecuter.ToListAsync(
-                queryable.Select(x => new { x.Id, x.MorbidityGroupName, x.MorbidityGroupSystemCode }));
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return new List<SelectedDropDownList>();
 
-            return rows.Select(x => new SelectedDropDownList(x.Id, x.MorbidityGroupName, x.MorbidityGroupSystemCode, false)).ToList();
+            string normalizedSearch = searchTerm.ToLowerInvariant();
+
+            _morbidityGroupRepository.DisableTracking();
+
+            var allMatches = await _morbidityGroupRepository.GetListAsync(
+                x => x.MorbidityGroupName.ToLower().Contains(normalizedSearch) ||
+                      x.MorbidityGroupSystemCode.ToLower().Contains(normalizedSearch)
+            );
+
+            var orderedResults = allMatches
+                .Select(x => new
+                {
+                    Item = new SelectedDropDownList(
+                        x.Id,
+                        x.MorbidityGroupName, x.MorbidityGroupSystemCode, false// <-- concatenated display text
+                    ),
+                    Priority =
+                        x.MorbidityGroupName.Equals(searchTerm, StringComparison.OrdinalIgnoreCase) ? 0 :
+                        x.MorbidityGroupSystemCode.StartsWith(searchTerm, StringComparison.OrdinalIgnoreCase) ? 1 :
+                         2
+                })
+                .OrderBy(x => x.Priority)
+                .ThenBy(x => x.Item.Name)
+                .Select(x => x.Item)
+                .DistinctBy(x => x.Id)
+                .Take(15)
+                .ToList();
+
+            return orderedResults;
         }
 
         public async Task<List<SelectedDropDownList>> GetBatchTypesDropDownList()

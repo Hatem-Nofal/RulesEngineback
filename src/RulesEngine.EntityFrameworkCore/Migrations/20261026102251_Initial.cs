@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace RulesEngine.Migrations
 {
     /// <inheritdoc />
-    public partial class Init : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -491,6 +491,21 @@ namespace RulesEngine.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BatchTypes",
+                schema: "Lookups",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Code = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BatchTypes", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "DuplicateTherapyGroups",
                 schema: "Lookups",
                 columns: table => new
@@ -663,8 +678,10 @@ namespace RulesEngine.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Code = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    SpecialityCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SpecialityDisplay = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SpecialityDescription = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Group = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1102,7 +1119,7 @@ namespace RulesEngine.Migrations
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     NormalizedName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RejectionLevel = table.Column<int>(type: "int", nullable: false),
-                    RuleformconfigId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RuleformConfigId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     HasCustomeRule = table.Column<bool>(type: "bit", nullable: false),
                     ExtraProperties = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -1119,8 +1136,8 @@ namespace RulesEngine.Migrations
                 {
                     table.PrimaryKey("PK_Workflows", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Workflows_RuleFormConfigs_RuleformconfigId",
-                        column: x => x.RuleformconfigId,
+                        name: "FK_Workflows_RuleFormConfigs_RuleformConfigId",
+                        column: x => x.RuleformConfigId,
                         principalSchema: "RuleBuilders",
                         principalTable: "RuleFormConfigs",
                         principalColumn: "Id",
@@ -1285,8 +1302,8 @@ namespace RulesEngine.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     WorkflowId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SuccessEvent = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ErrorMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ViolationType = table.Column<int>(type: "int", nullable: false),
+                    ViolationMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     Expression = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1846,8 +1863,7 @@ namespace RulesEngine.Migrations
                 name: "IX_RuleFormConfigFields_RuleformConfigId_RulefieldId",
                 schema: "RuleBuilders",
                 table: "RuleFormConfigFields",
-                columns: new[] { "RuleformConfigId", "RulefieldId" },
-                unique: true);
+                columns: new[] { "RuleformConfigId", "RulefieldId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_RuleFormConfigs_Name",
@@ -1890,9 +1906,9 @@ namespace RulesEngine.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Workflows_RuleformconfigId",
+                name: "IX_Workflows_RuleformConfigId",
                 table: "Workflows",
-                column: "RuleformconfigId");
+                column: "RuleformConfigId");
         }
 
         /// <inheritdoc />
@@ -1987,6 +2003,10 @@ namespace RulesEngine.Migrations
 
             migrationBuilder.DropTable(
                 name: "ActivitySubTypeDtgs",
+                schema: "Lookups");
+
+            migrationBuilder.DropTable(
+                name: "BatchTypes",
                 schema: "Lookups");
 
             migrationBuilder.DropTable(

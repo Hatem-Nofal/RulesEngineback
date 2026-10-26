@@ -111,8 +111,8 @@ namespace RulesEngine.WorkFlows
         {
             Id = w.Id,
             Name = w.Name,
-            RuleFormConfigId = w.RuleformconfigId,
-            RuleFormConfigName = w.RuleformconfigId is { } c ? configs.GetValueOrDefault(c) : null,
+            RuleFormConfigId = w.RuleformConfigId,
+            RuleFormConfigName = w.RuleformConfigId is { } c ? configs.GetValueOrDefault(c) : null,
             RuleCount = counts.GetValueOrDefault(w.Id),
             HasCustomeRule = w.HasCustomeRule,
             RejectionLevel = w.RejectionLevel,

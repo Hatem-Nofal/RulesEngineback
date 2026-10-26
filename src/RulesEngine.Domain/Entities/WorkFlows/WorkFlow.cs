@@ -18,10 +18,11 @@ namespace RulesEngine.Entities.WorkFlows
         public string NormalizedName { get; private set; }
         public RejectionLevel RejectionLevel { get; private set; }
 
-        public Guid? RuleformconfigId { get; private set; }
-        [ForeignKey(nameof(RuleformconfigId))]
+        public Guid? RuleformConfigId { get; private set; }
 
-        public RuleFormConfig Ruleformconfig { get; private set; }
+        [ForeignKey("RuleformConfigId")]
+
+        public RuleFormConfig RuleformConfig { get; private set; }
 
         public bool IsActive { get; private set; } = true;
         public bool HasCustomeRule { get; private set; } = false;
@@ -40,7 +41,7 @@ namespace RulesEngine.Entities.WorkFlows
         public WorkFlow(string name, Guid? ruleFormConfigId, RejectionLevel rejectionLevel, bool hasCustomeRule)
         {
             Name = name ?? throw new ArgumentNullException(nameof(name));
-            RuleformconfigId = ruleFormConfigId;
+            RuleformConfigId = ruleFormConfigId;
             NormalizedName = name.NormalizeSpace();
             RejectionLevel = rejectionLevel;
             HasCustomeRule = hasCustomeRule;
@@ -64,7 +65,7 @@ namespace RulesEngine.Entities.WorkFlows
         public void UpdateRule(Rule rule)
         {
             if (rule == null) throw new ArgumentNullException(nameof(rule));
-            Rules.FirstOrDefault(x => x.Id == rule.Id).Update( rule.WorkflowId, rule.Expression,rule.ViolationMessage);
+            Rules.FirstOrDefault(x => x.Id == rule.Id).Update(rule.WorkflowId, rule.Expression, rule.ViolationMessage);
         }
 
         public void RemoveRule(Rule rule)
@@ -80,7 +81,7 @@ namespace RulesEngine.Entities.WorkFlows
         }
         public void UpdateRuleFormConfigId(Guid? ruleFormConfigId)
         {
-            RuleformconfigId = ruleFormConfigId;
+            RuleformConfigId = ruleFormConfigId;
         }
 
     }

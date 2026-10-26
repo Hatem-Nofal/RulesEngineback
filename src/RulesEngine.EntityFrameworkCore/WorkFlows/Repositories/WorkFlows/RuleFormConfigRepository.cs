@@ -38,7 +38,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
             var workflow = await _context.WorkFlows.AsNoTracking().FirstOrDefaultAsync(x => x.Id == workflowId)
                            ?? throw new KeyNotFoundException("Workflow not found.");
 
-            var configId = workflow.RuleformconfigId;
+            var configId = workflow.RuleformConfigId;
             var config = await _context.RuleFormConfigs.AsNoTracking().Include(x => x.RuleFormConfigFields)
                 .FirstOrDefaultAsync(x => x.Id == configId && x.IsActive);
             return config;
@@ -106,7 +106,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 
             if (removedKeys.Count > 0)
             {
-                var workflowIds = await _context.WorkFlows.Where(x => x.RuleformconfigId == id)
+                var workflowIds = await _context.WorkFlows.Where(x => x.RuleformConfigId == id)
                     .Select(x => x.Id).ToListAsync();
 
                 if (workflowIds.Count > 0)
@@ -144,7 +144,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 
         public async Task DeleteAsync(Guid id)
         {
-            var workflows = await _context.WorkFlows.CountAsync(x => x.RuleformconfigId == id);
+            var workflows = await _context.WorkFlows.CountAsync(x => x.RuleformConfigId == id);
             if (workflows > 0)
                 throw new RuleValidationException(
                     $"Cannot delete: {workflows} workflow(s) use this form config. Unassign it first.");

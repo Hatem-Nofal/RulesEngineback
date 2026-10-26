@@ -94,7 +94,7 @@ namespace RulesEngine.WorkFlows.Rules
                 Name = rule.Name,
                 WorkflowId = rule.WorkflowId,
                 IsActive = rule.IsActive,
-                Root = !rule.Workflow.HasCustomeRule ? await RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.Ruleformconfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto(),
+                Root = !rule.Workflow.HasCustomeRule ? await RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto(),
                 Expression = rule.Expression,
                 WorkflowHasCustomeRule = rule.Workflow.HasCustomeRule
             };
@@ -132,7 +132,7 @@ namespace RulesEngine.WorkFlows.Rules
         {
             var workflow = await _workflowRepository.GetAsync(workflowId)
                            ?? throw new RuleValidationException("Workflow not found.");
-            var config = workflow.Ruleformconfig
+            var config = workflow.RuleformConfig
                          ?? throw new RuleValidationException("This workflow has no form config assigned.");
 
             var ruleFields = await _ruleFieldRepository.GetListAsync();
@@ -266,7 +266,7 @@ namespace RulesEngine.WorkFlows.Rules
             var workflow = await _workflowRepository.GetAsync(workflowId)
                 ?? throw new KeyNotFoundException("Workflow not found.");
 
-            var config = workflow.Ruleformconfig;
+            var config = workflow.RuleformConfig;
 
             if (config == null)
                 throw new RuleValidationException(
@@ -588,7 +588,7 @@ namespace RulesEngine.WorkFlows.Rules
 
             var workflow = await _workflowRepository.GetAsync(workflowId)
                 ?? throw new KeyNotFoundException("Workflow not found.");
-            var config = workflow.Ruleformconfig;
+            var config = workflow.RuleformConfig;
             if (config == null) throw new RuleValidationException("This workflow has no form config assigned.");
 
             // Built once for the whole sheet: used to validate every row and to build every expression.

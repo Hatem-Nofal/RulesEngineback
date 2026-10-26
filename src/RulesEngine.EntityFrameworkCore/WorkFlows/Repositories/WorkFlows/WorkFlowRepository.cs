@@ -37,7 +37,7 @@ IWorkFlowRepository
             var w = await _context.WorkFlows
                 //.Include(x=>x.Rules)
                 //.Include(x=>x.Rules).ThenInclude(x=>x.Nodes)
-                .Include(x => x.Ruleformconfig)
+                .Include(x => x.RuleformConfig)
                 .ThenInclude(x => x.RuleFormConfigFields)
                 //   .ThenInclude(x=>x.Rulefield)
                 .AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
@@ -61,7 +61,7 @@ IWorkFlowRepository
                     ?? throw new KeyNotFoundException("Workflow not found.");
             await ValidateAsync(input, id);
             w.UpdateName(input.Name.Trim());
-            w.UpdateRuleFormConfigId(input.RuleformconfigId);
+            w.UpdateRuleFormConfigId(input.RuleformConfigId);
             await _context.SaveChangesAsync();
         }
 
@@ -87,7 +87,7 @@ IWorkFlowRepository
             if (await _context.WorkFlows.AnyAsync(x => x.Id != currentId && x.Name == name))
                 throw new RuleValidationException($"A workflow named '{name}' already exists.");
 
-            if (input.RuleformconfigId is { } cfgId
+            if (input.RuleformConfigId is { } cfgId
                 && !await _context.RuleFormConfigs.AnyAsync(x => x.Id == cfgId && x.IsActive))
                 throw new RuleValidationException("The selected form config does not exist or is inactive.");
         }

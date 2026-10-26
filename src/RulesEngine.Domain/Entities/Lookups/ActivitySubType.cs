@@ -44,9 +44,7 @@ namespace RulesEngine.Lookups
         public int? GenericDrugId { get; set; }
         [ForeignKey(nameof(GenericDrugId))]
         public GenericDrug? GenericDrug { get; set; }
-        public int? ProcedureGroupId { get; set; }
-        [ForeignKey(nameof(ProcedureGroupId))] 
-        public ProcedureGroup? ProcedureGroup { get; set; }
+  
         public List<ActivitySubTypeDtg>? DuplicateTherapyGroups { get; set; } = new();
 
         private ActivitySubType() { }

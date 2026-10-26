@@ -13,8 +13,8 @@ using Volo.Abp.EntityFrameworkCore;
 namespace RulesEngine.Migrations
 {
     [DbContext(typeof(RulesEngineDbContext))]
-    [Migration("20261021125053_UpdateRuleTable")]
-    partial class UpdateRuleTable
+    [Migration("20261026102251_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -48,6 +48,29 @@ namespace RulesEngine.Migrations
                     b.HasIndex("DuplicateTherapyGroupId");
 
                     b.ToTable("ActivitySubTypeDtgs", "Lookups");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.Lookups.BatchType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BatchTypes", "Lookups");
                 });
 
             modelBuilder.Entity("RulesEngine.Entities.Lookups.DiagnosisMorbidityGroup", b =>
@@ -333,8 +356,7 @@ namespace RulesEngine.Migrations
 
                     b.HasIndex("RulefieldId");
 
-                    b.HasIndex("RuleformConfigId", "RulefieldId")
-                        .IsUnique();
+                    b.HasIndex("RuleformConfigId", "RulefieldId");
 
                     b.ToTable("RuleFormConfigFields", "RuleBuilders");
                 });
@@ -525,7 +547,7 @@ namespace RulesEngine.Migrations
                     b.Property<int>("RejectionLevel")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("RuleformconfigId")
+                    b.Property<Guid?>("RuleformConfigId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -533,7 +555,7 @@ namespace RulesEngine.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.HasIndex("RuleformconfigId");
+                    b.HasIndex("RuleformConfigId");
 
                     b.ToTable("Workflows");
                 });
@@ -2985,12 +3007,12 @@ namespace RulesEngine.Migrations
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.WorkFlow", b =>
                 {
-                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", "Ruleformconfig")
-                        .WithMany()
-                        .HasForeignKey("RuleformconfigId")
+                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", "RuleformConfig")
+                        .WithMany("WorkFlows")
+                        .HasForeignKey("RuleformConfigId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("Ruleformconfig");
+                    b.Navigation("RuleformConfig");
                 });
 
             modelBuilder.Entity("RulesEngine.Lookups.ActivitySubType", b =>
@@ -3278,6 +3300,8 @@ namespace RulesEngine.Migrations
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", b =>
                 {
                     b.Navigation("RuleFormConfigFields");
+
+                    b.Navigation("WorkFlows");
                 });
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.WorkFlow", b =>

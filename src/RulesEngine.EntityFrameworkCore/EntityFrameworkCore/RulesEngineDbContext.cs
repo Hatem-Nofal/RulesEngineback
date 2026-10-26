@@ -77,8 +77,7 @@ public class RulesEngineDbContext :
     public DbSet<Specialities> Specialities => Set<Specialities>();
     public DbSet<GenericDrug> GenericDrugs { get; set; }
 
-    public DbSet<ProcedureGroup> ProcedureGroup { get; set; }
-    public DbSet<DuplicateTherapyGroup> DuplicateTherapyGroups { get; set; }
+     public DbSet<DuplicateTherapyGroup> DuplicateTherapyGroups { get; set; }
     public DbSet<MorbidityGroup> MorbidityGroups { get; set; }
     public DbSet<ActivitySubTypeDtg> ActivitySubTypeDtgs { get; set; }
     public DbSet<BatchType> BatchTypes { get; set; }
@@ -105,10 +104,10 @@ public class RulesEngineDbContext :
             e.Property(x => x.Name).IsRequired().HasMaxLength(200);
             e.HasIndex(x => x.Name).IsUnique();
 
-            e.HasOne(x => x.Ruleformconfig)
-            .WithMany()
-            .HasForeignKey(x => x.RuleformconfigId)
-            .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.RuleformConfig)
+                 .WithMany(x => x.WorkFlows)
+                 .HasForeignKey(x => x.RuleformConfigId)
+                 .OnDelete(DeleteBehavior.Restrict);
 
         });
 
@@ -128,7 +127,7 @@ public class RulesEngineDbContext :
             e.HasIndex(x => x.Name).IsUnique();
 
             e.HasMany(x => x.RuleFormConfigFields).WithOne().HasForeignKey(x => x.RuleformConfigId).OnDelete(DeleteBehavior.Restrict);
-        });
+         });
 
         builder.Entity<RuleFormConfigField>(e =>
         {

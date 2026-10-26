@@ -544,7 +544,7 @@ namespace RulesEngine.Migrations
                     b.Property<int>("RejectionLevel")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("RuleformconfigId")
+                    b.Property<Guid?>("RuleformConfigId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -552,7 +552,7 @@ namespace RulesEngine.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.HasIndex("RuleformconfigId");
+                    b.HasIndex("RuleformConfigId");
 
                     b.ToTable("Workflows");
                 });
@@ -607,9 +607,6 @@ namespace RulesEngine.Migrations
                     b.Property<decimal?>("Price")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int?>("ProcedureGroupId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Short_Desc")
                         .HasColumnType("nvarchar(max)");
 
@@ -646,8 +643,6 @@ namespace RulesEngine.Migrations
                     b.HasIndex("GenericDrugId");
 
                     b.HasIndex("LastUpdatedBy_Id");
-
-                    b.HasIndex("ProcedureGroupId");
 
                     b.ToTable("Activity_sub_types", "Lookups");
                 });
@@ -842,30 +837,6 @@ namespace RulesEngine.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("MorbidityGroups", "Lookups");
-                });
-
-            modelBuilder.Entity("RulesEngine.Lookups.ProcedureGroup", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("ProcedureGroupName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ProcedureGroupSystemCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ProcedureGroup", "Lookups");
                 });
 
             modelBuilder.Entity("RulesEngine.Lookups.Specialities", b =>
@@ -3004,12 +2975,12 @@ namespace RulesEngine.Migrations
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.WorkFlow", b =>
                 {
-                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", "Ruleformconfig")
-                        .WithMany()
-                        .HasForeignKey("RuleformconfigId")
+                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", "RuleformConfig")
+                        .WithMany("WorkFlows")
+                        .HasForeignKey("RuleformConfigId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("Ruleformconfig");
+                    b.Navigation("RuleformConfig");
                 });
 
             modelBuilder.Entity("RulesEngine.Lookups.ActivitySubType", b =>
@@ -3032,10 +3003,6 @@ namespace RulesEngine.Migrations
                         .WithMany()
                         .HasForeignKey("LastUpdatedBy_Id");
 
-                    b.HasOne("RulesEngine.Lookups.ProcedureGroup", "ProcedureGroup")
-                        .WithMany()
-                        .HasForeignKey("ProcedureGroupId");
-
                     b.Navigation("ActivityType");
 
                     b.Navigation("Createdby");
@@ -3043,8 +3010,6 @@ namespace RulesEngine.Migrations
                     b.Navigation("GenericDrug");
 
                     b.Navigation("LastUpdatedBy");
-
-                    b.Navigation("ProcedureGroup");
                 });
 
             modelBuilder.Entity("RulesEngine.Lookups.Diagnosis", b =>
@@ -3297,6 +3262,8 @@ namespace RulesEngine.Migrations
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", b =>
                 {
                     b.Navigation("RuleFormConfigFields");
+
+                    b.Navigation("WorkFlows");
                 });
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.WorkFlow", b =>
