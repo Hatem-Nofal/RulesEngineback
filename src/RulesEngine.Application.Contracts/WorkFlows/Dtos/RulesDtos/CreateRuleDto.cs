@@ -8,7 +8,7 @@ namespace RulesEngine.WorkFlows.Dtos.RulesDtos
     {
         public Guid WorkflowId { get; set; }
         public bool IsActive { get; set; } = true;
-        public string? ViolationMessage { get; set; } = string.Empty;
+        public string? ViolationMessage { get; set; }  
 
         public RuleNodeDto Root { get; set; } = default!;
         public ViolationType ViolationType { get; set; }

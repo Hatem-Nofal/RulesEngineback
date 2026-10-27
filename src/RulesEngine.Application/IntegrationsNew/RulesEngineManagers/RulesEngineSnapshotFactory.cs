@@ -1,3 +1,5 @@
+using RulesEngine.Common.Dtos;
+using RulesEngine.Entities.WorkFlows;
 using RulesEngine.HelperFunctions;
 using RulesEngine.Models;
 using System;
@@ -48,7 +50,7 @@ internal static class RulesEngineSnapshotFactory
         return new RulesEngineSnapshot(engine, plans);
     }
 
-    private static List<EngineRule> MapRules(Entities.WorkFlows.WorkFlow wf)
+    private static List<EngineRule> MapRules(WorkFlow wf)
     {
         var mapped = new List<EngineRule>(wf.Rules?.Count ?? 0);
         if (wf.Rules is null) return mapped;
@@ -58,13 +60,14 @@ internal static class RulesEngineSnapshotFactory
             if (r is null || string.IsNullOrWhiteSpace(r.Name) || string.IsNullOrWhiteSpace(r.Expression))
                 continue;
 
-            mapped.Add(new EngineRule
+            mapped.Add(new CustomEngineRule
             {
                 RuleName = r.Name,
                 Enabled = r.IsActive,
-                 ErrorMessage = r.ViolationMessage,
-                Expression = r.Expression
-            });
+                ErrorMessage = r.ViolationMessage,
+                Expression = r.Expression,
+                ViolationType=r.ViolationType
+             });
         }
         return mapped;
     }

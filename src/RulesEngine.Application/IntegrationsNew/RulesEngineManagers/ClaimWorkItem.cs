@@ -32,7 +32,7 @@ internal sealed class ClaimWorkItem
     private readonly Dictionary<string, int> _dtgCodeCounts;
     private readonly List<string> _genericsGroups;
     private readonly List<string> _diagnosisGroupCodes;
-    private readonly ConcurrentDictionary<string, List<ClaimActivityRequestDto>>? _otherActivitiesByCode;
+    private readonly ConcurrentDictionary<string, List<string>>? _otherActivitiesByCode;
     private RuleParameter[]? _claimLevelArgs;   // benign race: both candidates are equivalent
 
     private ClaimWorkItem(ClaimValidationByCodeRequestExtended claim, int age, string gender, DateTime today)
@@ -42,7 +42,7 @@ internal sealed class ClaimWorkItem
         Gender = gender;
 
         _diagnosisCodes = NormalizeCodes(claim.DiagnosisCodes);
-        _activityCodes = NormalizeCodes(claim.ActivityCodes);
+        _activityCodes = NormalizeCodes(claim.Activities.Select(x=>x.ActivityCode).ToList());
         Activities = claim.Activities ?? new List<ClaimActivityRequestDto>();
         _claimTags = claim.ClaimTags ?? new List<string>();
 
@@ -55,7 +55,7 @@ internal sealed class ClaimWorkItem
             _activityCodeById.TryAdd(activity.ActivityId, activity.ActivityCode); // first one wins
 
         if (Activities.Count is > 0 and <= MaxCachedOtherActivities)
-            _otherActivitiesByCode = new ConcurrentDictionary<string, List<ClaimActivityRequestDto>>(StringComparer.Ordinal);
+            _otherActivitiesByCode = new ConcurrentDictionary<string, List<string>>(StringComparer.Ordinal);
         _specialitiesCode = claim.Claimspeccode;
         var activities = claim.Activities.ToList() ?? new List<ClaimActivityRequestDto>();
 
@@ -115,7 +115,7 @@ internal sealed class ClaimWorkItem
             ClaimTags = _claimTags,
             Age = Age,
             Gender = Gender,
-            Activities = Activities,
+            Activities = Activities.Select(x=>x.ActivityCode).ToList(),
             SpecialitiesCode=_specialitiesCode,
             DtgCodeCounts=_dtgCodeCounts
         })
@@ -127,7 +127,7 @@ internal sealed class ClaimWorkItem
         {
             Diagnoses = _diagnosisCodes,
             DiagnosisCounts = _diagnosisCounts,
-            PrimaryActivity = _activityCodeById[activity.ActivityId],
+            Activity = _activityCodeById[activity.ActivityId],
             ActivitiesQuantities = _activityCodeCounts,
             NationalId = _claim.Patientnid,
             ClaimedNet = _claim.ClaimedNet,
@@ -144,7 +144,7 @@ internal sealed class ClaimWorkItem
             Gender = Gender,
             Activities = GetOtherActivities(activity),
             SpecialitiesCode=_specialitiesCode,
-            PrimaryGenericsGroup=activity.GenericCode,
+            GenericGroup=activity.GenericCode,
             GenericsGroups=_genericsGroups,
             DiagnosisGroupCodes=_diagnosisGroupCodes,
             DtgCodeCounts=_dtgCodeCounts
@@ -158,9 +158,9 @@ internal sealed class ClaimWorkItem
         {
             Diagnoses = _diagnosisCodes,
             DiagnosisCounts = _diagnosisCounts,
-            PrimaryActivity =_activityCodeById[activity.ActivityId],
+            Activity =_activityCodeById[activity.ActivityId],
             MedicationCounts = _activityCodeCounts,
-            NID = _claim.Patientnid,
+            NationalId = _claim.Patientnid,
             ClaimedNet = _claim.ClaimedNet,
             EnteredNet = _claim.EnteredNet,
             ClaimedGross = _claim.ClaimedGross,
@@ -171,13 +171,13 @@ internal sealed class ClaimWorkItem
             BatchServiceMonth = _claim.BatchServiceMonth,
             BatchServiceYear = _claim.BatchServiceYear,
             ClaimTags = _claimTags,
-            PatientAge = Age,
-            PatientGender = Gender,
-            Activities = new List<ClaimActivityRequestDto> { activity },
+            Age = Age,
+            Gender = Gender,
+            Activities = _activityCodes,
             ActivityQuantity = activity.Quantity,
             MedicationQuantities = _quantitiesByCode,
             SpecialitiesCode=_specialitiesCode,
-            PrimaryGenericsGroup=activity.GenericCode,
+            GenericGroup=activity.GenericCode,
             GenericsGroups=_genericsGroups,
             DiagnosisGroupCodes=_diagnosisGroupCodes,
             DtgCodeCounts=_dtgCodeCounts
@@ -188,7 +188,7 @@ internal sealed class ClaimWorkItem
     // ---- helpers ----------------------------------------------------------------------------------
 
     /// <summary>All activities whose code differs from the given activity's code.</summary>
-    private List<ClaimActivityRequestDto> GetOtherActivities(ClaimActivityRequestDto activity)
+    private List<string> GetOtherActivities(ClaimActivityRequestDto activity)
     {
         if (_otherActivitiesByCode is null)
             return BuildOthers(Activities, activity.ActivityCode);
@@ -199,13 +199,13 @@ internal sealed class ClaimWorkItem
             (Activities, Code: activity.ActivityCode));
     }
 
-    private static List<ClaimActivityRequestDto> BuildOthers(List<ClaimActivityRequestDto> all, string? code)
+    private static List<string> BuildOthers(List<ClaimActivityRequestDto> all, string? code)
     {
-        var others = new List<ClaimActivityRequestDto>(all.Count);
+        var others = new List<string>(all.Count);
         foreach (var other in all)
         {
             if (!string.Equals(other.ActivityCode, code, StringComparison.Ordinal))
-                others.Add(other);
+                others.Add(other.ActivityCode);
         }
         return others;
     }

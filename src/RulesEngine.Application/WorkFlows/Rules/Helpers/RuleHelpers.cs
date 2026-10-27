@@ -19,7 +19,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
     public class ExpressionBuildResult
     {
-        public string Expression { get; set; } = string.Empty;
+        public string Expression { get; set; }  
     }
 
     public static class RuleTreeMapper
@@ -138,7 +138,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
         {
             var items = v.ValueKind == JsonValueKind.Array ? v.EnumerateArray().ToList() : new List<JsonElement> { v };
             if (items.Count == 0 || items.Any(i => i.ValueKind != JsonValueKind.String))
-                throw new RuleValidationException("Expected one or more text values.");
+                return new();
             return items.Select(i => i.GetString()!).ToList();
         }
 

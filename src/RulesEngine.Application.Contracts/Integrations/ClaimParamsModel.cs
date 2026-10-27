@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 public class ClaimValidationByCodeRequest
 {
-    public string Patientnid { get; set; } = string.Empty;
+    public string Patientnid { get; set; }  
 
     public List<string>? ActivityCodes { get; set; }
     public List<string>? DiagnosisCodes { get; set; }

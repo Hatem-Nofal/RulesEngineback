@@ -20,7 +20,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         public WorkFlow Workflow { get; private set; }
 
         public ViolationType ViolationType { get; set; } = ViolationType.Error;
-        public string? ViolationMessage { get; set; } = string.Empty;
+        public string? ViolationMessage { get; set; } 
         public bool IsActive { get; private set; } = true;
         public string Expression { get; private set; }
 

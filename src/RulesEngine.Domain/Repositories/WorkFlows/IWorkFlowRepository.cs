@@ -18,6 +18,7 @@ namespace RulesEngine.Repositories.WorkFlows
         Task DeleteAsync(Guid id);
         Task<IQueryable<WorkFlow>> GetAllForRuleEngine();
         Task<RulesFingerprint> GetRulesFingerprintAsync(CancellationToken cancellationToken = default);
+        Task<WorkFlow> GetDetailsAsync(Guid id);
 
     }
     public readonly record struct RulesFingerprint(int Workflows, int Rules, DateTime? LastChange);

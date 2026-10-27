@@ -96,7 +96,9 @@ namespace RulesEngine.WorkFlows.Rules
                 IsActive = rule.IsActive,
                 Root = !rule.Workflow.HasCustomeRule ? await RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto(),
                 Expression = rule.Expression,
-                WorkflowHasCustomeRule = rule.Workflow.HasCustomeRule
+                WorkflowHasCustomeRule = rule.Workflow.HasCustomeRule,
+                ViolationMessage=rule.ViolationMessage,
+               ViolationType=rule.ViolationType 
             };
         }
 

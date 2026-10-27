@@ -16,10 +16,10 @@ namespace RulesEngine.WorkFlows
     public class WorkFlowAppService : CrudAppService<WorkFlow, WorkflowDto, WorkflowDto, Guid, WorkflowPagedAndFilterDto, SaveWorkflowDto, SaveWorkflowDto>, IWorkFlowAppService
     {
         private readonly IWorkFlowRepository _workFlowRepository;
-        private readonly IRepository<RuleFormConfig> _ruleFormConfigRepository;
-        private readonly IRepository<Rule> _ruleRepository;
+        private readonly IRepository<RuleFormConfig,Guid> _ruleFormConfigRepository;
+        private readonly IRepository<Rule, Guid> _ruleRepository;
 
-        public WorkFlowAppService(IRepository<WorkFlow, Guid> repository, IWorkFlowRepository workFlowRepository, IRepository<RuleFormConfig> ruleFormConfigRepository, IRepository<Rule> ruleRepository) : base(repository)
+        public WorkFlowAppService(IRepository<WorkFlow, Guid> repository, IWorkFlowRepository workFlowRepository, IRepository<RuleFormConfig, Guid> ruleFormConfigRepository, IRepository<Rule, Guid> ruleRepository) : base(repository)
         {
             _workFlowRepository = workFlowRepository;
             _ruleFormConfigRepository = ruleFormConfigRepository;
@@ -44,12 +44,10 @@ namespace RulesEngine.WorkFlows
 
         public override async Task<WorkflowDto> GetAsync(Guid id)
         {
-            var workflow = await _workFlowRepository.GetAsync(id);
-            var rule = await _ruleRepository.GetAsync(x => x.WorkflowId == id);
-            var configs = (await _ruleFormConfigRepository.GetListAsync()).ToDictionary(x => x.Id, x => x.Name);
+            var workflow = await _workFlowRepository.GetDetailsAsync(id);
+             var configs = (await _ruleFormConfigRepository.GetListAsync()).ToDictionary(x => x.Id, x => x.Name);
             var count = await _ruleRepository.CountAsync(x => x.WorkflowId == id);
-            workflow.AddRule(rule);
-            return Map(workflow, configs, new Dictionary<Guid, int> { [id] = count });
+             return Map(workflow, configs, new Dictionary<Guid, int> { [id] = count });
 
         }
 
@@ -73,10 +71,11 @@ namespace RulesEngine.WorkFlows
 
         public override async Task<WorkflowDto> UpdateAsync(Guid id, SaveWorkflowDto input)
         {
-            var workflow = await _workFlowRepository.GetAsync(id);
+            var workflow = await _workFlowRepository.GetAsync(x=>x.Id==id);
             workflow.UpdateName(input.Name);
             workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
             workflow.SetHasCustomeRule(input.HasCustomeRule);
+            workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
             if (input.HasCustomeRule)
             {
                 if (string.IsNullOrEmpty(input.RuleExpression))

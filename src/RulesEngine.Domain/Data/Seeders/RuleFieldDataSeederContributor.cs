@@ -1,18 +1,11 @@
 ﻿using RulesEngine.Common.Consts;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.IO;
-using System.Security.Claims;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Uow;
-using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace RulesEngine.Data.Seeders
 {
@@ -57,7 +50,7 @@ namespace RulesEngine.Data.Seeders
                 new RuleField("BatchServiceYear", "Batch Service Year", DataTypes.Number),
                 new RuleField("ClaimTags", "Claim Tags", DataTypes.List),
                 new RuleField("SpecialitiesCode", "Specialities", DataTypes.List),
-                new RuleField("PrimaryGenericsGroup", "Generic Group", DataTypes.List),
+                new RuleField("GenericGroup", "Generic Group", DataTypes.List),
                 new RuleField("GenericsGroups", "Generics Groups", DataTypes.List),
                 new RuleField("DiagnosisGroupCodes", "Diagnosis Groups", DataTypes.List),
             });

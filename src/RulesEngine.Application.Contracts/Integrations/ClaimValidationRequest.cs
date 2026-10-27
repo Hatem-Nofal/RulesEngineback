@@ -6,10 +6,10 @@ namespace RulesEngine.Integrations
 {
     public class ClaimValidationRequest
     {
-          public string PatientId { get; set; } = string.Empty;
+          public string PatientId { get; set; }  
         public int? PatientAge { get; set; }
         public string Patientnid { get; set; }
-        public string? PatientGender { get; set; } = string.Empty;
+        public string? PatientGender { get; set; } 
         public List<string>? Diagnoses { get; set; } = new();
         public List<string>? CurrentMedications { get; set; } = new();
         public List<string>? Procedures { get; set; } = new();

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using RulesEngine.Common.Enums;
+using RulesEngine.Common.Helper;
 using RulesEngine.Integrations;
 using RulesEngine.Lookups;
 using RulesEngine.Models;
@@ -56,7 +57,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
 
         var startedAt = Stopwatch.GetTimestamp();
 
-        if (_logger.IsEnabled(LogLevel.Information))
+        if (_logger.IsEnabled(LogLevel.Warning))
         {
             LogStarting(
                 claims.Count,
@@ -395,7 +396,15 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                     var ruleName = result.Rule.RuleName;
                     if (!string.IsNullOrEmpty(result.ExceptionMessage))
                         LogRuleThrew(ruleName, plan.Name, claim.ClaimNumber, activityId, result.ExceptionMessage);
+                    var ruleType = result.Rule.GetType();
 
+                    var violationType = result.Rule
+                                        .GetType()
+                                        .GetProperty("ViolationType")
+                                        ?.GetValue(result.Rule)
+                                        ?.ToString();
+                    var activityQuantity = RuleHelpers.GetPropertyValue("ActivityQuantity", result.Inputs);
+                    int.TryParse(activityQuantity?.ToString(), out var maxDailyQuantity);
                     outcome.Failures.Add(new ClaimValidationResultDto
                     {
                         ActivityId = activityId ?? 0,
@@ -403,6 +412,9 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                         WorkFlowName = plan.Name,
                         NormalizedWorkFlowName = plan.NormalizedName,
                         Rule = ruleName,
+                        ErrorMessage = RuleHelpers.FormatMessage(result.ExceptionMessage, result.Inputs),
+                        ErrorType = violationType,
+                        MaxDailyQuantity = maxDailyQuantity
 
                     });
                 }

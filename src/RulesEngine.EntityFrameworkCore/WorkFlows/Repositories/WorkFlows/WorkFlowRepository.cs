@@ -45,6 +45,19 @@ IWorkFlowRepository
 
             return w;
         }
+        public async Task<WorkFlow> GetDetailsAsync(Guid id)
+        {
+            var w = await _context.WorkFlows
+                .Include(x=>x.Rules)
+                //.Include(x=>x.Rules).ThenInclude(x=>x.Nodes)
+                .Include(x => x.RuleformConfig)
+                .ThenInclude(x => x.RuleFormConfigFields)
+                //   .ThenInclude(x=>x.Rulefield)
+                .AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
+                    ?? throw new KeyNotFoundException("Workflow not found.");
+
+            return w;
+        }
 
         public async Task<Guid> CreateAsync(WorkFlow input)
         {

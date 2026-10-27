@@ -12,11 +12,10 @@ namespace RulesEngine.WorkFlows.Dtos.RulesDtos
         public string Name { get; set; } = default!;
         public Guid WorkflowId { get; set; }
         public bool IsActive { get; set; } = true;
-        public bool IsMultiple { get; set; }
         public string? Expression { get; set; }
-        public bool WorkflowHasCustomeRule { get;   set; } = false;
+        public bool WorkflowHasCustomeRule { get; set; } = false;
         public ViolationType ViolationType { get; set; }
-        public string? ViolationMessage { get; set; } = string.Empty;
+        public string? ViolationMessage { get; set; }
 
         public RuleNodeDto Root { get; set; } = default!;
     }
