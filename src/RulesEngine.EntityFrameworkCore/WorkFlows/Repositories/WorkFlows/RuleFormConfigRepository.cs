@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using RulesEngine.Application.Repositories.WorkFlows;
 using RulesEngine.Common.Enums;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.EntityFrameworkCore;
+using RulesEngine.Repositories.WorkFlows;
 using System;
 using System.Collections.Generic;
 using System.Linq;

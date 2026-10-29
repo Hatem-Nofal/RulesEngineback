@@ -1,12 +1,11 @@
 ﻿using RulesEngine.Common.Enums;
-using RulesEngine.Entities.Lookups;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
 using Volo.Abp.Domain.Entities;
 
-namespace RulesEngine.Lookups
+namespace RulesEngine.Entities.Lookups
 {
     [Table("Diagnoses", Schema = "Lookups")]
     public class Diagnosis : Entity<long>

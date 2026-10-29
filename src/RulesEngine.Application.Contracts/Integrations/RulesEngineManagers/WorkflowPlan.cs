@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RulesEngine.IntegrationsNew.RulesEngineManagers;
+namespace RulesEngine.Integrations.RulesEngineManagers;
 
 /// <summary>
 /// Everything the validation pipeline needs to know about a workflow, computed once per snapshot.

@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using Volo.Abp.Domain.Entities;
 
-namespace RulesEngine.Lookups
+namespace RulesEngine.Entities.Lookups
 {
     [Table("MorbidityGroups", Schema = "Lookups")]
     public class MorbidityGroup : Entity<int>

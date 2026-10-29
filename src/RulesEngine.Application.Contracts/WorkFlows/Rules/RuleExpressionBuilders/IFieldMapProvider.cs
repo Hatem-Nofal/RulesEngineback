@@ -1,10 +1,9 @@
-﻿using RulesEngine.WorkFlows.Rules.RuleExpressionBuilders;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RulesEngine.WorkFlows.Rules.RuleBuilders
+namespace RulesEngine.WorkFlows.Rules.RuleExpressionBuilders
 {
     public interface IFieldMapProvider
     {

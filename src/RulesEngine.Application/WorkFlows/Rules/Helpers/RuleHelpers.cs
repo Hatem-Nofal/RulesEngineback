@@ -1,8 +1,8 @@
 using RulesEngine.Common.Consts;
 using RulesEngine.Common.Enums;
+using RulesEngine.Entities.Lookups;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
-using RulesEngine.Lookups;
 using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
 using RulesEngine.WorkFlows.Dtos.RulesDtos;
 using System;

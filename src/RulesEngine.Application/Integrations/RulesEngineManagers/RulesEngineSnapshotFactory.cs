@@ -1,13 +1,14 @@
 using RulesEngine.Common.Dtos;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.HelperFunctions;
+using RulesEngine.IntegrationsNew.RulesEngineManagers;
 using RulesEngine.Models;
 using System;
 using System.Collections.Generic;
 using EngineRule = RulesEngine.Models.Rule;
 using EngineWorkflow = RulesEngine.Models.Workflow;
 
-namespace RulesEngine.IntegrationsNew.RulesEngineManagers;
+namespace RulesEngine.Integrations.RulesEngineManagers;
 
 /// <summary>Pure function: database workflows in, ready-to-use snapshot out.</summary>
 internal static class RulesEngineSnapshotFactory

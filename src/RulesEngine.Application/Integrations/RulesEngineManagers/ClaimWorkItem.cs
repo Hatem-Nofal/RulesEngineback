@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-namespace RulesEngine.IntegrationsNew.RulesEngineManagers;
+namespace RulesEngine.Integrations.RulesEngineManagers;
 
 /// <summary>
 /// One claim, normalized once and shared (read-only) by every workflow evaluated against it.

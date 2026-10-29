@@ -1,5 +1,4 @@
-﻿using RulesEngine.Entities.Lookups;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -8,7 +7,7 @@ using System.Text.Json.Serialization;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Identity;
 
-namespace RulesEngine.Lookups
+namespace RulesEngine.Entities.Lookups
 {
     [Table("Activity_sub_types", Schema = "Lookups")]
     public class ActivitySubType : Entity<long>

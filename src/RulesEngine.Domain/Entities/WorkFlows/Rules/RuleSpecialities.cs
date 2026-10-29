@@ -1,4 +1,4 @@
-﻿using RulesEngine.Lookups;
+﻿using RulesEngine.Entities.Lookups;
 using System;
 using System.ComponentModel.DataAnnotations.Schema;
 using Volo.Abp.Domain.Entities;

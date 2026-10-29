@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
 using Volo.Abp.Domain.Entities;
 
-namespace RulesEngine.Lookups
+namespace RulesEngine.Entities.Lookups
 {
 
     [Table("Activity_types", Schema = "Lookups")]

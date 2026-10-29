@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace RulesEngine.IntegrationsNew.RulesEngineManagers;
+namespace RulesEngine.Integrations.RulesEngineManagers;
 
 // Strongly typed replacements for the three anonymous "ctx" objects. Property names and types are
 // IDENTICAL to the old anonymous types, so every stored rule expression keeps working unchanged.

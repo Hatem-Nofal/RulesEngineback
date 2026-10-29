@@ -3,7 +3,6 @@ using RulesEngine.Entities.Lookups;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
-using RulesEngine.Lookups;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;

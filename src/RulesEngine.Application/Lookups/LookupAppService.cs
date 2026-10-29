@@ -1,7 +1,6 @@
 ﻿using RulesEngine.Common.Dtos;
 using RulesEngine.Entities.Lookups;
 using RulesEngine.Entities.WorkFlows;
-using RulesEngine.Lookups;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,7 +10,7 @@ using System.Threading.Tasks;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 
-namespace EhealthClaims.Lookups
+namespace RulesEngine.Lookups
 {
     /// <summary>
     /// Drop-down data for the UI.

@@ -1,11 +1,10 @@
-﻿using RulesEngine.Integrations;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Services;
 
-namespace RulesEngine.IntegrationsNew
+namespace RulesEngine.Integrations
 {
     public interface IIntegrationsAppService: IApplicationService
     {

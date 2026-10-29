@@ -2,7 +2,6 @@
 using RulesEngine.Common.Consts;
 using RulesEngine.Common.Enums;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
-using RulesEngine.WorkFlows.Rules.RuleBuilders;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -1,5 +1,5 @@
-﻿using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
-using RulesEngine.Lookups;
+﻿using RulesEngine.Entities.Lookups;
+using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using System;
 using System.ComponentModel.DataAnnotations.Schema;
 using Volo.Abp.Domain.Entities;

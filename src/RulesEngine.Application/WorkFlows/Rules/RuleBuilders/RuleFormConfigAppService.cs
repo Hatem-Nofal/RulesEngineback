@@ -1,12 +1,10 @@
 using Duende.IdentityModel;
-using RulesEngine.Application.Repositories.WorkFlows;
 using RulesEngine.Common.Extensions;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.Lookups.Dtos;
 using RulesEngine.Repositories.WorkFlows;
 using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
-using RulesEngine.WorkFlows.Rules.RuleBuilders;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +16,7 @@ using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 
 
-namespace RuleBuilder.Api;
+namespace RulesEngine.WorkFlows.Rules.RuleBuilders;
 
 /// <summary>Read-only: configs are managed in the database (see DbSeeder or plain SQL).</summary>
 public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormConfigDto, FormConfigListDto, Guid, PagedAndSortedResultRequestDto, CreateFormConfigEditDto, CreateFormConfigEditDto>, IRuleFormConfigAppService 

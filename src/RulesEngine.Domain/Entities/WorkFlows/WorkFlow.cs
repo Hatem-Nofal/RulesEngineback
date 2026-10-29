@@ -2,7 +2,6 @@
 using RulesEngine.Common.Extensions;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
-using RulesEngine.Lookups;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;

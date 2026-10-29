@@ -8,13 +8,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi;
 using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
+using RulesEngine.CustomAppServices;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.EntityFrameworkCore;
-using RulesEngine.HandelError;
 using RulesEngine.HealthChecks;
 using RulesEngine.MiddleWares;
 using RulesEngine.MultiTenancy;
@@ -24,8 +25,6 @@ using Serilog.Events;
 using System;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.Account;
@@ -44,6 +43,7 @@ using Volo.Abp.Auditing;
 using Volo.Abp.Autofac;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Entities.Caching;
+using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.Security.Claims;
@@ -52,7 +52,6 @@ using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.UI.Navigation.Urls;
 using Volo.Abp.VirtualFileSystem;
-using static OpenIddict.Server.OpenIddictServerEvents;
 
 namespace RulesEngine;
 
@@ -107,8 +106,8 @@ public class RulesEngineHttpApiHostModule : AbpModule
 
         if (!configuration.GetValue<bool>("App:DisablePII"))
         {
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.LogCompleteSecurityArtifact = true;
+            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = false;
+            Microsoft.IdentityModel.Logging.IdentityModelEventSource.LogCompleteSecurityArtifact = false;
         }
 
         if (!configuration.GetValue<bool>("AuthServer:RequireHttpsMetadata"))
@@ -143,6 +142,7 @@ public class RulesEngineHttpApiHostModule : AbpModule
         ConfigureCors(context, configuration);
         ConfigureSerilog(configuration, hostingEnvironment);
         ConfigureSignalR(context);
+        ConfigureCustomConfigurations(context);
 
         Configure<AbpAuditingOptions>(options =>
         {
@@ -154,10 +154,10 @@ public class RulesEngineHttpApiHostModule : AbpModule
             options.SendStackTraceToClients = false;
 
         });
-  
+
         Configure<AbpAntiForgeryOptions>(options =>
         {
-            
+
             options.AutoValidateFilter = type =>
                 !(new[] { "RuleApplication", "Identity" })
                     .Any(ns => type.Namespace?.Contains(ns, StringComparison.OrdinalIgnoreCase) ?? false);
@@ -395,6 +395,18 @@ public class RulesEngineHttpApiHostModule : AbpModule
                     });
                 });
         });
+    }
+
+    private void ConfigureCustomConfigurations(ServiceConfigurationContext context)
+    {
+
+        // context.Services.Replace(ServiceDescriptor.Transient<IAbpApplicationConfigurationAppService, CustomApplicationConfigurationAppServices>());
+
+        context.Services.Replace(ServiceDescriptor.Transient<IIdentityUserAppService, CustomUserAppService>());
+        context.Services.Replace(ServiceDescriptor.Transient<IIdentityRoleAppService, CustomRolesAppService>());
+
+
+
     }
     public override async Task OnApplicationInitializationAsync(ApplicationInitializationContext context)
     {

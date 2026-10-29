@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
-namespace RulesEngine.IntegrationsNew.RulesEngineManagers;
+namespace RulesEngine.Integrations.RulesEngineManagers;
 
 /// <summary>
 /// Immutable view of the rules engine at one point in time. Workflow lookups are in-memory, so resolving
