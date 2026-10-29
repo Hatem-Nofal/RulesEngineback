@@ -12,9 +12,7 @@ using Volo.Abp.EntityFrameworkCore;
 
 namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 {
-
-
-
+     
     public class RuleRepository
 : EfCoreRepository<RulesEngineDbContext, Rule, Guid>,
 IRuleRepository
@@ -43,10 +41,10 @@ IRuleRepository
         }
         public async Task<Rule> GetForUpdateAsync(Guid id)
         {
-            var w = await _context.Rules.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
+            return await _context.Rules.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
                     ?? throw new KeyNotFoundException("Workflow not found.");
             
-            return w;
+ 
         }
 
         

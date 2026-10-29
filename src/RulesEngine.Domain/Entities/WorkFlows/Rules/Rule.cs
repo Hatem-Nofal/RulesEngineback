@@ -19,8 +19,8 @@ namespace RulesEngine.Entities.WorkFlows.Rules
 
         public WorkFlow Workflow { get; private set; }
 
-        public ViolationType ViolationType { get; set; } = ViolationType.Error;
-        public string? ViolationMessage { get; set; } 
+        public ViolationType ViolationType { get; private set; } = ViolationType.Error;
+        public string? ViolationMessage { get; private set; } 
         public bool IsActive { get; private set; } = true;
         public string Expression { get; private set; }
 

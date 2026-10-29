@@ -53,7 +53,7 @@ namespace RulesEngine.WorkFlows
 
         public override async Task<WorkflowDto> CreateAsync(SaveWorkflowDto input)
         {
-            var workflow = new WorkFlow(input.Name, input.RuleFormConfigId, input.RejectionLevel, input.HasCustomeRule);
+            var workflow = new WorkFlow(input.Name, input.RuleFormConfigId, input.RejectionLevel, input.HasCustomeRule, input.ViolationMessage);
             workflow.SetId(null);
 
 
@@ -75,6 +75,7 @@ namespace RulesEngine.WorkFlows
             workflow.UpdateName(input.Name);
             workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
             workflow.SetHasCustomeRule(input.HasCustomeRule);
+            workflow.SetViolationMessage(input.ViolationMessage);
             workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
             if (input.HasCustomeRule)
             {
@@ -115,7 +116,8 @@ namespace RulesEngine.WorkFlows
             RuleCount = counts.GetValueOrDefault(w.Id),
             HasCustomeRule = w.HasCustomeRule,
             RejectionLevel = w.RejectionLevel,
-            RuleExpression = w.HasCustomeRule ? w.Rules.FirstOrDefault()?.Expression : string.Empty
+            RuleExpression = w.HasCustomeRule ? w.Rules.FirstOrDefault()?.Expression : string.Empty,
+            ViolationMessage=w.ViolationMessage
 
         };
         private static WorkflowDto Map(WorkflowDto w, Dictionary<Guid, string> configs, Dictionary<Guid, int> counts) => new()
@@ -127,7 +129,9 @@ namespace RulesEngine.WorkFlows
             RuleCount = counts.GetValueOrDefault(w.Id),
             HasCustomeRule = w.HasCustomeRule,
             RejectionLevel = w.RejectionLevel,
-            RuleExpression = w.RuleExpression
+            RuleExpression = w.RuleExpression,
+            ViolationMessage = w.ViolationMessage
+
         };
 
     }

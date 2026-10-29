@@ -87,8 +87,7 @@ namespace RulesEngine.WorkFlows.Rules
             var rule = await _ruleRepository.GetAsync(id)
                        ?? throw new KeyNotFoundException("Rule not found.");
 
-
-            return new RuleDto
+             return new RuleDto
             {
                 Id = rule.Id,
                 Name = rule.Name,
@@ -97,8 +96,8 @@ namespace RulesEngine.WorkFlows.Rules
                 Root = !rule.Workflow.HasCustomeRule ? await RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto(),
                 Expression = rule.Expression,
                 WorkflowHasCustomeRule = rule.Workflow.HasCustomeRule,
-                ViolationMessage=rule.ViolationMessage,
-               ViolationType=rule.ViolationType 
+                ViolationMessage = rule.ViolationMessage?? rule.Workflow.ViolationMessage,
+                ViolationType = rule.ViolationType
             };
         }
 
@@ -199,9 +198,10 @@ namespace RulesEngine.WorkFlows.Rules
 
             var ruleId = Guid.CreateVersion7();
 
-            var rule = new Rule(ruleId, input.WorkflowId, prepared.Expression, input.ViolationMessage);
 
             var workflow = await _workflowRepository.GetAsync(input.WorkflowId);
+            var rule = new Rule(ruleId, input.WorkflowId, prepared.Expression, input.ViolationMessage ?? workflow.ViolationMessage);
+
             var count = await _ruleRepository.CountAsync(x => x.WorkflowId == input.WorkflowId);
 
 

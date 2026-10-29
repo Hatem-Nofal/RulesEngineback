@@ -27,6 +27,7 @@ namespace RulesEngine.Entities.WorkFlows
         public bool IsActive { get; private set; } = true;
         public bool HasCustomeRule { get; private set; } = false;
 
+        public string? ViolationMessage { get; private set; }
 
         // EF mapping property - keep private setter and expose read-only view
         public ICollection<Rule> Rules { get; private set; } = new List<Rule>();
@@ -38,13 +39,14 @@ namespace RulesEngine.Entities.WorkFlows
 
         }
 
-        public WorkFlow(string name, Guid? ruleFormConfigId, RejectionLevel rejectionLevel, bool hasCustomeRule)
+        public WorkFlow(string name, Guid? ruleFormConfigId, RejectionLevel rejectionLevel, bool hasCustomeRule, string? violationMessage)
         {
             Name = name ?? throw new ArgumentNullException(nameof(name));
             RuleformConfigId = ruleFormConfigId;
             NormalizedName = name.NormalizeSpace();
             RejectionLevel = rejectionLevel;
             HasCustomeRule = hasCustomeRule;
+            ViolationMessage = violationMessage;
         }
 
         public void SetId(Guid? id)
@@ -55,8 +57,10 @@ namespace RulesEngine.Entities.WorkFlows
         {
             HasCustomeRule = hasCustomeRule;
         }
-
-
+        public void SetViolationMessage(string? violationMessage)
+        {
+            ViolationMessage = violationMessage;
+        }
         public void AddRule(Rule rule)
         {
             if (rule == null) throw new ArgumentNullException(nameof(rule));

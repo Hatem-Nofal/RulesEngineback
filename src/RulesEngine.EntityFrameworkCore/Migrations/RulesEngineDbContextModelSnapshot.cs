@@ -547,6 +547,9 @@ namespace RulesEngine.Migrations
                     b.Property<Guid?>("RuleformConfigId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ViolationMessage")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Name")

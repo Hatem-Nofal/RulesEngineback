@@ -15,6 +15,8 @@ namespace RulesEngine.WorkFlows.Dtos
         public RejectionLevel RejectionLevel { get;  set; }
         public bool HasCustomeRule { get; set; } = false;
         public string? RuleExpression { get;  set; }
+        public string? ViolationMessage { get;  set; }
+
 
     }
 }
