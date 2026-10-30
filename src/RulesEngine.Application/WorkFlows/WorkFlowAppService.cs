@@ -10,13 +10,16 @@ using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
+using Microsoft.AspNetCore.Authorization;
+using RulesEngine.Permissions;
 
 namespace RulesEngine.WorkFlows
 {
+    [Authorize(RulesEnginePermissions.Workflows)]
     public class WorkFlowAppService : CrudAppService<WorkFlow, WorkflowDto, WorkflowDto, Guid, WorkflowPagedAndFilterDto, SaveWorkflowDto, SaveWorkflowDto>, IWorkFlowAppService
     {
         private readonly IWorkFlowRepository _workFlowRepository;
-        private readonly IRepository<RuleFormConfig,Guid> _ruleFormConfigRepository;
+        private readonly IRepository<RuleFormConfig, Guid> _ruleFormConfigRepository;
         private readonly IRepository<Rule, Guid> _ruleRepository;
 
         public WorkFlowAppService(IRepository<WorkFlow, Guid> repository, IWorkFlowRepository workFlowRepository, IRepository<RuleFormConfig, Guid> ruleFormConfigRepository, IRepository<Rule, Guid> ruleRepository) : base(repository)
@@ -30,14 +33,27 @@ namespace RulesEngine.WorkFlows
         {
             input.Sorting = input.Sorting ?? "CreationTime desc";
 
-            var configs = (await _ruleFormConfigRepository.GetListAsync()).ToDictionary(x => x.Id, x => x.Name);
-            var counts = (await _ruleRepository.GetListAsync())
-                .GroupBy(x => x.WorkflowId)
-                .Select(g => new { WorkflowId = g.Key, Count = g.Count() })
-                .ToDictionary(x => x.WorkflowId, x => x.Count);
-            var workflows = await base.GetListAsync(input);
-            var workflowDtos = workflows.Items.Select(w => Map(w, configs, counts)).ToList();
-            return new PagedResultDto<WorkflowDto>(workflows.TotalCount, workflowDtos);
+            var query = (await _workFlowRepository.GetAllList())
+                .WhereIf(input.RejectionLevel.HasValue, x => x.RejectionLevel == input.RejectionLevel)
+                .WhereIf(input.RuleFormConfigId.HasValue, x => x.RuleformConfigId == input.RuleFormConfigId)
+                .WhereIf(!string.IsNullOrEmpty(input.Name), x => x.Name.Contains(input.Name));
+            var total = await AsyncExecuter.CountAsync(query);
+
+            var workflows = query.ToList();
+
+
+            return new PagedResultDto<WorkflowDto>(total, workflows.Select(w => new WorkflowDto()
+            {
+                Id = w.Id,
+                Name = w.Name,
+                RuleFormConfigId = w.RuleformConfigId,
+                RuleFormConfigName = w.RuleformConfig.Name,
+                RuleCount = w.Rules.Count(),
+                HasCustomeRule = w.HasCustomeRule,
+                RejectionLevel = w.RejectionLevel,
+                RuleExpression = w.HasCustomeRule ? w.Rules.FirstOrDefault().Expression : "",
+                ViolationMessage = w.ViolationMessage
+            }).ToList());
 
         }
 
@@ -45,9 +61,9 @@ namespace RulesEngine.WorkFlows
         public override async Task<WorkflowDto> GetAsync(Guid id)
         {
             var workflow = await _workFlowRepository.GetDetailsAsync(id);
-             var configs = (await _ruleFormConfigRepository.GetListAsync()).ToDictionary(x => x.Id, x => x.Name);
+            var configs = (await _ruleFormConfigRepository.GetListAsync()).ToDictionary(x => x.Id, x => x.Name);
             var count = await _ruleRepository.CountAsync(x => x.WorkflowId == id);
-             return Map(workflow, configs, new Dictionary<Guid, int> { [id] = count });
+            return Map(workflow, configs, new Dictionary<Guid, int> { [id] = count });
 
         }
 
@@ -71,7 +87,7 @@ namespace RulesEngine.WorkFlows
 
         public override async Task<WorkflowDto> UpdateAsync(Guid id, SaveWorkflowDto input)
         {
-            var workflow = await _workFlowRepository.GetAsync(x=>x.Id==id);
+            var workflow = await _workFlowRepository.GetAsync(x => x.Id == id);
             workflow.UpdateName(input.Name);
             workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
             workflow.SetHasCustomeRule(input.HasCustomeRule);
@@ -117,7 +133,7 @@ namespace RulesEngine.WorkFlows
             HasCustomeRule = w.HasCustomeRule,
             RejectionLevel = w.RejectionLevel,
             RuleExpression = w.HasCustomeRule ? w.Rules.FirstOrDefault()?.Expression : string.Empty,
-            ViolationMessage=w.ViolationMessage
+            ViolationMessage = w.ViolationMessage
 
         };
         private static WorkflowDto Map(WorkflowDto w, Dictionary<Guid, string> configs, Dictionary<Guid, int> counts) => new()
@@ -130,6 +146,19 @@ namespace RulesEngine.WorkFlows
             HasCustomeRule = w.HasCustomeRule,
             RejectionLevel = w.RejectionLevel,
             RuleExpression = w.RuleExpression,
+            ViolationMessage = w.ViolationMessage
+
+        };
+        private static WorkflowDto Map(WorkFlow w) => new()
+        {
+            Id = w.Id,
+            Name = w.Name,
+            RuleFormConfigId = w.RuleformConfigId,
+            RuleFormConfigName = w.RuleformConfig.Name,
+            RuleCount = w.Rules.Count(),
+            HasCustomeRule = w.HasCustomeRule,
+            RejectionLevel = w.RejectionLevel,
+            RuleExpression = w.HasCustomeRule ? w.Rules.FirstOrDefault().Expression : "",
             ViolationMessage = w.ViolationMessage
 
         };

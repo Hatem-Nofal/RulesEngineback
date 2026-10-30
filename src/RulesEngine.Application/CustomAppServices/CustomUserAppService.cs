@@ -10,6 +10,7 @@ using Volo.Abp.DependencyInjection;
 using Volo.Abp.Identity;
 namespace RulesEngine.CustomAppServices;
 
+[Microsoft.AspNetCore.Authorization.Authorize("AbpIdentity.Users")]
 [Dependency(ReplaceServices = true)]
 [ExposeServices(typeof(IIdentityUserAppService), typeof(IdentityUserAppService), typeof(CustomUserAppService))]
 public class CustomUserAppService : IdentityUserAppService

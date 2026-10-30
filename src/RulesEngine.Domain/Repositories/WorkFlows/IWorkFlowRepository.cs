@@ -17,6 +17,7 @@ namespace RulesEngine.Repositories.WorkFlows
         Task UpdateAsync(Guid id, WorkFlow input);
         Task DeleteAsync(Guid id);
         Task<IQueryable<WorkFlow>> GetAllForRuleEngine();
+        Task<IQueryable<WorkFlow>> GetAllList();
         Task<RulesFingerprint> GetRulesFingerprintAsync(CancellationToken cancellationToken = default);
         Task<WorkFlow> GetDetailsAsync(Guid id);
 

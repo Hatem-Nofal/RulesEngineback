@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
+using Microsoft.AspNetCore.Authorization;
+using RulesEngine.Permissions;
 
 namespace RulesEngine.Lookups
 {
@@ -20,6 +22,7 @@ namespace RulesEngine.Lookups
     ///   in memory for a few minutes instead of being re-read on every dropdown open.
     /// - Workflows change often, so that list is never cached.
     /// </summary>
+    [Authorize(RulesEnginePermissions.Lookups)]
     public class LookupAppService : ApplicationService, ILookupAppService
     {
 

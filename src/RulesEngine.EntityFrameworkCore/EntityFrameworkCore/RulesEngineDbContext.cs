@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RulesEngine.Entities.Logers;
 using RulesEngine.Entities.Lookups;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules;
@@ -80,6 +81,7 @@ public class RulesEngineDbContext :
     public DbSet<MorbidityGroup> MorbidityGroups { get; set; }
     public DbSet<ActivitySubTypeDtg> ActivitySubTypeDtgs { get; set; }
     public DbSet<BatchType> BatchTypes { get; set; }
+    public DbSet<RulesEngineViolationLog> RulesEngineViolationLogs { get; set; }
 
     #endregion
 

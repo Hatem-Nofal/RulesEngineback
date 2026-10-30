@@ -1,12 +1,14 @@
 using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
 using RulesEngine.Common.Enums;
 using RulesEngine.Common.Extensions;
 using RulesEngine.Entities.Lookups;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.Integrations.RulesEngineManagers;
-using RulesEngine.IntegrationsNew.RulesEngineManagers;
+using RulesEngine.Permissions;
 using RulesEngine.Repositories.WorkFlows;
+using RulesEngine.WorkFlows.Dtos;
 using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
 using RulesEngine.WorkFlows.Dtos.RulesDtos;
 using RulesEngine.WorkFlows.Rules.Helpers;
@@ -21,11 +23,12 @@ using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Content;
 using Volo.Abp.Domain.Repositories;
-
+using System.Linq.Dynamic.Core;
 namespace RulesEngine.WorkFlows.Rules
 {
 
-    public class RuleAppService : CrudAppService<Rule, RuleDto, RuleListItemDto, Guid, PagedAndSortedResultRequestDto, CreateRuleDto, CreateRuleDto>, IRuleAppService
+    [Authorize(RulesEnginePermissions.Rules)]
+    public class RuleAppService : CrudAppService<Rule, RuleDto, RuleListItemDto, Guid, RulePagedAndSortedResultRequestDto, CreateRuleDto, CreateRuleDto>, IRuleAppService
     {
         private readonly IRepository<RuleNode, Guid> _ruleNodeRepository;
         private readonly IWorkFlowRepository _workflowRepository;
@@ -54,24 +57,23 @@ namespace RulesEngine.WorkFlows.Rules
             _activitySubTypeRepository = activitySubTypeRepository;
         }
 
-        public override async Task<PagedResultDto<RuleListItemDto>> GetListAsync(PagedAndSortedResultRequestDto input)
+        public override async Task<PagedResultDto<RuleListItemDto>> GetListAsync(RulePagedAndSortedResultRequestDto input)
         {
             // Paging happens in SQL and only the four list columns are read. The previous version loaded every rule
             // (including its expression text) into memory just to take one page of it.
             var query = (await Repository.GetQueryableAsync())
-                .OrderBy(x => x.Name)
-                .ThenBy(x => x.Id);   // stable order, so a row can never appear on two pages
+                .WhereIf(!string.IsNullOrEmpty(input.RuleName), x => x.Name.Contains(input.RuleName))
+                .WhereIf(input.WorkflowId.HasValue, x => x.WorkflowId == input.WorkflowId) ;   // stable order, so a row can never appear on two pages
 
             var total = await AsyncExecuter.CountAsync(query);
+            query = query.OrderBy(input.Sorting ?? "CreationTime DESC")
+                .PageBy(input);
 
-            var page = await AsyncExecuter.ToListAsync(
-                query.Skip(input.SkipCount)
-                     .Take(input.MaxResultCount)
-                     .Select(x => new { x.Id, x.Name, x.WorkflowId, x.IsActive }));
+
 
             var workflows = (await _workflowRepository.GetListAsync()).ToDictionary(x => x.Id, x => x.Name);
 
-            var items = page.Select(x => new RuleListItemDto
+            var items = query.Select(x => new RuleListItemDto
             {
                 Id = x.Id,
                 Name = x.Name,
@@ -88,7 +90,7 @@ namespace RulesEngine.WorkFlows.Rules
             var rule = await _ruleRepository.GetAsync(id)
                        ?? throw new KeyNotFoundException("Rule not found.");
 
-             return new RuleDto
+            return new RuleDto
             {
                 Id = rule.Id,
                 Name = rule.Name,
@@ -97,7 +99,7 @@ namespace RulesEngine.WorkFlows.Rules
                 Root = !rule.Workflow.HasCustomeRule ? await RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto(),
                 Expression = rule.Expression,
                 WorkflowHasCustomeRule = rule.Workflow.HasCustomeRule,
-                ViolationMessage = rule.ViolationMessage?? rule.Workflow.ViolationMessage,
+                ViolationMessage = rule.ViolationMessage ?? rule.Workflow.ViolationMessage,
                 ViolationType = rule.ViolationType
             };
         }

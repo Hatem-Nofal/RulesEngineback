@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using RulesEngine.Common.Enums;
 using RulesEngine.Common.Helper;
+using RulesEngine.Entities.Logers;
 using RulesEngine.Entities.Lookups;
 using RulesEngine.Integrations;
 using RulesEngine.Integrations.RulesEngineManagers;
@@ -27,15 +28,17 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
     private readonly IRulesEngineManager _rulesEngineManager;
     private readonly IRepository<Diagnosis> _diagnosisRepository;
     private readonly IRepository<ActivitySubType> _activitySubTypeRepository;
+    private readonly IRepository<RulesEngineViolationLog> _rulesEngineViolationLogRepository;
     private readonly IAsyncQueryableExecuter _asyncExecuter;
 
-    public RulesValidationManager(ILogger<RulesValidationManager> logger, IRulesEngineManager rulesEngineManager, IRepository<Diagnosis> diagnosisRepository, IRepository<ActivitySubType> activitySubTypeRepository, IAsyncQueryableExecuter asyncExecuter)
+    public RulesValidationManager(ILogger<RulesValidationManager> logger, IRulesEngineManager rulesEngineManager, IRepository<Diagnosis> diagnosisRepository, IRepository<ActivitySubType> activitySubTypeRepository, IAsyncQueryableExecuter asyncExecuter, IRepository<RulesEngineViolationLog> rulesEngineViolationLogRepository)
     {
         _logger = logger;
         _rulesEngineManager = rulesEngineManager;
         _diagnosisRepository = diagnosisRepository;
         _activitySubTypeRepository = activitySubTypeRepository;
         _asyncExecuter = asyncExecuter;
+        _rulesEngineViolationLogRepository = rulesEngineViolationLogRepository;
     }
 
 
@@ -314,6 +317,8 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
 
         for (var offset = 0; offset < claims.Count; offset += ClaimChunkSize)
         {
+            var rulesEngineViolationLogs = new List<RulesEngineViolationLog>();
+
             var chunkStart = offset;
             var itemCount = Math.Min(ClaimChunkSize, claims.Count - chunkStart) * plans.Count;
             Array.Clear(slots, 0, itemCount);
@@ -330,7 +335,9 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                 if (slots[i] is not { } outcome) continue;
                 failures.AddRange(outcome.Failures);
                 errors.AddRange(outcome.Errors);
+                rulesEngineViolationLogs.AddRange(outcome.RulesEngineViolationLog);
             }
+            await _rulesEngineViolationLogRepository.UpdateManyAsync(rulesEngineViolationLogs);
         }
 
         return (failures, errors);
@@ -415,6 +422,12 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                         MaxDailyQuantity = maxDailyQuantity
 
                     });
+                    outcome.RulesEngineViolationLog.Add(RulesEngineViolationLog.Create(
+                        activityId ?? 0,
+                        claim.ClaimNumber,
+                        plan.Name, ruleName,
+                        RuleHelpers.FormatMessage(result.ExceptionMessage, result.Inputs),
+                        violationType, result.Rule.Expression));
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -436,6 +449,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
     {
         public List<ClaimValidationResultDto> Failures { get; } = new();
         public List<string> Errors { get; } = new();
+        public List<RulesEngineViolationLog> RulesEngineViolationLog { get; } = new();
         public bool IsEmpty => Failures.Count == 0 && Errors.Count == 0;
     }
 

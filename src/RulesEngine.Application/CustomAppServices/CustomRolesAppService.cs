@@ -10,6 +10,7 @@ using Volo.Abp.Identity;
 
 namespace RulesEngine.CustomAppServices;
 
+[Microsoft.AspNetCore.Authorization.Authorize("AbpIdentity.Roles")]
 [Dependency(ReplaceServices = true)]
 [ExposeServices(typeof(IIdentityRoleAppService), typeof(IdentityRoleAppService), typeof(CustomRolesAppService))]
 public class CustomRolesAppService : IdentityRoleAppService

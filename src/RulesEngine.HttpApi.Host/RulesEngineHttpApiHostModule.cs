@@ -106,8 +106,8 @@ public class RulesEngineHttpApiHostModule : AbpModule
 
         if (!configuration.GetValue<bool>("App:DisablePII"))
         {
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = false;
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.LogCompleteSecurityArtifact = false;
+            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
+            Microsoft.IdentityModel.Logging.IdentityModelEventSource.LogCompleteSecurityArtifact = true;
         }
 
         if (!configuration.GetValue<bool>("AuthServer:RequireHttpsMetadata"))
@@ -402,8 +402,8 @@ public class RulesEngineHttpApiHostModule : AbpModule
 
         // context.Services.Replace(ServiceDescriptor.Transient<IAbpApplicationConfigurationAppService, CustomApplicationConfigurationAppServices>());
 
-        context.Services.Replace(ServiceDescriptor.Transient<IIdentityUserAppService, CustomUserAppService>());
-        context.Services.Replace(ServiceDescriptor.Transient<IIdentityRoleAppService, CustomRolesAppService>());
+        //context.Services.Replace(ServiceDescriptor.Transient<IIdentityUserAppService, CustomUserAppService>());
+        //context.Services.Replace(ServiceDescriptor.Transient<IIdentityRoleAppService, CustomRolesAppService>());
 
 
 

@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text;
-using System.Text.Json.Serialization;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Identity;
 
@@ -16,7 +14,7 @@ namespace RulesEngine.Entities.Lookups
         public string? Short_Desc { get; set; }
         public string? Medium_Desc { get; set; }
         public int ActivityType_id { get; set; }
-        [ForeignKey(nameof(ActivityType_id))] 
+        [ForeignKey(nameof(ActivityType_id))]
         public ActivityType ActivityType { get; set; }
         public int Status { get; set; }
         public int OccurrenceCount { get; set; }
@@ -43,7 +41,7 @@ namespace RulesEngine.Entities.Lookups
         public int? GenericDrugId { get; set; }
         [ForeignKey(nameof(GenericDrugId))]
         public GenericDrug? GenericDrug { get; set; }
-  
+
         public List<ActivitySubTypeDtg>? DuplicateTherapyGroups { get; set; } = new();
 
         private ActivitySubType() { }

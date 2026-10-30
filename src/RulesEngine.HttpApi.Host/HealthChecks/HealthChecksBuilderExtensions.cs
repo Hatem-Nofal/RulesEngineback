@@ -47,6 +47,8 @@ public static class HealthChecksBuilderExtensions
         {
             options.EndpointConfigureActions.Add(endpointContext =>
             {
+                // HealthChecks UI polls this endpoint without a user token.
+                // Keep the response health-only and restrict it at the ingress when it is public.
                 endpointContext.Endpoints.MapHealthChecks(
                     new PathString(path.EnsureStartsWith('/')),
                     new HealthCheckOptions
@@ -54,7 +56,7 @@ public static class HealthChecksBuilderExtensions
                         Predicate = _ => true,
                         ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse,
                         AllowCachingResponses = false,
-                    });
+                    }).AllowAnonymous();
             });
         });
 
@@ -67,7 +69,7 @@ public static class HealthChecksBuilderExtensions
         {
             routerOptions.EndpointConfigureActions.Add(endpointContext =>
             {
-                endpointContext.Endpoints.MapHealthChecksUI(setupOption);
+                endpointContext.Endpoints.MapHealthChecksUI(setupOption).AllowAnonymous();
             });
         });
 

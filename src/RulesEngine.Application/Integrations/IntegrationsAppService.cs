@@ -3,9 +3,12 @@ using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Threading;
+using Microsoft.AspNetCore.Authorization;
+using RulesEngine.Permissions;
 
 namespace RulesEngine.Integrations
 {
+ //   [Authorize(RulesEnginePermissions.Validation)]
     public class IntegrationsAppService : ApplicationService, IIntegrationsAppService
     {
         private readonly IRulesValidationManager _rulesValidationManager;

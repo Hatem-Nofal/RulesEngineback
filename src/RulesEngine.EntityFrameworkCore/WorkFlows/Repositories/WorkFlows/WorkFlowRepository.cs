@@ -128,6 +128,16 @@ IWorkFlowRepository
 
             return Task.FromResult(query);
         }
+        public Task<IQueryable<WorkFlow>> GetAllList()
+        {
+            IQueryable<WorkFlow> query = _context.WorkFlows
+                .AsNoTracking()
+                .Where(x => x.IsActive)
+                .Include(x=>x.RuleformConfig)
+                .Include(x => x.Rules.Where(r => r.IsActive));
+
+            return Task.FromResult(query);
+        }
 
         public async Task<RulesFingerprint> GetRulesFingerprintAsync(CancellationToken cancellationToken = default)
         {

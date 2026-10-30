@@ -1,7 +1,7 @@
 /* Dev Login Helper */
 (() => {
   const defaultAdminUsername = "admin";
-  const defaultAdminPassword = "1q2w3E*";
+  const defaultAdminPassword = "";
 
   const run = () => {
     if (!/\/Account\/Login\/?$/i.test(window.location.pathname)) {

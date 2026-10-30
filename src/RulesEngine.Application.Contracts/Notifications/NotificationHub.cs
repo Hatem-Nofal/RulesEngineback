@@ -3,6 +3,7 @@ using Volo.Abp.AspNetCore.SignalR;
 
 namespace RulesEngine.Notifications
 {
+    [Microsoft.AspNetCore.Authorization.Authorize]
     public class NotificationHub : AbpHub
     {
         //private readonly UserHubConnections _userConnectionsSingleton;

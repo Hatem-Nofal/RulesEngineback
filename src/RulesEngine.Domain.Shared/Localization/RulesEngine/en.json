@@ -564,6 +564,12 @@
 
     "Beneficiaries:CompletionStatus": "Completion Status",
     "Beneficiaries:Complete": "Complete",
-    "Beneficiaries:Incomplete": "Incomplete"
+    "Beneficiaries:Incomplete": "Incomplete",
+    "Permission:RulesEngineLookups": "Lookups",
+    "Permission:RulesEngineValidation": "Validation",
+    "Permission:RulesEngineWorkflows": "Workflows",
+    "Permission:RulesEngineRules": "Rules",
+    "Permission:RulesEngineRuleFormConfigs": "RuleFormConfigs",
+    "Permission:RulesEngineAdministration": "Administration"
   }
 }

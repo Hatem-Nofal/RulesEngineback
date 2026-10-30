@@ -14,11 +14,14 @@ using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
+using Microsoft.AspNetCore.Authorization;
+using RulesEngine.Permissions;
 
 
 namespace RulesEngine.WorkFlows.Rules.RuleBuilders;
 
 /// <summary>Read-only: configs are managed in the database (see DbSeeder or plain SQL).</summary>
+[Authorize(RulesEnginePermissions.RuleFormConfigs)]
 public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormConfigDto, FormConfigListDto, Guid, PagedAndSortedResultRequestDto, CreateFormConfigEditDto, CreateFormConfigEditDto>, IRuleFormConfigAppService 
 {
      private readonly IRuleFormConfigRepository _ruleFormConfigsRepository;

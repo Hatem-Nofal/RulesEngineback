@@ -1,4 +1,5 @@
-﻿using RulesEngine.WorkFlows.Dtos.RulesDtos;
+﻿using RulesEngine.WorkFlows.Dtos;
+using RulesEngine.WorkFlows.Dtos.RulesDtos;
 using RulesEngine.WorkFlows.Rules.RuleExpressionBuilders;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ using Volo.Abp.Content;
 
 namespace RulesEngine.WorkFlows.Rules
 {
-    public interface IRuleAppService : ICrudAppService< RuleDto, RuleListItemDto, Guid, PagedAndSortedResultRequestDto, CreateRuleDto, CreateRuleDto>
+    public interface IRuleAppService : ICrudAppService< RuleDto, RuleListItemDto, Guid, RulePagedAndSortedResultRequestDto, CreateRuleDto, CreateRuleDto>
     {
         Task<RuleExpressionResultDto> PreviewExpression(RuleDto input);
         /// <summary>

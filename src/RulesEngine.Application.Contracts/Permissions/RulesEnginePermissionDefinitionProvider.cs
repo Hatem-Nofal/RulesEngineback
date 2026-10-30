@@ -10,9 +10,12 @@ public class RulesEnginePermissionDefinitionProvider : PermissionDefinitionProvi
     public override void Define(IPermissionDefinitionContext context)
     {
         var myGroup = context.AddGroup(RulesEnginePermissions.GroupName);
-
-        //Define your own permissions here. Example:
-        //myGroup.AddPermission(RulesEnginePermissions.MyPermission1, L("Permission:MyPermission1"));
+        myGroup.AddPermission(RulesEnginePermissions.Lookups, L("Permission:RulesEngineLookups"));
+        myGroup.AddPermission(RulesEnginePermissions.Validation, L("Permission:RulesEngineValidation"));
+        myGroup.AddPermission(RulesEnginePermissions.Workflows, L("Permission:RulesEngineWorkflows"));
+        myGroup.AddPermission(RulesEnginePermissions.Rules, L("Permission:RulesEngineRules"));
+        myGroup.AddPermission(RulesEnginePermissions.RuleFormConfigs, L("Permission:RulesEngineRuleFormConfigs"));
+        myGroup.AddPermission(RulesEnginePermissions.Administration, L("Permission:RulesEngineAdministration"));
     }
 
     private static LocalizableString L(string name)

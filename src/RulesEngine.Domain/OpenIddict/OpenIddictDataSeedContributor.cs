@@ -73,11 +73,8 @@ public class OpenIddictDataSeedContributor : OpenIddictDataSeedContributorBase, 
                 secret: null,
                 grantTypes: new List<string> {
                     OpenIddictConstants.GrantTypes.AuthorizationCode,
-                    OpenIddictConstants.GrantTypes.Password,
-                    OpenIddictConstants.GrantTypes.ClientCredentials,
                     OpenIddictConstants.GrantTypes.RefreshToken,
-                    "LinkLogin",
-                    "Impersonation"
+                    "LinkLogin"
                 },
                 scopes: commonScopes,
                 redirectUris: new List<string> { appClientRootUrl },
