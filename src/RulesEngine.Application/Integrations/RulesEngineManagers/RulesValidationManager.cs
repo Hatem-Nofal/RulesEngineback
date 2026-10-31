@@ -425,10 +425,12 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                     });
                     outcome.RulesEngineViolationLog.Add(RulesEngineViolationLog.Create(
                         activityId ?? 0,
-                        claim.ClaimNumber,
-                        plan.Name, ruleName,
+                        plan.Name,
+                         ruleName,
+                         violationType,
                         RuleHelpers.FormatMessage(result.ExceptionMessage, result.Inputs),
-                        violationType, result.Rule.Expression, ((ActivityRuleContext)inputs)?.Activity));
+                                                claim.ClaimNumber,
+                        result.Rule.Expression, ((ActivityRuleContext)inputs)?.Activity));
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
