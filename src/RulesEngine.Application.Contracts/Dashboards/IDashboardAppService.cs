@@ -8,9 +8,10 @@ namespace RulesEngine.Dashboards
 {
     public interface IDashboardAppService
     {
-        Task<WorkflowViolationsDto> GeetWorkflowViolationsCounts();
-        Task<ClaimNumberViolationsDto> GeetClaimNumberViolationsCounts();
-        Task<ActivityViolationsDto> GeetActivityViolationsCounts();
-        Task<RuleViolationsDto> GeetRuleViolationsCounts();
+        Task<WorkflowViolationsDto> GetWorkflowViolationsCounts(DashboardFilterDto input);
+        Task<ClaimNumberViolationsDto> GetClaimNumberViolationsCounts(DashboardFilterDto input);
+        Task<ActivityViolationsDto> GetActivityViolationsCounts(DashboardFilterDto input);
+        Task<RuleViolationsDto> GetRuleViolationsCounts(DashboardFilterDto input);
+        Task<ViolationsDetailsDto> GetViolationsDetails(DashboardFilterDto input);
     }
 }

@@ -42,6 +42,9 @@ namespace RulesEngine.Migrations
                     b.Property<string>("ClaimNumber")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("ErrorMessage")
                         .HasColumnType("nvarchar(max)");
 
