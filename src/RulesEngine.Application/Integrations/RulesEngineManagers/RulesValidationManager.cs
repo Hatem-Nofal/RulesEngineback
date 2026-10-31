@@ -410,6 +410,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                                         ?.ToString();
                     var activityQuantity = RuleHelpers.GetPropertyValue("ActivityQuantity", result.Inputs);
                     int.TryParse(activityQuantity?.ToString(), out var maxDailyQuantity);
+                    result.Inputs.TryGetValue("ctx", out var inputs);
                     outcome.Failures.Add(new ClaimValidationResultDto
                     {
                         ActivityId = activityId ?? 0,
@@ -427,7 +428,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                         claim.ClaimNumber,
                         plan.Name, ruleName,
                         RuleHelpers.FormatMessage(result.ExceptionMessage, result.Inputs),
-                        violationType, result.Rule.Expression));
+                        violationType, result.Rule.Expression, ((ActivityRuleContext)inputs)?.Activity));
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

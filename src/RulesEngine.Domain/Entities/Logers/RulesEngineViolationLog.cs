@@ -19,8 +19,9 @@ namespace RulesEngine.Entities.Logers
         public string? ErrorMessage { get; private set; }
         public string? ClaimNumber { get; private set; }
         public string Expression { get; private set; }
+        public string Activity { get; private set; }
 
-        public static RulesEngineViolationLog Create(int? activityId, string workFlowName, string? rule, string? errorType, string? errorMessage, string? claimNumber, string expression)
+        public static RulesEngineViolationLog Create(int? activityId, string workFlowName, string? rule, string? errorType, string? errorMessage, string? claimNumber, string expression, string activity)
         {
             return new RulesEngineViolationLog()
             {
@@ -33,6 +34,7 @@ namespace RulesEngine.Entities.Logers
                 ErrorMessage = errorMessage,
                 ClaimNumber = claimNumber,
                 Expression = expression,
+                Activity=activity
             };
         }
 
