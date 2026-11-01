@@ -9,6 +9,6 @@ namespace RulesEngine.Repositories.Logers
 {
     public interface IRulesEngineViolationLogRepository: IRepository
     {
-        Task<ViolationsDetails> GetViolationsDetails(DashboardFilter input);
+        Task<DashboardDetails> GetDashboardDetails(DashboardFilter input);
     }
 }

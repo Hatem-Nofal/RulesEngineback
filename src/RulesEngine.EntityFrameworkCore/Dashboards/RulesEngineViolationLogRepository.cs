@@ -19,7 +19,7 @@ IRulesEngineViolationLogRepository
             _context = context;
         }
 
-        public async Task<ViolationsDetails> GetViolationsDetails(DashboardFilter input)
+        public async Task<DashboardDetails> GetDashboardDetails(DashboardFilter input)
         {
             var query = _context.RulesEngineViolationLogs.AsNoTracking();
             query = query.WhereIf(!string.IsNullOrEmpty(input.Activity), x => x.Activity.Contains(input.Activity)).
@@ -27,70 +27,35 @@ IRulesEngineViolationLogRepository
                 WhereIf(input.FromDate.HasValue, x => x.CreationTime >= input.FromDate).
                 WhereIf(input.ToDate.HasValue, x => x.CreationTime <= input.ToDate);
 
-            var result = new ViolationsDetails
+            var result = new DashboardDetails
             {
                 TotalViolationCount = await query.CountAsync()
             };
 
-            // Most violated Workflow
-            var workflow = await query
-                .GroupBy(x => x.WorkFlowName)
-                .Select(g => new
-                {
-                    Name = g.Key,
-                    Count = g.LongCount()
-                })
-                .OrderByDescending(x => x.Count)
-                .FirstOrDefaultAsync();
 
-            result.MaxWorkFlowNameViolated = workflow?.Name;
-            result.MaxWorkFlowViolatedCount = workflow?.Count ?? 0;
 
-            // Most violated Rule
-            var rule = await query
-                .Where(x => x.Rule != null)
-                .GroupBy(x => x.Rule)
-                .Select(g => new
-                {
-                    Name = g.Key,
-                    Count = g.LongCount()
-                })
-                .OrderByDescending(x => x.Count)
-                .FirstOrDefaultAsync();
 
-            result.MaxRuleNameViolated = rule?.Name;
-            result.MaxRuleViolatedCount = rule?.Count ?? 0;
 
-            // Most violated Activity
-            var activity = await query
-                .GroupBy(x => x.Activity)
-                .Select(g => new
-                {
-                    Name = g.Key,
-                    Count = g.LongCount()
-                })
-                .OrderByDescending(x => x.Count)
-                .FirstOrDefaultAsync();
 
-            result.MaxActivityViolated = activity?.Name;
-            result.MaxActivityViolatedCount = activity?.Count ?? 0;
-
-            // Most violated Claim Number
-            var claim = await query
-                .Where(x => x.ClaimNumber != null)
-                .GroupBy(x => x.ClaimNumber)
-                .Select(g => new
-                {
-                    Name = g.Key,
-                    Count = g.LongCount()
-                })
-                .OrderByDescending(x => x.Count)
-                .FirstOrDefaultAsync();
-
-            result.MaxClaimNumberViolated = claim?.Name;
-            result.MaxClaimNumberViolatedCount = claim?.Count ?? 0;
+            result.TotalClaimNumberViolatedCount = await query.Where(x => x.ClaimNumber != null)
+                         .GroupBy(x => x.ClaimNumber)
+                         .Select(g => new
+                         {
+                             ClaimNumber = g.Key,
+                             Count = g.Count()
+                         })
+                         .CountAsync();
+            result.TotalWorkFlowViolatedCount = await query.Where(x => x.WorkFlowName != null)
+                         .GroupBy(x => x.WorkFlowName)
+                         .Select(g => new
+                         {
+                             WorkFlowName = g.Key,
+                             Count = g.Count()
+                         })
+                          .CountAsync();
 
             return result;
+
         }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using RulesEngine.Dashboards.Dtos;
 using RulesEngine.Entities.Logers;
+using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Repositories.Logers;
+using RulesEngine.Repositories.WorkFlows;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,11 +16,16 @@ namespace RulesEngine.Dashboards
     {
         private readonly IRepository<RulesEngineViolationLog> _rulesEngineViolationLogRepository;
         private readonly IRulesEngineViolationLogRepository _rulesViolationLogRepository;
+        private readonly IRepository<WorkFlow> _workFlowsRepository;
+        private readonly IRuleRepository _ruleRepository;
 
-        public DashboardAppService(IRepository<RulesEngineViolationLog> rulesEngineViolationLogRepository, IRulesEngineViolationLogRepository rulesViolationLogRepository)
+
+        public DashboardAppService(IRepository<RulesEngineViolationLog> rulesEngineViolationLogRepository, IRulesEngineViolationLogRepository rulesViolationLogRepository, IRepository<WorkFlow> workFlowsRepository, IRuleRepository ruleRepository)
         {
             _rulesEngineViolationLogRepository = rulesEngineViolationLogRepository;
             _rulesViolationLogRepository = rulesViolationLogRepository;
+            _workFlowsRepository = workFlowsRepository;
+            _ruleRepository = ruleRepository;
         }
 
         public async Task<ActivityViolationsDto> GetActivityViolationsCounts(DashboardFilterDto input)
@@ -84,9 +91,9 @@ namespace RulesEngine.Dashboards
             };
         }
 
-        public async Task<ViolationsDetailsDto> GetViolationsDetails(DashboardFilterDto input)
+        public async Task<DashboardDetailsDto> GetDashboardDetails(DashboardFilterDto input)
         {
-            var violationsDetails = await _rulesViolationLogRepository.GetViolationsDetails(new DashboardFilter()
+            var violationsDetails = await _rulesViolationLogRepository.GetDashboardDetails(new DashboardFilter()
             {
                 Activity = input.Activity,
                 FromDate = input.FromDate,
@@ -94,18 +101,15 @@ namespace RulesEngine.Dashboards
                 WorkFlowName = input.WorkFlowName
             });
 
-
-            return new ViolationsDetailsDto()
+            var totalWorkflowsCount = await _workFlowsRepository.CountAsync();
+            var totalRulesCount = await _ruleRepository.CountAsync();
+            return new DashboardDetailsDto()
             {
-                MaxActivityViolated = violationsDetails.MaxActivityViolated,
-                MaxActivityViolatedCount = violationsDetails.MaxActivityViolatedCount,
-                MaxClaimNumberViolated = violationsDetails.MaxClaimNumberViolated,
-                MaxClaimNumberViolatedCount = violationsDetails.MaxClaimNumberViolatedCount,
-                MaxRuleNameViolated = violationsDetails.MaxRuleNameViolated,
-                MaxRuleViolatedCount = violationsDetails.MaxRuleViolatedCount,
-                MaxWorkFlowNameViolated = violationsDetails.MaxWorkFlowNameViolated,
-                MaxWorkFlowViolatedCount = violationsDetails.MaxWorkFlowViolatedCount,
-                TotalViolationCount = violationsDetails.TotalViolationCount
+                TotalWorkflowsCount = totalWorkflowsCount,
+                TotalRulesCount = totalRulesCount,
+                TotalViolationCount = violationsDetails.TotalViolationCount,
+                TotalClaimNumberViolatedCount = violationsDetails.TotalClaimNumberViolatedCount,
+                TotalWorkFlowViolatedCount = violationsDetails.TotalWorkFlowViolatedCount
             };
         }
 

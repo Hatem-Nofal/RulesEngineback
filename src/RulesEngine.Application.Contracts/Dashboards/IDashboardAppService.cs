@@ -12,6 +12,6 @@ namespace RulesEngine.Dashboards
         Task<ClaimNumberViolationsDto> GetClaimNumberViolationsCounts(DashboardFilterDto input);
         Task<ActivityViolationsDto> GetActivityViolationsCounts(DashboardFilterDto input);
         Task<RuleViolationsDto> GetRuleViolationsCounts(DashboardFilterDto input);
-        Task<ViolationsDetailsDto> GetViolationsDetails(DashboardFilterDto input);
+        Task<DashboardDetailsDto> GetDashboardDetails(DashboardFilterDto input);
     }
 }
