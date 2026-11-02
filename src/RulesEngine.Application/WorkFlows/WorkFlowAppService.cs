@@ -41,10 +41,9 @@ namespace RulesEngine.WorkFlows
             var total = await AsyncExecuter.CountAsync(query);
             query = query.OrderBy(input.Sorting ?? "CreationTime DESC")
                 .PageBy(input);
-            var workflows = query.ToList();
+ 
 
-
-            return new PagedResultDto<WorkflowDto>(total, workflows.Select(w => new WorkflowDto()
+            return new PagedResultDto<WorkflowDto>(total, query.ToList().Select(w => new WorkflowDto()
             {
                 Id = w.Id,
                 Name = w.Name,
@@ -80,7 +79,7 @@ namespace RulesEngine.WorkFlows
                 if (string.IsNullOrEmpty(input.RuleExpression))
                     throw new RuleValidationException($"If WorkFlow IsWorkflowLevel , RuleExpression is require !");
 
-                workflow.AddRule(Rule.CreateRuleForCustomeWorkflow(Guid.CreateVersion7(), "Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression));
+                workflow.AddRule(Rule.CreateRuleForCustomeWorkflow(Guid.CreateVersion7(), "Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression, input.ViolationMessage, input.ViolationType));
             }
             await _workFlowRepository.InsertAsync(workflow);
 
@@ -89,7 +88,7 @@ namespace RulesEngine.WorkFlows
 
         public override async Task<WorkflowDto> UpdateAsync(Guid id, SaveWorkflowDto input)
         {
-            var workflow = await _workFlowRepository.GetAsync(x => x.Id == id);
+            var workflow = await _workFlowRepository.GetDetailsAsync(id);
             workflow.UpdateName(input.Name);
             workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
             workflow.SetIsWorkflowLevel(input.IsWorkflowLevel);
@@ -102,18 +101,21 @@ namespace RulesEngine.WorkFlows
                     throw new RuleValidationException($"If WorkFlow IsWorkflowLevel , RuleExpression is require !");
                 if (workflow.Rules.Any())
                 {
-                    workflow.Rules.FirstOrDefault().UpdateExpression(input.RuleExpression);
+                    var rule = workflow.Rules.FirstOrDefault();
+                    rule.UpdateExpression(input.RuleExpression);
+                    rule.UpdateViolationMessage(input.ViolationMessage);
+                    rule.UpdateViolationType(input.ViolationType);
+                    await _ruleRepository.UpdateAsync(rule);
                 }
                 else
                 {
-                    workflow.AddRule(Rule.CreateRuleForCustomeWorkflow(Guid.CreateVersion7(), "Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression));
-
+                    var rule = Rule.CreateRuleForCustomeWorkflow(Guid.CreateVersion7(), "Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression, input.ViolationMessage, input.ViolationType);
+                    await _ruleRepository.InsertAsync(rule);
                 }
             }
 
 
             await _workFlowRepository.UpdateAsync(workflow);
-
             return Map(workflow, new Dictionary<Guid, string>(), new Dictionary<Guid, int> { [workflow.Id] = 0 });
         }
 
@@ -136,7 +138,8 @@ namespace RulesEngine.WorkFlows
             IsWorkflowLevel = w.IsWorkflowLevel,
             RejectionLevel = w.RejectionLevel,
             RuleExpression = w.IsWorkflowLevel ? w.Rules.FirstOrDefault()?.Expression : string.Empty,
-            ViolationMessage = w.ViolationMessage
+            ViolationMessage = w.ViolationMessage,
+            ViolationType = w.ViolationType
 
         };
 
@@ -150,7 +153,8 @@ namespace RulesEngine.WorkFlows
 
                 IsWorkflowLevel = workflow.IsWorkflowLevel,
                 RuleExpression = workflow.IsWorkflowLevel ? workflow.Rules.FirstOrDefault()?.Expression : string.Empty,
-                ViolationMessage = workflow.ViolationMessage
+                ViolationMessage = workflow.ViolationMessage,
+                ViolationType = workflow.ViolationType
             });
         }
     }

@@ -28,10 +28,10 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
     private readonly IRulesEngineManager _rulesEngineManager;
     private readonly IRepository<Diagnosis> _diagnosisRepository;
     private readonly IRepository<ActivitySubType> _activitySubTypeRepository;
-    private readonly IRepository<RulesEngineViolationLog> _rulesEngineViolationLogRepository;
+    private readonly IRepository<RulesEngineExecutionLog> _rulesEngineViolationLogRepository;
     private readonly IAsyncQueryableExecuter _asyncExecuter;
 
-    public RulesValidationManager(ILogger<RulesValidationManager> logger, IRulesEngineManager rulesEngineManager, IRepository<Diagnosis> diagnosisRepository, IRepository<ActivitySubType> activitySubTypeRepository, IAsyncQueryableExecuter asyncExecuter, IRepository<RulesEngineViolationLog> rulesEngineViolationLogRepository)
+    public RulesValidationManager(ILogger<RulesValidationManager> logger, IRulesEngineManager rulesEngineManager, IRepository<Diagnosis> diagnosisRepository, IRepository<ActivitySubType> activitySubTypeRepository, IAsyncQueryableExecuter asyncExecuter, IRepository<RulesEngineExecutionLog> rulesEngineViolationLogRepository)
     {
         _logger = logger;
         _rulesEngineManager = rulesEngineManager;
@@ -317,7 +317,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
 
         for (var offset = 0; offset < claims.Count; offset += ClaimChunkSize)
         {
-            var rulesEngineViolationLogs = new List<RulesEngineViolationLog>();
+            var rulesEngineViolationLogs = new List<RulesEngineExecutionLog>();
 
             var chunkStart = offset;
             var itemCount = Math.Min(ClaimChunkSize, claims.Count - chunkStart) * plans.Count;
@@ -395,8 +395,6 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                 for (var i = 0; i < results.Count; i++)
                 {
                     var result = results[i];
-                    if (result.IsSuccess)
-                        continue;
 
                     var ruleName = result.Rule.RuleName;
                     if (!string.IsNullOrEmpty(result.ExceptionMessage))
@@ -408,9 +406,18 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                                         .GetProperty("ViolationType")
                                         ?.GetValue(result.Rule)
                                         ?.ToString();
+
                     var activityQuantity = RuleHelpers.GetPropertyValue("ActivityQuantity", result.Inputs);
                     int.TryParse(activityQuantity?.ToString(), out var maxDailyQuantity);
                     result.Inputs.TryGetValue("ctx", out var inputs);
+                    if (result.IsSuccess)
+                    {
+                        outcome.RulesEngineViolationLog.Add(RulesEngineExecutionLog.Create(plan.Name, ruleName, "", "",
+                                              claim.ClaimNumber, result.Rule.Expression, ((ActivityRuleContext)inputs)?.Activity, false));
+
+                        continue;
+                    }
+
                     outcome.Failures.Add(new ClaimValidationResultDto
                     {
                         ActivityId = activityId ?? 0,
@@ -423,14 +430,13 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                         MaxDailyQuantity = maxDailyQuantity
 
                     });
-                    outcome.RulesEngineViolationLog.Add(RulesEngineViolationLog.Create(
-                        activityId ?? 0,
-                        plan.Name,
+                    outcome.RulesEngineViolationLog.Add(RulesEngineExecutionLog.Create(
+                         plan.Name,
                          ruleName,
                          violationType,
                         RuleHelpers.FormatMessage(result.ExceptionMessage, result.Inputs),
                                                 claim.ClaimNumber,
-                        result.Rule.Expression, ((ActivityRuleContext)inputs)?.Activity));
+                        result.Rule.Expression, ((ActivityRuleContext)inputs)?.Activity, true));
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -452,7 +458,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
     {
         public List<ClaimValidationResultDto> Failures { get; } = new();
         public List<string> Errors { get; } = new();
-        public List<RulesEngineViolationLog> RulesEngineViolationLog { get; } = new();
+        public List<RulesEngineExecutionLog> RulesEngineViolationLog { get; } = new();
         public bool IsEmpty => Failures.Count == 0 && Errors.Count == 0;
     }
 

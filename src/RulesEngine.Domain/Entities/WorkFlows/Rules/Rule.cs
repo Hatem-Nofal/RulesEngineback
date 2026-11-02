@@ -45,13 +45,15 @@ namespace RulesEngine.Entities.WorkFlows.Rules
             Expression = expression;
             ViolationMessage = violationMessage;
         }
-        public static Rule CreateRuleForCustomeWorkflow( Guid id, string name, Guid workflowId, string expression)
+        public static Rule CreateRuleForCustomeWorkflow( Guid id, string name, Guid workflowId, string expression, string? violationMessage, ViolationType violationType)
         {
             var rule = new Rule();
             rule.Id = id;
             rule.WorkflowId = workflowId;
             rule.Expression = expression;
             rule.Name = name;
+            rule.ViolationMessage = violationMessage;
+            rule.ViolationType = violationType;
             return rule;
         }
         public void Update(Guid workflowId, string expression, string? violationMessage)
@@ -65,6 +67,18 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         {
 
             Expression = expression;
+
+        }
+        public void UpdateViolationMessage(string violationMessage)
+        {
+
+            ViolationMessage = violationMessage;
+
+        }
+        public void UpdateViolationType(ViolationType violationType)
+        {
+
+            ViolationType = violationType;
 
         }
 

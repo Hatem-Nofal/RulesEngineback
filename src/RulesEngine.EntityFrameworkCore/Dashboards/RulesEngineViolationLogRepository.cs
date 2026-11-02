@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RulesEngine.Entities.Logers;
 using RulesEngine.EntityFrameworkCore;
+using RulesEngine.Logers;
 using RulesEngine.Repositories.Logers;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,7 +10,7 @@ using Volo.Abp.EntityFrameworkCore;
 
 namespace RulesEngine.Dashboards
 {
-    public class RulesEngineViolationLogRepository : EfCoreRepository<RulesEngineDbContext, RulesEngineViolationLog, int>,
+    public class RulesEngineViolationLogRepository : EfCoreRepository<RulesEngineDbContext, RulesEngineExecutionLog, int>,
 IRulesEngineViolationLogRepository
     {
         private readonly RulesEngineDbContext _context;
@@ -57,5 +58,7 @@ IRulesEngineViolationLogRepository
             return result;
 
         }
+
+     
     }
 }

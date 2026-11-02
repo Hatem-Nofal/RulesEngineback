@@ -46,6 +46,8 @@
     "Menu:RuleManagement": "Rule Management",
     "Menu:Formconfigs": "Form Configurations",
     "Menu:HomePage": "Home Page",
+    "Menu:ExecutionLogs": "Execution Logs",
+    "Menu:Dashboard": "Dashboard",
     "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information visit",
     "Welcome": "Welcome",
     "Next": "Next",

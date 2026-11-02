@@ -6,13 +6,12 @@ using Volo.Abp.Domain.Entities;
 
 namespace RulesEngine.Entities.Logers
 {
-    [Table("RulesEngineViolationLog", Schema = "Logers")]
+    [Table("RulesEngineExecutionLogs", Schema = "Logers")]
 
-    public sealed class RulesEngineViolationLog : Entity<int>
+    public sealed class RulesEngineExecutionLog : Entity<int>
     {
 
 
-        public int? ActivityId { get; private set; }
         public string WorkFlowName { get; private set; }
         public string? Rule { get; private set; }
         public string? ErrorType { get; private set; }
@@ -21,14 +20,13 @@ namespace RulesEngine.Entities.Logers
         public string Expression { get; private set; }
         public string Activity { get; private set; }
         public DateTime CreationTime { get; private set; } = DateTime.Now;
-
-        public static RulesEngineViolationLog Create(int? activityId, string workFlowName, string? rule, string? errorType, string? errorMessage, string? claimNumber, string expression, string activity)
+        public bool IsViolated { get; private set; } = false;
+        public static RulesEngineExecutionLog Create(string workFlowName, string? rule, string? errorType, string? errorMessage, string? claimNumber, string expression, string activity, bool isViolated)
         {
-            return new RulesEngineViolationLog()
+            return new RulesEngineExecutionLog()
             {
 
 
-                ActivityId = activityId,
                 WorkFlowName = workFlowName,
                 Rule = rule,
                 ErrorType = errorType,
@@ -36,7 +34,8 @@ namespace RulesEngine.Entities.Logers
                 ClaimNumber = claimNumber,
                 Expression = expression,
                 Activity = activity,
-                CreationTime = DateTime.Now
+                CreationTime = DateTime.Now,
+                IsViolated= isViolated
             };
         }
 

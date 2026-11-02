@@ -14,13 +14,13 @@ namespace RulesEngine.Dashboards
 {
     public class DashboardAppService : ApplicationService, IDashboardAppService
     {
-        private readonly IRepository<RulesEngineViolationLog> _rulesEngineViolationLogRepository;
+        private readonly IRepository<RulesEngineExecutionLog> _rulesEngineViolationLogRepository;
         private readonly IRulesEngineViolationLogRepository _rulesViolationLogRepository;
         private readonly IRepository<WorkFlow> _workFlowsRepository;
         private readonly IRuleRepository _ruleRepository;
 
 
-        public DashboardAppService(IRepository<RulesEngineViolationLog> rulesEngineViolationLogRepository, IRulesEngineViolationLogRepository rulesViolationLogRepository, IRepository<WorkFlow> workFlowsRepository, IRuleRepository ruleRepository)
+        public DashboardAppService(IRepository<RulesEngineExecutionLog> rulesEngineViolationLogRepository, IRulesEngineViolationLogRepository rulesViolationLogRepository, IRepository<WorkFlow> workFlowsRepository, IRuleRepository ruleRepository)
         {
             _rulesEngineViolationLogRepository = rulesEngineViolationLogRepository;
             _rulesViolationLogRepository = rulesViolationLogRepository;

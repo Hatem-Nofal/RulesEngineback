@@ -24,7 +24,7 @@ namespace RulesEngine.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("RulesEngine.Entities.Logers.RulesEngineViolationLog", b =>
+            modelBuilder.Entity("RulesEngine.Entities.Logers.RulesEngineExecutionLog", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -35,9 +35,6 @@ namespace RulesEngine.Migrations
                     b.Property<string>("Activity")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("ActivityId")
-                        .HasColumnType("int");
 
                     b.Property<string>("ClaimNumber")
                         .HasColumnType("nvarchar(max)");
@@ -55,6 +52,9 @@ namespace RulesEngine.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsViolated")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Rule")
                         .HasColumnType("nvarchar(max)");
 
@@ -64,7 +64,7 @@ namespace RulesEngine.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RulesEngineViolationLog", "Logers");
+                    b.ToTable("RulesEngineExecutionLogs", "Logers");
                 });
 
             modelBuilder.Entity("RulesEngine.Entities.Lookups.ActivitySubType", b =>
