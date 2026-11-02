@@ -284,6 +284,7 @@ public class RulesEngineHttpApiHostModule : AbpModule
                     .WithAbpExposedHeaders()
                     .SetIsOriginAllowedToAllowWildcardSubdomains()
                     .AllowAnyHeader()
+
                     .AllowAnyMethod()
                     .AllowCredentials();
             });

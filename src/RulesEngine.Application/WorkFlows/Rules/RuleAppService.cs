@@ -232,34 +232,42 @@ namespace RulesEngine.WorkFlows.Rules
         {
             prepared ??= await PrepareRuleAsync(input);
             var ruleDto = prepared.Dto;
-
-            _ruleRepository.DisableTracking();
-            var rule = await _ruleRepository.GetForUpdateAsync(id);
-
-
-            rule.Update(input.WorkflowId, prepared.Expression, input.ViolationMessage);
-
-            // Replace the whole tree: one set-based DELETE instead of loading and deleting every node separately.
-            await _ruleNodeRepository.DeleteDirectAsync(n => n.RuleId == rule.Id);
-
-
-            if (input.IsActive) rule.Activate(); else rule.Deactivate();
-
-            var flatNodes = new List<RuleNode>();
-            RuleTreeMapper.Flatten(input.Root, rule.Id, null, 0, flatNodes);
-            rule.AddNodes(flatNodes);
-
-
-            await _ruleRepository.UpdateAsync(rule);
-
-            if (rule.Nodes.Count > 0)
+            try
             {
-                await _ruleNodeRepository.InsertManyAsync(rule.Nodes);
-                if (saveChanges)
-                    await CurrentUnitOfWork.SaveChangesAsync();
-            }
 
-            await EngineManager.ReloadAfterCommitAsync();   // once per unit of work, even for bulk uploads
+                _ruleRepository.DisableTracking();
+                var rule = await _ruleRepository.GetForUpdateAsync(id);
+
+
+                rule.Update(input.WorkflowId, prepared.Expression, input.ViolationMessage);
+
+                // Replace the whole tree: one set-based DELETE instead of loading and deleting every node separately.
+                await _ruleNodeRepository.DeleteDirectAsync(n => n.RuleId == rule.Id);
+
+
+                if (input.IsActive) rule.Activate(); else rule.Deactivate();
+
+                var flatNodes = new List<RuleNode>();
+                RuleTreeMapper.Flatten(input.Root, rule.Id, null, 0, flatNodes);
+                rule.AddNodes(flatNodes);
+
+
+                await _ruleRepository.UpdateAsync(rule);
+
+                if (rule.Nodes.Count > 0)
+                {
+                    await _ruleNodeRepository.InsertManyAsync(rule.Nodes);
+                    if (saveChanges)
+                        await CurrentUnitOfWork.SaveChangesAsync();
+                }
+
+                await EngineManager.ReloadAfterCommitAsync();
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            } // once per unit of work, even for bulk uploads
             return ruleDto;
         }
 
@@ -547,14 +555,14 @@ namespace RulesEngine.WorkFlows.Rules
         /// Returns null on success; when any row has a problem, returns the same workbook with the problems
         /// written to an "Errors" column at the end of each affected row (several problems: comma separated).
         /// </summary>
-        public async Task<IRemoteStreamContent?> BulkUploadAsync(Guid workflowId, IRemoteStreamContent fileContent)
+        public async Task<IRemoteStreamContent?> BulkUploadAsync(Guid workflowId, IRemoteStreamContent file)
         {
-            if (fileContent == null || fileContent.ContentLength == 0) return null;
+            if (file == null || file.ContentLength == 0) return null;
             var ruleFields = await _ruleFieldRepository.GetListAsync();
             var fieldsById = ruleFields.ToDictionary(x => x.Id);
 
             using var buffer = new MemoryStream();
-            await using (var upload = fileContent.GetStream())
+            await using (var upload = file.GetStream())
             {
                 await upload.CopyToAsync(buffer);
             }
@@ -620,18 +628,18 @@ namespace RulesEngine.WorkFlows.Rules
             // ---- Phase 1: read + validate every row. Nothing is written to the database here. ----
             for (int r = 2; r <= lastRow; r++)
             {
-                var ruleName = ws.Cell(r, nameIndex + 1).GetString();
-                if (string.IsNullOrWhiteSpace(ruleName))
-                {
-                    // Completely empty rows are ignored; a row with data but no name is a mistake.
-                    if (ws.Row(r).CellsUsed().Any(c => !string.IsNullOrWhiteSpace(c.GetString())))
-                    {
-                        var unnamed = new UploadRow(r);
-                        unnamed.Errors.Add("Rule name is required.");
-                        rows.Add(unnamed);
-                    }
-                    continue;
-                }
+                //var ruleName = ws.Cell(r, nameIndex + 1).GetString();
+                //if (string.IsNullOrWhiteSpace(ruleName))
+                //{
+                //    // Completely empty rows are ignored; a row with data but no name is a mistake.
+                //    if (ws.Row(r).CellsUsed().Any(c => !string.IsNullOrWhiteSpace(c.GetString())))
+                //    {
+                //        var unnamed = new UploadRow(r);
+                //        unnamed.Errors.Add("Rule name is required.");
+                //        rows.Add(unnamed);
+                //    }
+                //    continue;
+                //}
 
                 var row = new UploadRow(r);
                 rows.Add(row);
@@ -708,6 +716,12 @@ namespace RulesEngine.WorkFlows.Rules
 
                     if (root.Children.Count > 0) node.LogicalJoinOperator = LogicalOperator.And;
                     root.Children.Add(node);
+
+                    if (string.Equals(key, "Activity", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(key, "Activities", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await ValidateFieldCodesAsync(row, key, val);
+                    } 
                 }
 
                 if (row.Errors.Count > 0) continue;   // cell-level problems found: no point validating the whole rule
@@ -745,11 +759,9 @@ namespace RulesEngine.WorkFlows.Rules
             }
 
             // ---- Any problem: give the user their own sheet back, annotated. Nothing has been saved. ----
-            if (rows.Any(x => x.Errors.Count > 0))
-                return BuildErrorWorkbook(wb, ws, lastRow, rows, workflow.Name);
-
+         
             // ---- Phase 2: everything is valid; save. All rows are written in one flush (one transaction). ----
-            foreach (var row in rows)
+            foreach (var row in rows.Where(x=>!x.Errors.Any()))
             {
                 if (row.ExistingId.HasValue)
                 {
@@ -766,6 +778,9 @@ namespace RulesEngine.WorkFlows.Rules
             if (rows.Count > 0 && rows.Any(x => x.Errors.Count() > 0))
                 await CurrentUnitOfWork.SaveChangesAsync();
 
+            if (rows.Any(x => x.Errors.Any()))
+                return BuildErrorWorkbook(wb, ws, lastRow, rows.Where(x => x.Errors.Any()).ToList(), workflow.Name);
+
             return null;
         }
 
@@ -773,6 +788,36 @@ namespace RulesEngine.WorkFlows.Rules
 
         private const string ErrorsHeader = "Errors";
         private const string ExcelContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+        private async Task ValidateFieldCodesAsync(UploadRow row, string fieldKey, string values)
+        {
+            if (string.IsNullOrWhiteSpace(values))
+                return;
+
+            if (!string.Equals(fieldKey, "Activity", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(fieldKey, "Activities", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var codes = values
+                .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (codes.Count == 0)
+                return;
+
+            var existing = await _activitySubTypeRepository.GetListAsync(x => codes.Contains(x.iqvia_code));
+            var validCodes = new HashSet<string>(existing.Select(x => x.iqvia_code), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var code in codes.Where(x => !validCodes.Contains(x)))
+            {
+                row.Errors.Add($"Activity '{code}' was not found in the database.");
+            }
+        }
 
         /// <summary>One data row of the uploaded sheet, with everything that is wrong with it.</summary>
         private sealed class UploadRow
