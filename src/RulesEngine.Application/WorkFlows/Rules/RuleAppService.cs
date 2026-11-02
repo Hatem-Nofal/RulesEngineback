@@ -36,8 +36,12 @@ namespace RulesEngine.WorkFlows.Rules
         private readonly IRuleExpressionBuilder _expressionsBuilder;
         private readonly IRuleRepository _ruleRepository;
         private readonly IRepository<ActivitySubType> _activitySubTypeRepository;
+        private readonly IRepository<Diagnosis> _diagnosisRepository;
 
+        private readonly IRepository<Specialities> _specialitiesRepository;
+        private readonly IRepository<GenericDrug> _genericDrugsRepository;
 
+        private readonly IRepository<MorbidityGroup, int> _morbidityGroupRepository;
         private IRulesEngineManager EngineManager => LazyServiceProvider.LazyGetRequiredService<IRulesEngineManager>();
 
         public RuleAppService(
@@ -47,7 +51,11 @@ namespace RulesEngine.WorkFlows.Rules
              IRuleExpressionBuilder expressionsBuilder,
             IRuleRepository ruleRepository,
             IRepository<RuleField, Guid> ruleFieldRepository,
-            IRepository<ActivitySubType> activitySubTypeRepository) : base(repository)
+            IRepository<ActivitySubType> activitySubTypeRepository,
+            IRepository<Diagnosis> diagnosisRepository,
+            IRepository<Specialities> specialitiesRepository,
+            IRepository<GenericDrug> genericDrugsRepository,
+            IRepository<MorbidityGroup, int> morbidityGroupRepository) : base(repository)
         {
             _ruleNodeRepository = ruleNodeRepository;
             _workflowRepository = workflowRepository;
@@ -55,6 +63,10 @@ namespace RulesEngine.WorkFlows.Rules
             _ruleRepository = ruleRepository;
             _ruleFieldRepository = ruleFieldRepository;
             _activitySubTypeRepository = activitySubTypeRepository;
+            _diagnosisRepository = diagnosisRepository;
+            _specialitiesRepository = specialitiesRepository;
+            _genericDrugsRepository = genericDrugsRepository;
+            _morbidityGroupRepository = morbidityGroupRepository;
         }
 
         public override async Task<PagedResultDto<RuleListItemDto>> GetListAsync(RulePagedAndSortedResultRequestDto input)
@@ -720,8 +732,25 @@ namespace RulesEngine.WorkFlows.Rules
                     if (string.Equals(key, "Activity", StringComparison.OrdinalIgnoreCase)
                         || string.Equals(key, "Activities", StringComparison.OrdinalIgnoreCase))
                     {
-                        await ValidateFieldCodesAsync(row, key, val);
-                    } 
+                        await ValidateFieldActivityCodesAsync(row, key, val);
+                    }
+                    if (string.Equals(key, "GenericGroup", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(key, "GenericsGroups", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await ValidateFieldGenericGroupCodesAsync(row, key, val);
+                    }
+                    if (string.Equals(key, "Diagnoses", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await ValidateFieldDiagnosesCodesAsync(row, key, val);
+                    }
+                    if (string.Equals(key, "DiagnosisGroupCodes", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await ValidateFieldDiagnosisGroupCodesAsync(row, key, val);
+                    }
+                    if (string.Equals(key, "SpecialitiesCode", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await ValidateFieldSpecialitiesAsync(row, key, val);
+                    }
                 }
 
                 if (row.Errors.Count > 0) continue;   // cell-level problems found: no point validating the whole rule
@@ -759,9 +788,9 @@ namespace RulesEngine.WorkFlows.Rules
             }
 
             // ---- Any problem: give the user their own sheet back, annotated. Nothing has been saved. ----
-         
+
             // ---- Phase 2: everything is valid; save. All rows are written in one flush (one transaction). ----
-            foreach (var row in rows.Where(x=>!x.Errors.Any()))
+            foreach (var row in rows.Where(x => !x.Errors.Any()))
             {
                 if (row.ExistingId.HasValue)
                 {
@@ -789,16 +818,11 @@ namespace RulesEngine.WorkFlows.Rules
         private const string ErrorsHeader = "Errors";
         private const string ExcelContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-        private async Task ValidateFieldCodesAsync(UploadRow row, string fieldKey, string values)
+        private async Task ValidateFieldActivityCodesAsync(UploadRow row, string fieldKey, string values)
         {
             if (string.IsNullOrWhiteSpace(values))
                 return;
 
-            if (!string.Equals(fieldKey, "Activity", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(fieldKey, "Activities", StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
 
             var codes = values
                 .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -818,6 +842,102 @@ namespace RulesEngine.WorkFlows.Rules
                 row.Errors.Add($"Activity '{code}' was not found in the database.");
             }
         }
+        private async Task ValidateFieldSpecialitiesAsync(UploadRow row, string fieldKey, string values)
+        {
+            if (string.IsNullOrWhiteSpace(values))
+                return;
+
+
+            var codes = values
+                .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (codes.Count == 0)
+                return;
+
+            var existing = await _specialitiesRepository.GetListAsync(x => codes.Contains(x.SpecialityCode));
+            var validCodes = new HashSet<string>(existing.Select(x => x.SpecialityCode), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var code in codes.Where(x => !validCodes.Contains(x)))
+            {
+                row.Errors.Add($"Speciality '{code}' was not found in the database.");
+            }
+        }
+        private async Task ValidateFieldGenericGroupCodesAsync(UploadRow row, string fieldKey, string values)
+        {
+            if (string.IsNullOrWhiteSpace(values))
+                return;
+
+
+            var codes = values
+                .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (codes.Count == 0)
+                return;
+
+            var existing = await _genericDrugsRepository.GetListAsync(x => codes.Contains(x.GenericCode));
+            var validCodes = new HashSet<string>(existing.Select(x => x.GenericCode), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var code in codes.Where(x => !validCodes.Contains(x)))
+            {
+                row.Errors.Add($"Generic Group '{code}' was not found in the database.");
+            }
+        }
+        private async Task ValidateFieldDiagnosesCodesAsync(UploadRow row, string fieldKey, string values)
+        {
+            if (string.IsNullOrWhiteSpace(values))
+                return;
+
+
+            var codes = values
+                .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (codes.Count == 0)
+                return;
+
+            var existing = await _diagnosisRepository.GetListAsync(x => codes.Contains(x.iqvia_code));
+            var validCodes = new HashSet<string>(existing.Select(x => x.iqvia_code), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var code in codes.Where(x => !validCodes.Contains(x)))
+            {
+                row.Errors.Add($"Diagnoses '{code}' was not found in the database.");
+            }
+        }
+        private async Task ValidateFieldDiagnosisGroupCodesAsync(UploadRow row, string fieldKey, string values)
+        {
+            if (string.IsNullOrWhiteSpace(values))
+                return;
+
+
+            var codes = values
+                .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (codes.Count == 0)
+                return;
+
+            var existing = await _morbidityGroupRepository.GetListAsync(x => codes.Contains(x.MorbidityGroupSystemCode));
+            var validCodes = new HashSet<string>(existing.Select(x => x.MorbidityGroupSystemCode), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var code in codes.Where(x => !validCodes.Contains(x)))
+            {
+                row.Errors.Add($"Diagnosis Group Codes '{code}' was not found in the database.");
+            }
+        }
 
         /// <summary>One data row of the uploaded sheet, with everything that is wrong with it.</summary>
         private sealed class UploadRow
@@ -832,47 +952,73 @@ namespace RulesEngine.WorkFlows.Rules
         }
 
 
-        /// <summary>Writes each row's problems (comma separated) into an "Errors" column after the last used column.</summary>
+        /// <summary>Builds a new workbook from scratch with the original headers and only the rows that contain errors.</summary>
         private static IRemoteStreamContent BuildErrorWorkbook(
             XLWorkbook wb, IXLWorksheet ws, int lastRow, List<UploadRow> rows, string? originalFileName)
         {
-            var lastColumn = ws.LastColumnUsed().ColumnNumber();
-            var lastHeader = ws.Cell(1, lastColumn);
+            var lastColumn = ws.LastColumnUsed()?.ColumnNumber() ?? 1;
+            var errorRows = rows.Where(x => x.Errors.Count > 0)
+                .OrderBy(x => x.RowNumber)
+                .ToList();
 
-            // Re-uploading a sheet that already has an Errors column: reuse (and refresh) it instead of adding another.
-            var errorColumn = string.Equals(lastHeader.GetString().Trim(), ErrorsHeader, StringComparison.OrdinalIgnoreCase)
-                ? lastColumn
-                : lastColumn + 1;
-
-            if (errorColumn == lastColumn)
+            if (errorRows.Count == 0)
             {
-                for (var r = 2; r <= lastRow; r++)
-                    ws.Cell(r, errorColumn).Clear(XLClearOptions.Contents);
-            }
-            else
-            {
-                ws.Cell(1, errorColumn).Style = lastHeader.Style;   // same look as the other headers
-            }
+                var output = new MemoryStream();
+                var emptyWorkbook = new XLWorkbook();
+                var emptySheet = emptyWorkbook.Worksheets.Add("Rules_Import");
+                emptySheet.Cell(1, 1).Value = ErrorsHeader;
+                emptyWorkbook.SaveAs(output);
+                output.Position = 0;
 
-            ws.Cell(1, errorColumn).Value = ErrorsHeader;
-            ws.Column(errorColumn).Width = 60;
+                var baseName = Path.GetFileNameWithoutExtension(originalFileName);
+                if (string.IsNullOrWhiteSpace(baseName)) baseName = "Rules_Import";
 
-            foreach (var row in rows.Where(x => x.Errors.Count > 0))
-            {
-                var cell = ws.Cell(row.RowNumber, errorColumn);
-                cell.Value = string.Join(", ", row.Errors);
-                cell.Style.Font.FontColor = XLColor.Red;
-                cell.Style.Alignment.WrapText = true;
+                return new RemoteStreamContent(output, $"{baseName}_Errors.xlsx", ExcelContentType);
             }
 
-            var output = new MemoryStream();
-            wb.SaveAs(output);
-            output.Position = 0;
+            var outputWorkbook = new XLWorkbook();
+            var outputSheet = outputWorkbook.Worksheets.Add("Rules_Import");
 
-            var baseName = Path.GetFileNameWithoutExtension(originalFileName);
-            if (string.IsNullOrWhiteSpace(baseName)) baseName = "Rules_Import";
+            for (var c = 1; c <= lastColumn; c++)
+            {
+                var sourceCell = ws.Cell(1, c);
+                var targetCell = outputSheet.Cell(1, c);
+                targetCell.Value = sourceCell.Value;
+                targetCell.Style = sourceCell.Style;
+            }
 
-            return new RemoteStreamContent(output, $"{baseName}_Errors.xlsx", ExcelContentType);
+            var errorColumn = lastColumn + 1;
+            outputSheet.Cell(1, errorColumn).Value = ErrorsHeader;
+            outputSheet.Cell(1, errorColumn).Style = ws.Cell(1, lastColumn).Style;
+            outputSheet.Column(errorColumn).Width = 60;
+
+            var outputRow = 2;
+            foreach (var row in errorRows)
+            {
+                for (var c = 1; c <= lastColumn; c++)
+                {
+                    var sourceCell = ws.Cell(row.RowNumber, c);
+                    var targetCell = outputSheet.Cell(outputRow, c);
+                    targetCell.Value = sourceCell.Value;
+                    targetCell.Style = sourceCell.Style;
+                }
+
+                var errorCell = outputSheet.Cell(outputRow, errorColumn);
+                errorCell.Value = string.Join(", ", row.Errors);
+                errorCell.Style.Font.FontColor = XLColor.Red;
+                errorCell.Style.Alignment.WrapText = true;
+
+                outputRow++;
+            }
+
+            var stream = new MemoryStream();
+            outputWorkbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var baseName2 = Path.GetFileNameWithoutExtension(originalFileName);
+            if (string.IsNullOrWhiteSpace(baseName2)) baseName2 = "Rules_Import";
+
+            return new RemoteStreamContent(stream, $"{baseName2}_Errors.xlsx", ExcelContentType);
         }
     }
 }
