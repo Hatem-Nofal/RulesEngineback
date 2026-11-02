@@ -17,5 +17,6 @@ namespace RulesEngine.Lookups
         Task<List<SelectedDropDownList>> GetBatchTypesDropDownList();
         Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownListPaged(int activityTypeId, string searchTerm);
         Task<List<SelectedDropDownList>> GetDiagnosisDropDownListPaged(string searchTerm);
+        Task<List<SelectedDropDownListByGuid>> GetWorkflowsForCreateRuleDropDownList();
       }
 }

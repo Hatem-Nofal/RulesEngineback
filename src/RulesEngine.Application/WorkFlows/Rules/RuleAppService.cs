@@ -17,13 +17,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Dynamic.Core;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Content;
 using Volo.Abp.Domain.Repositories;
-using System.Linq.Dynamic.Core;
 namespace RulesEngine.WorkFlows.Rules
 {
 
@@ -63,7 +63,7 @@ namespace RulesEngine.WorkFlows.Rules
             // (including its expression text) into memory just to take one page of it.
             var query = (await Repository.GetQueryableAsync())
                 .WhereIf(!string.IsNullOrEmpty(input.RuleName), x => x.Name.Contains(input.RuleName))
-                .WhereIf(input.WorkflowId.HasValue, x => x.WorkflowId == input.WorkflowId) ;   // stable order, so a row can never appear on two pages
+                .WhereIf(input.WorkflowId.HasValue, x => x.WorkflowId == input.WorkflowId);   // stable order, so a row can never appear on two pages
 
             var total = await AsyncExecuter.CountAsync(query);
             query = query.OrderBy(input.Sorting ?? "CreationTime DESC")
@@ -96,9 +96,9 @@ namespace RulesEngine.WorkFlows.Rules
                 Name = rule.Name,
                 WorkflowId = rule.WorkflowId,
                 IsActive = rule.IsActive,
-                Root = !rule.Workflow.HasCustomeRule ? await RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto(),
+                Root = !rule.Workflow.IsWorkflowLevel ? await RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto(),
                 Expression = rule.Expression,
-                WorkflowHasCustomeRule = rule.Workflow.HasCustomeRule,
+                WorkflowIsWorkflowLevel = rule.Workflow.IsWorkflowLevel,
                 ViolationMessage = rule.ViolationMessage ?? rule.Workflow.ViolationMessage,
                 ViolationType = rule.ViolationType
             };

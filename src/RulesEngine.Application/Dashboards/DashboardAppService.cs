@@ -51,7 +51,7 @@ namespace RulesEngine.Dashboards
         public async Task<ClaimNumberViolationsDto> GetClaimNumberViolationsCounts(DashboardFilterDto input)
         {
             var claimNumberViolationsCounts = (await _rulesEngineViolationLogRepository.GetQueryableAsync()).
-                WhereIf(!string.IsNullOrEmpty(input.Activity), x => x.Activity.Contains(input.Activity)).
+                WhereIf(!string.IsNullOrEmpty(input.ClaimNumber), x => x.ClaimNumber.Contains(input.ClaimNumber)).
                 WhereIf(!string.IsNullOrEmpty(input.WorkFlowName), x => x.WorkFlowName.Contains(input.WorkFlowName)).
                 WhereIf(input.FromDate.HasValue, x => x.CreationTime >= input.FromDate).
                 WhereIf(input.ToDate.HasValue, x => x.CreationTime <= input.ToDate)
@@ -119,12 +119,13 @@ namespace RulesEngine.Dashboards
 
 
             var workflowViolationsCount = (await _rulesEngineViolationLogRepository.GetQueryableAsync()).
-                WhereIf(!string.IsNullOrEmpty(input.Activity), x => x.Activity.Contains(input.Activity)).
                 WhereIf(!string.IsNullOrEmpty(input.WorkFlowName), x => x.WorkFlowName.Contains(input.WorkFlowName)).
+                WhereIf(!string.IsNullOrEmpty(input.Activity), x => x.Activity.Contains(input.Activity)).
+                WhereIf(!string.IsNullOrEmpty(input.ClaimNumber), x => x.ClaimNumber.Contains(input.ClaimNumber)).
                 WhereIf(input.FromDate.HasValue, x => x.CreationTime >= input.FromDate).
                 WhereIf(input.ToDate.HasValue, x => x.CreationTime <= input.ToDate)
                    .
-                    GroupBy(x => x.Rule).Select(g => new WorkflowViolationsCountDto()
+                    GroupBy(x => x.WorkFlowName).Select(g => new WorkflowViolationsCountDto()
                     {
                         WorkFlowName = g.Key,
                         ViolationsCounts = g.LongCount()

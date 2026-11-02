@@ -24,7 +24,8 @@ namespace RulesEngine.Entities.WorkFlows
         public RuleFormConfig RuleformConfig { get; private set; }
 
         public bool IsActive { get; private set; } = true;
-        public bool HasCustomeRule { get; private set; } = false;
+        public bool IsWorkflowLevel { get; private set; } = false;
+        public ViolationType ViolationType { get; private set; } = ViolationType.Error;
 
         public string? ViolationMessage { get; private set; }
 
@@ -38,27 +39,32 @@ namespace RulesEngine.Entities.WorkFlows
 
         }
 
-        public WorkFlow(string name, Guid? ruleFormConfigId, RejectionLevel rejectionLevel, bool hasCustomeRule, string? violationMessage)
+        public WorkFlow(string name, Guid? ruleFormConfigId, RejectionLevel rejectionLevel, bool isWorkflowLevel, string? violationMessage, ViolationType violationType)
         {
             Name = name ?? throw new ArgumentNullException(nameof(name));
             RuleformConfigId = ruleFormConfigId;
             NormalizedName = name.NormalizeSpace();
             RejectionLevel = rejectionLevel;
-            HasCustomeRule = hasCustomeRule;
+            IsWorkflowLevel = isWorkflowLevel;
             ViolationMessage = violationMessage;
+            ViolationType = violationType;
         }
 
         public void SetId(Guid? id)
         {
             Id = id ?? Guid.CreateVersion7();
         }
-        public void SetHasCustomeRule(bool hasCustomeRule)
+        public void SetIsWorkflowLevel(bool isWorkflowLevel)
         {
-            HasCustomeRule = hasCustomeRule;
+            IsWorkflowLevel = isWorkflowLevel;
         }
         public void SetViolationMessage(string? violationMessage)
         {
             ViolationMessage = violationMessage;
+        }
+        public void SetViolationType(ViolationType violationType)
+        {
+            ViolationType = violationType;
         }
         public void AddRule(Rule rule)
         {

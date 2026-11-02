@@ -10,6 +10,7 @@ namespace RulesEngine.Dashboards.Dtos
         public DateTime? FromDate { get;  set; }
         public DateTime? ToDate { get;  set; }
         public string? Activity { get;  set; }
+        public string? ClaimNumber { get;  set; }
 
     }
 }

@@ -33,7 +33,7 @@ namespace RulesEngine.Lookups
         private readonly IRepository<Specialities> _specialitiesRepository;
         private readonly IRepository<WorkFlow> _workFlowsRepository;
         private readonly IRepository<GenericDrug> _genericDrugsRepository;
- 
+
         private readonly IRepository<DuplicateTherapyGroup, int> _duplicateTherapyGroupRepository;
         private readonly IRepository<MorbidityGroup, int> _morbidityGroupRepository;
         private readonly IRepository<BatchType, int> _batchTypeRepository;
@@ -59,7 +59,7 @@ namespace RulesEngine.Lookups
             _duplicateTherapyGroupRepository = duplicateTherapyGroupRepository;
             _morbidityGroupRepository = morbidityGroupRepository;
             _batchTypeRepository = batchTypeRepository;
-         }
+        }
 
         public async Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownList(int? activityTypeId)
         {
@@ -211,7 +211,15 @@ namespace RulesEngine.Lookups
         {
             var queryable = await _workFlowsRepository.GetQueryableAsync();
             var rows = await AsyncExecuter.ToListAsync(
-                queryable.Select(x => new { x.Id, x.Name }));
+                queryable.Where(x => x.IsActive).Select(x => new { x.Id, x.Name }));
+
+            return rows.Select(x => new SelectedDropDownListByGuid(x.Id, x.Name, false)).ToList();
+        }
+        public async Task<List<SelectedDropDownListByGuid>> GetWorkflowsForCreateRuleDropDownList()
+        {
+            var queryable = await _workFlowsRepository.GetQueryableAsync();
+            var rows = await AsyncExecuter.ToListAsync(
+                queryable.Where(x => !x.IsWorkflowLevel && x.IsActive).Select(x => new { x.Id, x.Name }));
 
             return rows.Select(x => new SelectedDropDownListByGuid(x.Id, x.Name, false)).ToList();
         }
@@ -259,7 +267,7 @@ namespace RulesEngine.Lookups
         }
 
 
-         
+
 
         public async Task<List<SelectedDropDownList>> GetDuplicateTherapyGroupsDropDownList(string searchTerm)
         {

@@ -13,7 +13,7 @@ namespace RulesEngine.WorkFlows.Dtos.RulesDtos
         public Guid WorkflowId { get; set; }
         public bool IsActive { get; set; } = true;
         public string? Expression { get; set; }
-        public bool WorkflowHasCustomeRule { get; set; } = false;
+        public bool WorkflowIsWorkflowLevel { get; set; } = false;
         public ViolationType ViolationType { get; set; }
         public string? ViolationMessage { get; set; }
 

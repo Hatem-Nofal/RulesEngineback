@@ -12,6 +12,7 @@ using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using RulesEngine.Permissions;
+using System.Linq.Dynamic.Core;
 
 namespace RulesEngine.WorkFlows
 {
@@ -38,7 +39,8 @@ namespace RulesEngine.WorkFlows
                 .WhereIf(input.RuleFormConfigId.HasValue, x => x.RuleformConfigId == input.RuleFormConfigId)
                 .WhereIf(!string.IsNullOrEmpty(input.Name), x => x.Name.Contains(input.Name));
             var total = await AsyncExecuter.CountAsync(query);
-
+            query = query.OrderBy(input.Sorting ?? "CreationTime DESC")
+                .PageBy(input);
             var workflows = query.ToList();
 
 
@@ -47,11 +49,11 @@ namespace RulesEngine.WorkFlows
                 Id = w.Id,
                 Name = w.Name,
                 RuleFormConfigId = w.RuleformConfigId,
-                RuleFormConfigName = w.RuleformConfig.Name,
+                RuleFormConfigName = w.RuleformConfig?.Name,
                 RuleCount = w.Rules.Count(),
-                HasCustomeRule = w.HasCustomeRule,
+                IsWorkflowLevel = w.IsWorkflowLevel,
                 RejectionLevel = w.RejectionLevel,
-                RuleExpression = w.HasCustomeRule ? w.Rules.FirstOrDefault().Expression : "",
+                RuleExpression = w.IsWorkflowLevel ? w.Rules.FirstOrDefault()?.Expression : "",
                 ViolationMessage = w.ViolationMessage
             }).ToList());
 
@@ -69,14 +71,14 @@ namespace RulesEngine.WorkFlows
 
         public override async Task<WorkflowDto> CreateAsync(SaveWorkflowDto input)
         {
-            var workflow = new WorkFlow(input.Name, input.RuleFormConfigId, input.RejectionLevel, input.HasCustomeRule, input.ViolationMessage);
+            var workflow = new WorkFlow(input.Name, input.RuleFormConfigId, input.RejectionLevel, input.IsWorkflowLevel, input.ViolationMessage, input.ViolationType);
             workflow.SetId(null);
 
 
-            if (input.HasCustomeRule)
+            if (input.IsWorkflowLevel)
             {
                 if (string.IsNullOrEmpty(input.RuleExpression))
-                    throw new RuleValidationException($"If WorkFlow HasCustomeRule , RuleExpression is require !");
+                    throw new RuleValidationException($"If WorkFlow IsWorkflowLevel , RuleExpression is require !");
 
                 workflow.AddRule(Rule.CreateRuleForCustomeWorkflow(Guid.CreateVersion7(), "Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression));
             }
@@ -90,13 +92,14 @@ namespace RulesEngine.WorkFlows
             var workflow = await _workFlowRepository.GetAsync(x => x.Id == id);
             workflow.UpdateName(input.Name);
             workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
-            workflow.SetHasCustomeRule(input.HasCustomeRule);
+            workflow.SetIsWorkflowLevel(input.IsWorkflowLevel);
             workflow.SetViolationMessage(input.ViolationMessage);
             workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
-            if (input.HasCustomeRule)
+            workflow.SetViolationType(input.ViolationType);
+            if (input.IsWorkflowLevel)
             {
                 if (string.IsNullOrEmpty(input.RuleExpression))
-                    throw new RuleValidationException($"If WorkFlow HasCustomeRule , RuleExpression is require !");
+                    throw new RuleValidationException($"If WorkFlow IsWorkflowLevel , RuleExpression is require !");
                 if (workflow.Rules.Any())
                 {
                     workflow.Rules.FirstOrDefault().UpdateExpression(input.RuleExpression);
@@ -130,38 +133,25 @@ namespace RulesEngine.WorkFlows
             RuleFormConfigId = w.RuleformConfigId,
             RuleFormConfigName = w.RuleformConfigId is { } c ? configs.GetValueOrDefault(c) : null,
             RuleCount = counts.GetValueOrDefault(w.Id),
-            HasCustomeRule = w.HasCustomeRule,
+            IsWorkflowLevel = w.IsWorkflowLevel,
             RejectionLevel = w.RejectionLevel,
-            RuleExpression = w.HasCustomeRule ? w.Rules.FirstOrDefault()?.Expression : string.Empty,
+            RuleExpression = w.IsWorkflowLevel ? w.Rules.FirstOrDefault()?.Expression : string.Empty,
             ViolationMessage = w.ViolationMessage
 
         };
-        private static WorkflowDto Map(WorkflowDto w, Dictionary<Guid, string> configs, Dictionary<Guid, int> counts) => new()
+
+        public Task<WorkflowForRuleDto> GetWorkflowForRuleAsync(Guid workflowId)
         {
-            Id = w.Id,
-            Name = w.Name,
-            RuleFormConfigId = w.RuleFormConfigId,
-            RuleFormConfigName = w.RuleFormConfigId is { } c ? configs.GetValueOrDefault(c) : null,
-            RuleCount = counts.GetValueOrDefault(w.Id),
-            HasCustomeRule = w.HasCustomeRule,
-            RejectionLevel = w.RejectionLevel,
-            RuleExpression = w.RuleExpression,
-            ViolationMessage = w.ViolationMessage
+            var workflow = _workFlowRepository.GetAsync(workflowId).Result;
+            if (workflow == null)
+                throw new RuleValidationException($"Workflow with Id {workflowId} not found.");
+            return Task.FromResult(new WorkflowForRuleDto
+            {
 
-        };
-        private static WorkflowDto Map(WorkFlow w) => new()
-        {
-            Id = w.Id,
-            Name = w.Name,
-            RuleFormConfigId = w.RuleformConfigId,
-            RuleFormConfigName = w.RuleformConfig.Name,
-            RuleCount = w.Rules.Count(),
-            HasCustomeRule = w.HasCustomeRule,
-            RejectionLevel = w.RejectionLevel,
-            RuleExpression = w.HasCustomeRule ? w.Rules.FirstOrDefault().Expression : "",
-            ViolationMessage = w.ViolationMessage
-
-        };
-
+                IsWorkflowLevel = workflow.IsWorkflowLevel,
+                RuleExpression = workflow.IsWorkflowLevel ? workflow.Rules.FirstOrDefault()?.Expression : string.Empty,
+                ViolationMessage = workflow.ViolationMessage
+            });
+        }
     }
 }

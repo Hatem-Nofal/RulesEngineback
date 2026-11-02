@@ -13,9 +13,10 @@ namespace RulesEngine.WorkFlows.Dtos
         public string? RuleFormConfigName { get; set; }
         public int RuleCount { get; set; }
         public RejectionLevel RejectionLevel { get;  set; }
-        public bool HasCustomeRule { get; set; } = false;
+        public bool IsWorkflowLevel { get; set; } = false;
         public string? RuleExpression { get;  set; }
         public string? ViolationMessage { get;  set; }
+        public ViolationType ViolationType { get;  set; } 
 
 
     }

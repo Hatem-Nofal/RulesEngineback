@@ -863,9 +863,6 @@ namespace RulesEngine.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("ExtraProperties");
 
-                    b.Property<bool>("HasCustomeRule")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -874,6 +871,9 @@ namespace RulesEngine.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false)
                         .HasColumnName("IsDeleted");
+
+                    b.Property<bool>("IsWorkflowLevel")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastModificationTime")
                         .HasColumnType("datetime2")
@@ -900,6 +900,9 @@ namespace RulesEngine.Migrations
 
                     b.Property<string>("ViolationMessage")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ViolationType")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
