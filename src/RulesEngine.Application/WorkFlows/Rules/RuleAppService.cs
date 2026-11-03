@@ -123,7 +123,7 @@ namespace RulesEngine.WorkFlows.Rules
 
         public override async Task<RuleDto> UpdateAsync(Guid id, CreateRuleDto input)
         {
-            return await UpdarteRuleAsync(input, id);
+            return await UpdateRuleAsync(input, id);
         }
 
         public override async Task DeleteAsync(Guid id)
@@ -240,7 +240,7 @@ namespace RulesEngine.WorkFlows.Rules
             await EngineManager.ReloadAfterCommitAsync();   // once per unit of work, even for bulk uploads
             return ruleDto;
         }
-        private async Task<RuleDto> UpdarteRuleAsync(CreateRuleDto input, Guid id, PreparedRule? prepared = null, bool saveChanges = true)
+        private async Task<RuleDto> UpdateRuleAsync(CreateRuleDto input, Guid id, PreparedRule? prepared = null, bool saveChanges = true)
         {
             prepared ??= await PrepareRuleAsync(input);
             var ruleDto = prepared.Dto;
@@ -794,7 +794,7 @@ namespace RulesEngine.WorkFlows.Rules
             {
                 if (row.ExistingId.HasValue)
                 {
-                    await UpdarteRuleAsync(row.Dto!, row.ExistingId.Value, row.Prepared, saveChanges: false);
+                    await UpdateRuleAsync(row.Dto!, row.ExistingId.Value, row.Prepared, saveChanges: false);
 
                 }
                 else

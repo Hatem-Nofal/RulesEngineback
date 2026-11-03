@@ -1,4 +1,5 @@
 using RulesEngine.Common.Enums;
+using RulesEngine.Common.Helpers;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
 using System.Collections.Generic;
@@ -89,15 +90,37 @@ public sealed class RuleExpressionStrategyBase : IRuleExpressionStrategy
             _ => throw Unsupported(f, op)
         };
     }
-    protected  string RenderMultipleSelect(FieldMapDto f, RuleOperator op, JsonElement v)
+    protected string RenderMultipleSelect(FieldMapDto f, RuleOperator op, JsonElement v)
     {
         var items = Strings(v);
+        if (items.Count == 0)
+        {
+            return op switch
+            {
+                RuleOperator.Contains => "false",
+                RuleOperator.NotContains => "true",
+                _ => throw Unsupported(f, op)
+            };
+        }
+
+        if (items.Count > 2)
+        {
+            var encoded = LargeRuleLists.Encode(items);
+            var expr = $"LargeRuleLists.AnyCodes({f.key}, {Quote(encoded)})";
+            return op switch
+            {
+                RuleOperator.Contains => expr,
+                RuleOperator.NotContains => $"({expr})",
+                _ => throw Unsupported(f, op)
+            };
+        }
+
         var parts = items.Select(s => $"{f.key}.Contains({Quote(s)})").ToList();
-        var expr = parts.Count == 1 ? parts[0] : $"({string.Join(" || ", parts)})";
+        var exprSmall = parts.Count == 1 ? parts[0] : $"({string.Join(" || ", parts)})";
         return op switch
         {
-            RuleOperator.Contains => expr,
-            RuleOperator.NotContains => $"!({expr})",
+            RuleOperator.Contains => exprSmall,
+            RuleOperator.NotContains => $"({exprSmall})",
             _ => throw Unsupported(f, op)
         };
     }
