@@ -48,7 +48,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
     // =============================================================================================
 
     public async Task<ClaimValidationResponse> SpecificValidateClaimsByCodesExtended(
-        List<Guid>? workflowIds,
+        List<long>? workflowIds,
         List<string>? workflownames,
         List<ClaimValidationByCodeRequestExtended> claims,
         CancellationToken cancellationToken = default)
@@ -186,10 +186,10 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
     // Step 1: which workflows run
     // =============================================================================================
 
-    private List<WorkflowPlan> ResolveWorkflows(RulesEngineSnapshot snapshot, List<Guid>? workflowIds, List<string>? workflowNames)
+    private List<WorkflowPlan> ResolveWorkflows(RulesEngineSnapshot snapshot, List<long>? workflowIds, List<string>? workflowNames)
     {
         var selected = new List<WorkflowPlan>();
-        var seen = new HashSet<Guid>();
+        var seen = new HashSet<long>();
 
         void Add(WorkflowPlan plan)
         {
@@ -224,7 +224,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
         // By id.
         if (workflowIds is { Count: > 0 })
         {
-            var missingIds = new List<Guid>();
+            var missingIds = new List<long>();
             foreach (var id in workflowIds.Distinct())
             {
                 if (snapshot.TryGetById(id, out var plan)) Add(plan);
@@ -356,10 +356,10 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
         switch (plan.RejectionLevel)
         {
             case RejectionLevel.Activity:
-            case RejectionLevel.AllActivity:
+            case RejectionLevel.Claim:
                 foreach (var activity in claim.Activities)
                 {
-                    var args = plan.RejectionLevel == RejectionLevel.AllActivity
+                    var args = plan.RejectionLevel == RejectionLevel.Claim
                         ? claim.CreateAllActivityArgs(activity)
                         : claim.CreateActivityArgs(activity);
 

@@ -15,7 +15,7 @@ using Volo.Abp.EntityFrameworkCore;
 
 namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 {
-    public class RuleFormConfigRepository : EfCoreRepository<RulesEngineDbContext, RuleFormConfig, Guid>, IRuleFormConfigRepository, IRepository
+    public class RuleFormConfigRepository : EfCoreRepository<RulesEngineDbContext, RuleFormConfig, long>, IRuleFormConfigRepository, IRepository
     {
         private readonly RulesEngineDbContext _context;
         public RuleFormConfigRepository(IDbContextProvider<RulesEngineDbContext> dbContextProvider, RulesEngineDbContext context) : base(dbContextProvider)
@@ -33,7 +33,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 
 
 
-        public async Task<RuleFormConfig?> GetByWorkflowAsync(Guid workflowId)
+        public async Task<RuleFormConfig?> GetByWorkflowAsync(long workflowId)
         {
             var workflow = await _context.WorkFlows.AsNoTracking().FirstOrDefaultAsync(x => x.Id == workflowId)
                            ?? throw new KeyNotFoundException("Workflow not found.");
@@ -53,7 +53,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
             return  _context.RuleFormConfigs.Include(x=>x.WorkFlows).Include(x=>x.RuleFormConfigFields).AsNoTracking().OrderBy(x => x.Name);
         }
 
-        public async Task<RuleFormConfig> GetAsync(Guid id)
+        public async Task<RuleFormConfig> GetAsync(long id)
         {
             var config = await _context.RuleFormConfigs.AsNoTracking().Include(x => x.RuleFormConfigFields).ThenInclude(x => x.Rulefield)
                         .FirstOrDefaultAsync(x => x.Id == id)
@@ -85,14 +85,14 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 
 
             var fields = BuildFields(input, catalog);
-            config.RuleFormConfigFields.AddRange(fields);
+            config.AddRuleFormConfigFields(fields);
 
             _context.RuleFormConfigs.Add(config);
             await _context.SaveChangesAsync();
             return config;
         }
 
-        public async Task<RuleFormConfig> UpdateAsync(Guid id, RuleFormConfig input)
+        public async Task<RuleFormConfig> UpdateAsync(long id, RuleFormConfig input)
         {
             var config = await _context.RuleFormConfigs.FirstOrDefaultAsync(x => x.Id == id)
                          ?? throw new KeyNotFoundException("Form config not found.");
@@ -115,8 +115,8 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
                         .Where(n => n.NodeType == RuleNodeType.Condition
                                     && n.FieldKey != null
                                     && removedKeys.Contains(n.FieldKey)
-                                    && _context.Rules.Any(r => r.Id == n.RuleId && workflowIds.Contains(r.WorkflowId)))
-                        .Select(n => n.RuleId)
+                                    && _context.Rules.Any(r => r.Id == n.WorkFlowId && workflowIds.Contains(r.WorkflowId)))
+                        .Select(n => n.WorkFlowId)
                         .Distinct()
                         .CountAsync();
 
@@ -142,7 +142,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
             return config;
         }
 
-        public async Task DeleteAsync(Guid id)
+        public async Task DeleteAsync(long id)
         {
             var workflows = await _context.WorkFlows.CountAsync(x => x.RuleformConfigId == id);
             if (workflows > 0)
@@ -156,7 +156,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
             await tx.CommitAsync();
         }
 
-        private static List<RuleFormConfigField> BuildFields(RuleFormConfig input, Dictionary<Guid, RuleField> catalog)
+        private static List<RuleFormConfigField> BuildFields(RuleFormConfig input, Dictionary<long, RuleField> catalog)
         {
             var list = new List<RuleFormConfigField>();
             var order = 0;
@@ -168,14 +168,14 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
                 if (!string.IsNullOrEmpty(f.AllowedOperatorsJson))
                     allowedJson = JsonSerializer.Serialize(f.AllowedOperatorsJson);
 
-                var cfgField = new RuleFormConfigField(Guid.Empty, f.RulefieldId, order++, f.IsMultiple, f.IsDefault, allowedJson);
+                var cfgField = new RuleFormConfigField(input.Id,f.RulefieldId, order++, f.IsMultiple, f.IsDefault, allowedJson);
                 list.Add(cfgField);
             }
 
             return list;
         }
 
-        private async Task<Dictionary<Guid, RuleField>> ValidateAsync(RuleFormConfig input, Guid? currentId)
+        private async Task<Dictionary<long, RuleField>> ValidateAsync(RuleFormConfig input, long? currentId)
         {
             var name = input.Name?.Trim();
             if (string.IsNullOrEmpty(name))

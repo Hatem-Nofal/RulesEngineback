@@ -12,7 +12,7 @@ namespace RulesEngine.Integrations.RulesEngineManagers;
 /// </summary>
 public sealed class WorkflowPlan
 {
-    public WorkflowPlan(Guid id, string name, string normalizedName, RejectionLevel rejectionLevel, IReadOnlyList<WorkflowBatch> batches)
+    public WorkflowPlan(long id, string name, string normalizedName, RejectionLevel rejectionLevel, IReadOnlyList<WorkflowBatch> batches)
     {
         Id = id;
         Name = name;
@@ -26,7 +26,7 @@ public sealed class WorkflowPlan
             name.Contains("gender", StringComparison.Ordinal);
     }
 
-    public Guid Id { get; }
+    public long Id { get; }
     public string Name { get; }
     public string NormalizedName { get; }
     public RejectionLevel RejectionLevel { get; }

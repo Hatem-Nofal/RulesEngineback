@@ -8,9 +8,9 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
     [Table("RuleNodes", Schema = "RuleBuilders")]
     public sealed class RuleNode : FullAuditedEntity<Guid>
     {
-        public Guid RuleId { get; private set; }
-        [ForeignKey(nameof(RuleId))]
-        public Rule Rule { get; private set; }
+        public long WorkFlowId { get; private set; }
+        [ForeignKey(nameof(WorkFlowId))]
+        public WorkFlow WorkFlow { get; private set; }
 
         public Guid? ParentId { get; private set; }
         [ForeignKey(nameof(ParentId))]
@@ -27,11 +27,11 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 
         public RuleNode() { }
 
-        public RuleNode(Guid ruleId,  Guid? parentId,  RuleNodeType nodeType, LogicalOperator? logicalOperator, LogicalOperator? logicalJoinOperator, string? fieldKey, RuleOperator? @operator, string? valueJson, int order)
+        public RuleNode(long workFlowId,  Guid? parentId,  RuleNodeType nodeType, LogicalOperator? logicalOperator, LogicalOperator? logicalJoinOperator, string? fieldKey, RuleOperator? @operator, string? valueJson, int order)
         {
             Id = Guid.CreateVersion7();
 
-            RuleId = ruleId;
+            WorkFlowId = workFlowId;
             ParentId = parentId;
             NodeType = nodeType;
             LogicalOperator = logicalOperator;

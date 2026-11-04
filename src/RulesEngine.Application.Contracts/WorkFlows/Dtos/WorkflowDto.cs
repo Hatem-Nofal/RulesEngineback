@@ -7,9 +7,9 @@ namespace RulesEngine.WorkFlows.Dtos
 {
     public class WorkflowDto
     {
-        public Guid Id { get; set; }
+        public long Id { get; set; }
         public string Name { get; set; } = default!;
-        public Guid? RuleFormConfigId { get; set; }
+        public long? RuleFormConfigId { get; set; }
         public string? RuleFormConfigName { get; set; }
         public int RuleCount { get; set; }
         public RejectionLevel RejectionLevel { get;  set; }

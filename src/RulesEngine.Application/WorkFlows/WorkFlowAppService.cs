@@ -17,17 +17,19 @@ using System.Linq.Dynamic.Core;
 namespace RulesEngine.WorkFlows
 {
     [Authorize(RulesEnginePermissions.Workflows)]
-    public class WorkFlowAppService : CrudAppService<WorkFlow, WorkflowDto, WorkflowDto, Guid, WorkflowPagedAndFilterDto, SaveWorkflowDto, SaveWorkflowDto>, IWorkFlowAppService
+    public class WorkFlowAppService : CrudAppService<WorkFlow, WorkflowDto, WorkflowDto, long, WorkflowPagedAndFilterDto, SaveWorkflowDto, SaveWorkflowDto>, IWorkFlowAppService
     {
         private readonly IWorkFlowRepository _workFlowRepository;
-        private readonly IRepository<RuleFormConfig, Guid> _ruleFormConfigRepository;
-        private readonly IRepository<Rule, Guid> _ruleRepository;
+        private readonly IRepository<RuleFormConfig, long> _ruleFormConfigRepository;
+        private readonly IRepository<Rule, long> _ruleRepository;
+        private readonly IRepository<RuleNode, Guid> _ruleNodeRepository;
 
-        public WorkFlowAppService(IRepository<WorkFlow, Guid> repository, IWorkFlowRepository workFlowRepository, IRepository<RuleFormConfig, Guid> ruleFormConfigRepository, IRepository<Rule, Guid> ruleRepository) : base(repository)
+        public WorkFlowAppService(IRepository<WorkFlow, long> repository, IWorkFlowRepository workFlowRepository, IRepository<RuleFormConfig, long> ruleFormConfigRepository, IRepository<Rule, long> ruleRepository, IRepository<RuleNode, Guid> ruleNodeRepository) : base(repository)
         {
             _workFlowRepository = workFlowRepository;
             _ruleFormConfigRepository = ruleFormConfigRepository;
             _ruleRepository = ruleRepository;
+            _ruleNodeRepository = ruleNodeRepository;
         }
 
         public override async Task<PagedResultDto<WorkflowDto>> GetListAsync(WorkflowPagedAndFilterDto input)
@@ -41,7 +43,7 @@ namespace RulesEngine.WorkFlows
             var total = await AsyncExecuter.CountAsync(query);
             query = query.OrderBy(input.Sorting ?? "CreationTime DESC")
                 .PageBy(input);
- 
+
 
             return new PagedResultDto<WorkflowDto>(total, query.ToList().Select(w => new WorkflowDto()
             {
@@ -59,19 +61,18 @@ namespace RulesEngine.WorkFlows
         }
 
 
-        public override async Task<WorkflowDto> GetAsync(Guid id)
+        public override async Task<WorkflowDto> GetAsync(long id)
         {
             var workflow = await _workFlowRepository.GetDetailsAsync(id);
             var configs = (await _ruleFormConfigRepository.GetListAsync()).ToDictionary(x => x.Id, x => x.Name);
             var count = await _ruleRepository.CountAsync(x => x.WorkflowId == id);
-            return Map(workflow, configs, new Dictionary<Guid, int> { [id] = count });
+            return Map(workflow, configs, new Dictionary<long, int> { [id] = count });
 
         }
 
         public override async Task<WorkflowDto> CreateAsync(SaveWorkflowDto input)
         {
             var workflow = new WorkFlow(input.Name, input.RuleFormConfigId, input.RejectionLevel, input.IsWorkflowLevel, input.ViolationMessage, input.ViolationType);
-            workflow.SetId(null);
 
 
             if (input.IsWorkflowLevel)
@@ -79,16 +80,16 @@ namespace RulesEngine.WorkFlows
                 if (string.IsNullOrEmpty(input.RuleExpression))
                     throw new RuleValidationException($"If WorkFlow IsWorkflowLevel , RuleExpression is require !");
 
-                workflow.AddRule(Rule.CreateRuleForCustomeWorkflow(Guid.CreateVersion7(), "Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression, input.ViolationMessage, input.ViolationType));
+                workflow.AddRule(Rule.CreateRuleForCustomeWorkflow("Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression, input.ViolationMessage, input.ViolationType));
             }
             await _workFlowRepository.InsertAsync(workflow);
 
-            return Map(workflow, new Dictionary<Guid, string>(), new Dictionary<Guid, int> { [workflow.Id] = 0 });
+            return Map(workflow, new Dictionary<long, string>(), new Dictionary<long, int> { [workflow.Id] = 0 });
         }
 
-        public override async Task<WorkflowDto> UpdateAsync(Guid id, SaveWorkflowDto input)
+        public override async Task<WorkflowDto> UpdateAsync(long id, SaveWorkflowDto input)
         {
-            var workflow = await _workFlowRepository.GetDetailsAsync(id);
+            var workflow = await _workFlowRepository.GetForUpdateAsync(id);
             workflow.UpdateName(input.Name);
             workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
             workflow.SetIsWorkflowLevel(input.IsWorkflowLevel);
@@ -109,26 +110,27 @@ namespace RulesEngine.WorkFlows
                 }
                 else
                 {
-                    var rule = Rule.CreateRuleForCustomeWorkflow(Guid.CreateVersion7(), "Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression, input.ViolationMessage, input.ViolationType);
+                    var rule = Rule.CreateRuleForCustomeWorkflow("Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression, input.ViolationMessage, input.ViolationType);
                     await _ruleRepository.InsertAsync(rule);
                 }
             }
 
 
             await _workFlowRepository.UpdateAsync(workflow);
-            return Map(workflow, new Dictionary<Guid, string>(), new Dictionary<Guid, int> { [workflow.Id] = 0 });
+            return Map(workflow, new Dictionary<long, string>(), new Dictionary<long, int> { [workflow.Id] = 0 });
         }
 
-        public override async Task DeleteAsync(Guid id)
+        public override async Task DeleteAsync(long id)
         {
-            var count = await _ruleRepository.CountAsync(x => x.WorkflowId == id);
-            if (count > 0)
-                throw new RuleValidationException($"Cannot delete: {count} rule(s) use this workflow. Delete or move them first.");
 
-            await _workFlowRepository.DeleteAsync(id);
+            // One set-based DELETE for all nodes instead of loading them and deleting them one by one.
+            await _ruleRepository.DeleteDirectAsync(n => n.WorkflowId == id);
+            await _ruleNodeRepository.DeleteDirectAsync(n => n.WorkFlowId == id);
+
+            await _workFlowRepository.HardDeleteAsync(x => x.Id == id);
         }
 
-        private static WorkflowDto Map(WorkFlow w, Dictionary<Guid, string> configs, Dictionary<Guid, int> counts) => new()
+        private static WorkflowDto Map(WorkFlow w, Dictionary<long, string> configs, Dictionary<long, int> counts) => new()
         {
             Id = w.Id,
             Name = w.Name,
@@ -143,7 +145,7 @@ namespace RulesEngine.WorkFlows
 
         };
 
-        public Task<WorkflowForRuleDto> GetWorkflowForRuleAsync(Guid workflowId)
+        public Task<WorkflowForRuleDto> GetWorkflowForRuleAsync(long workflowId)
         {
             var workflow = _workFlowRepository.GetAsync(workflowId).Result;
             if (workflow == null)

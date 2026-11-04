@@ -8,7 +8,6 @@ namespace RulesEngine.Common.Enums
     {
         Activity=1,
         Claim=2,
-        AllActivity=3
-
+ 
     }
 }

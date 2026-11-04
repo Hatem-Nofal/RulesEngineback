@@ -4,6 +4,6 @@ using System.Text;
 
 namespace RulesEngine.Lookups.Dtos
 {
-    public record LookupDto(Guid Id, string Name);
+    public record LookupDto(long Id, string Name);
 
 }

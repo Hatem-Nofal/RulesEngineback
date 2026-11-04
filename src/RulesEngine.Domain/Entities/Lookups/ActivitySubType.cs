@@ -22,7 +22,8 @@ namespace RulesEngine.Entities.Lookups
         public DateTime Update_timestamp { get; set; }
         public DateTime Create_timestamp { get; set; }
         public Guid? AbpCreatedBy_Id { get; set; }
-        [ForeignKey("AbpCreatedBy_Id")] public virtual IdentityUser? Createdby { get; set; }
+        [ForeignKey("AbpCreatedBy_Id")] 
+        public virtual IdentityUser? Createdby { get; set; }
         [RegularExpression(@"^\d+(\.\d{1,3})?$", ErrorMessage = "Only up to 3 decimal places are allowed.")] public decimal? Price { get; set; }
         public int Valid_DateId { get; set; }
 
@@ -32,7 +33,8 @@ namespace RulesEngine.Entities.Lookups
         public int? ItemSubCategoryId { get; set; }
 
         public Guid? LastUpdatedBy_Id { get; set; }
-        [ForeignKey(nameof(LastUpdatedBy_Id))] public virtual IdentityUser? LastUpdatedBy { get; set; }
+        [ForeignKey(nameof(LastUpdatedBy_Id))]
+        public virtual IdentityUser? LastUpdatedBy { get; set; }
         public DateTime? LastUpdatedDate { get; set; }
         public bool IsActive { get; set; } = true;
         public bool IsCapitation { get; set; } = false;

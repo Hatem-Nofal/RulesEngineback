@@ -8,7 +8,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
     [Table("RuleDiagnosis")]
     public sealed class RuleDiagnosis : Entity<long>
     {
-        public Guid RuleId { get; private set; }
+        public long RuleId { get; private set; }
         [ForeignKey("RuleId")]
 
         public Rule Rule { get; private set; }
@@ -19,7 +19,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         public bool? IsSecondary { get; private set; }
 
  
-        public RuleDiagnosis(long id, Guid ruleId, long diagnosisId, bool? isSecondary = null)
+        public RuleDiagnosis(long id, long ruleId, long diagnosisId, bool? isSecondary = null)
         {
             Id = id;
             RuleId = ruleId;

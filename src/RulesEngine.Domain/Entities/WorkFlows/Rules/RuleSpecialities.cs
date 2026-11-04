@@ -8,7 +8,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
     [Table("RuleSpecialities")]
     public sealed class RuleSpecialities : Entity<long>
     {
-        public Guid RuleId { get; private set; }
+        public long RuleId { get; private set; }
         [ForeignKey("RuleId")]
 
         public Rule Rule { get; private set; }
@@ -18,7 +18,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         public Specialities Specialitiy { get; private set; }
 
  
-        public RuleSpecialities(long id, Guid ruleId, int specialitiesId)
+        public RuleSpecialities(long id, long ruleId, int specialitiesId)
         {
             Id = id;
             RuleId = ruleId;

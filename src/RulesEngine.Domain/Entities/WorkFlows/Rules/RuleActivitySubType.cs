@@ -9,7 +9,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
     [Table("RuleActivitySubTypes")]
     public sealed class RuleActivitySubType : Entity<long>
     {
-        public Guid RuleId { get; private set; }
+        public long RuleId { get; private set; }
 
         [ForeignKey(nameof(RuleId))]
 
@@ -21,7 +21,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         public bool? IsSecondary { get; private set; }
 
  
-        public RuleActivitySubType(long id, Guid ruleId, long activitySubTypeId, bool? isSecondary = null)
+        public RuleActivitySubType(long id, long ruleId, long activitySubTypeId, bool? isSecondary = null)
         {
             Id = id;
             RuleId = ruleId;

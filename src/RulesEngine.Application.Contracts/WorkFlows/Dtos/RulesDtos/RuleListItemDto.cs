@@ -7,9 +7,9 @@ namespace RulesEngine.WorkFlows.Dtos.RulesDtos
 {
     public class RuleListItemDto
     {
-        public Guid Id { get; set; }
+        public long Id { get; set; }
         public string Name { get; set; } = default!;
-        public Guid WorkflowId { get; set; }
+        public long WorkflowId { get; set; }
         public string? WorkflowName { get; set; }
         public bool IsActive { get; set; }
         public ViolationType ViolationType { get; set; }

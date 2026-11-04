@@ -7,11 +7,11 @@ using Volo.Abp.Domain.Repositories;
 
 namespace RulesEngine.Repositories.WorkFlows
 {
-    public interface IRuleRepository : IRepository<Rule, Guid>
+    public interface IRuleRepository : IRepository<Rule, long>
     {
         Task<List<Rule>> GetListAsync();
-        Task<Rule> GetAsync(Guid id);
-        Task<Rule> GetForUpdateAsync(Guid id);
+        Task<Rule> GetAsync(long id);
+        Task<Rule> GetForUpdateAsync(long id);
 
 
      }

@@ -11,13 +11,13 @@ using Volo.Abp.Domain.Entities.Auditing;
 namespace RulesEngine.Entities.WorkFlows
 {
     [Table("Workflows")]
-    public sealed class WorkFlow : FullAuditedAggregateRoot<Guid>
+    public sealed class WorkFlow : FullAuditedAggregateRoot<long>
     {
         public string Name { get; private set; } = default!;
         public string NormalizedName { get; private set; }
         public RejectionLevel RejectionLevel { get; private set; }
 
-        public Guid? RuleformConfigId { get; private set; }
+        public long? RuleformConfigId { get; private set; }
 
         [ForeignKey("RuleformConfigId")]
 
@@ -30,16 +30,21 @@ namespace RulesEngine.Entities.WorkFlows
         public string? ViolationMessage { get; private set; }
 
         // EF mapping property - keep private setter and expose read-only view
-        public ICollection<Rule> Rules { get; private set; } = new List<Rule>();
+      
+        private readonly List<Rule> _rules = new();
+
+        public IReadOnlyCollection<Rule> Rules => _rules.AsReadOnly();
+        // EF mapping property - keep list with private setter
+        public List<RuleNode> Nodes { get; private set; } = new();
 
         [NotMapped]
-        public IReadOnlyCollection<Rule> _Rules => (IReadOnlyCollection<Rule>)Rules;
+        public IReadOnlyCollection<RuleNode> _Nodes => Nodes.AsReadOnly();
         public WorkFlow()
         {
 
         }
 
-        public WorkFlow(string name, Guid? ruleFormConfigId, RejectionLevel rejectionLevel, bool isWorkflowLevel, string? violationMessage, ViolationType violationType)
+        public WorkFlow(string name, long? ruleFormConfigId, RejectionLevel rejectionLevel, bool isWorkflowLevel, string? violationMessage, ViolationType violationType)
         {
             Name = name ?? throw new ArgumentNullException(nameof(name));
             RuleformConfigId = ruleFormConfigId;
@@ -50,10 +55,7 @@ namespace RulesEngine.Entities.WorkFlows
             ViolationType = violationType;
         }
 
-        public void SetId(Guid? id)
-        {
-            Id = id ?? Guid.CreateVersion7();
-        }
+       
         public void SetIsWorkflowLevel(bool isWorkflowLevel)
         {
             IsWorkflowLevel = isWorkflowLevel;
@@ -69,18 +71,18 @@ namespace RulesEngine.Entities.WorkFlows
         public void AddRule(Rule rule)
         {
             if (rule == null) throw new ArgumentNullException(nameof(rule));
-            Rules.Add(rule);
+            _rules.Add(rule);
         }
         public void UpdateRule(Rule rule)
         {
             if (rule == null) throw new ArgumentNullException(nameof(rule));
-            Rules.FirstOrDefault(x => x.Id == rule.Id).Update(rule.WorkflowId, rule.Expression, rule.ViolationMessage);
+            _rules.FirstOrDefault(x => x.Id == rule.Id)?.Update(rule.WorkflowId, rule.Expression, rule.ViolationMessage);
         }
 
         public void RemoveRule(Rule rule)
         {
             if (rule == null) throw new ArgumentNullException(nameof(rule));
-            Rules.Remove(rule);
+            _rules.Remove(rule);
         }
 
         public void UpdateName(string name)
@@ -88,7 +90,7 @@ namespace RulesEngine.Entities.WorkFlows
             Name = name ?? throw new ArgumentNullException(nameof(name));
             NormalizedName = name.NormalizeSpace();
         }
-        public void UpdateRuleFormConfigId(Guid? ruleFormConfigId)
+        public void UpdateRuleFormConfigId(long? ruleFormConfigId)
         {
             RuleformConfigId = ruleFormConfigId;
         }

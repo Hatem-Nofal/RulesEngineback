@@ -21,9 +21,9 @@ public class FieldMapProvider: IFieldMapProvider
 {
     private Dictionary<string, FieldMapDto>? _cache;
 
-    private readonly IRepository<RuleField, Guid> _ruleFieldRepository;
+    private readonly IRepository<RuleField, long> _ruleFieldRepository;
 
-    public FieldMapProvider(IRepository<RuleField, Guid> ruleFieldRepository)
+    public FieldMapProvider(IRepository<RuleField, long> ruleFieldRepository)
     {
         _ruleFieldRepository = ruleFieldRepository;
     }

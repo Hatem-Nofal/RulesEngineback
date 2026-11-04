@@ -7,7 +7,7 @@ namespace RulesEngine.WorkFlows.Dtos
 {
     public class RulePagedAndSortedResultRequestDto: PagedAndSortedResultRequestDto
     {
-        public Guid? WorkflowId { get;  set; }
+        public long? WorkflowId { get;  set; }
         public string? RuleName { get;  set; }
     }
 }

@@ -6,7 +6,7 @@ namespace RulesEngine.Integrations
     public class ClaimDto
     {
 
-        public Guid Id { get; set; }
+        public long Id { get; set; }
         public string PatientId { get; set; }
         public List<DiagnosisDto> Diagnoses { get; set; }
         public List<MedicationDto> CurrentMedications { get; set; }
@@ -16,7 +16,7 @@ namespace RulesEngine.Integrations
     }
     public class ClaimValidation
     {
-        public List<Guid>? workflows { get; set; }
+        public List<long>? workflows { get; set; }
         public List<string>? workflownames { get; set; }
         public List<ClaimValidationByCodeRequestExtended> ClaimValidationRequests { get; set; } = new();
     }

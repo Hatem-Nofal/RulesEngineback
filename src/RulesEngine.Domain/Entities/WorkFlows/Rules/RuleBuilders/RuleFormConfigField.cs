@@ -7,15 +7,15 @@ using Volo.Abp.Domain.Entities.Auditing;
 namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 {
     [Table("RuleFormConfigFields", Schema = "RuleBuilders")]
-    public sealed class RuleFormConfigField : FullAuditedEntity<Guid>
+    public sealed class RuleFormConfigField : FullAuditedEntity<long>
     {
-        public Guid RuleformConfigId { get; private set; }
+        public long RuleformConfigId { get; private set; }
 
         [ForeignKey("RuleformConfigId")]
 
         public RuleFormConfig RuleformConfig { get; private set; }
 
-        public Guid RulefieldId { get; private set; }
+        public long RulefieldId { get; private set; }
 
         [ForeignKey(nameof(RulefieldId))]
 
@@ -30,10 +30,9 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
         {
             
         }
-        public RuleFormConfigField( Guid formConfigId, Guid ruleFieldId, int order, bool isMultiple, bool isDefault, string? allowedOperatorsJson = null)
+        public RuleFormConfigField( long formConfigId, long ruleFieldId, int order, bool isMultiple, bool isDefault, string? allowedOperatorsJson = null)
         {
-            Id = Guid.CreateVersion7();
-
+ 
             RuleformConfigId = formConfigId;
             RulefieldId = ruleFieldId;
             Order = order;
@@ -41,7 +40,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
             IsMultiple = isMultiple;
             IsDefault = isDefault;
         }
-        public void Update( Guid formConfigId, Guid ruleFieldId, int order, bool isMultiple, bool isDefault, string? allowedOperatorsJson = null)
+        public void Update( long formConfigId, long ruleFieldId, int order, bool isMultiple, bool isDefault, string? allowedOperatorsJson = null)
         {
              
 
@@ -58,7 +57,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
             Order = order;
             AllowedOperatorsJson = allowedOperatorsJson;
         }
-        public void UpdateRuleFormConfigId(Guid ruleFormConfigId)
+        public void UpdateRuleFormConfigId(long ruleFormConfigId)
         {
             RuleformConfigId = ruleFormConfigId;
         }

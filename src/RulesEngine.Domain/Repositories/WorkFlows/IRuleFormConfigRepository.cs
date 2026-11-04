@@ -10,12 +10,12 @@ namespace RulesEngine.Repositories.WorkFlows
     public interface IRuleFormConfigRepository:IRepository
     {
         Task<List<RuleFormConfig>> GetConfigsAsync();
-         Task<RuleFormConfig?> GetByWorkflowAsync(Guid workflowId);
+         Task<RuleFormConfig?> GetByWorkflowAsync(long workflowId);
         Task<List<RuleFormConfig>> GetListAsync();
-        Task<RuleFormConfig> GetAsync(Guid id);
+        Task<RuleFormConfig> GetAsync(long id);
         Task<RuleFormConfig> CreateAsync(RuleFormConfig input);
-        Task<RuleFormConfig> UpdateAsync(Guid id, RuleFormConfig input);
-        Task DeleteAsync(Guid id);
+        Task<RuleFormConfig> UpdateAsync(long id, RuleFormConfig input);
+        Task DeleteAsync(long id);
 
         Task<IQueryable<RuleFormConfig>> GetQueryableAsync();
     }

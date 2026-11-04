@@ -6,7 +6,7 @@ namespace RulesEngine.WorkFlows.Dtos.RulesDtos
 {
     public class CreateRuleDto
     {
-        public Guid WorkflowId { get; set; }
+        public long WorkflowId { get; set; }
         public bool IsActive { get; set; } = true;
         public string? ViolationMessage { get; set; }  
 

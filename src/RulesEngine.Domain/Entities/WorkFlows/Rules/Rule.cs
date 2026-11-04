@@ -9,26 +9,22 @@ using Volo.Abp.Domain.Entities.Auditing;
 namespace RulesEngine.Entities.WorkFlows.Rules
 {
     [Table("Rules")]
-    public sealed class Rule : FullAuditedEntity<Guid>
+    public sealed class Rule : FullAuditedEntity<long>
     {
         public string Name { get; private set; }
 
-        public Guid WorkflowId { get; private set; }
+        public long WorkflowId { get; private set; }
 
         [ForeignKey(nameof(WorkflowId))]
 
         public WorkFlow Workflow { get; private set; }
 
         public ViolationType ViolationType { get; private set; } = ViolationType.Error;
-        public string? ViolationMessage { get; private set; } 
+        public string? ViolationMessage { get; private set; }
         public bool IsActive { get; private set; } = true;
         public string Expression { get; private set; }
 
-        // EF mapping property - keep list with private setter
-        public List<RuleNode> Nodes { get; private set; } = new();
-
-        [NotMapped]
-        public IReadOnlyCollection<RuleNode> _Nodes => Nodes.AsReadOnly();
+    
 
         public ICollection<RuleDiagnosis> RuleDiagnosis { get; private set; } = new List<RuleDiagnosis>();
         public ICollection<RuleActivitySubType> RuleActivitySubTypes { get; private set; } = new List<RuleActivitySubType>();
@@ -38,17 +34,15 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         {
 
         }
-        public Rule(Guid id, Guid workflowId, string expression, string? violationMessage)
+        public Rule(long workflowId, string expression, string? violationMessage)
         {
-            Id = id;
             WorkflowId = workflowId;
             Expression = expression;
             ViolationMessage = violationMessage;
         }
-        public static Rule CreateRuleForCustomeWorkflow( Guid id, string name, Guid workflowId, string expression, string? violationMessage, ViolationType violationType)
+        public static Rule CreateRuleForCustomeWorkflow(string name, long workflowId, string expression, string? violationMessage, ViolationType violationType)
         {
             var rule = new Rule();
-            rule.Id = id;
             rule.WorkflowId = workflowId;
             rule.Expression = expression;
             rule.Name = name;
@@ -56,7 +50,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules
             rule.ViolationType = violationType;
             return rule;
         }
-        public void Update(Guid workflowId, string expression, string? violationMessage)
+        public void Update(long workflowId, string expression, string? violationMessage)
         {
             WorkflowId = workflowId;
             Expression = expression;
@@ -85,22 +79,22 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         public void AddNode(RuleNode node)
         {
             if (node == null) throw new ArgumentNullException(nameof(node));
-            Nodes.Add(node);
+            Workflow.Nodes.Add(node);
         }
         public void AddNodes(List<RuleNode> nodes)
         {
-            Nodes.AddRange(nodes);
+            Workflow.Nodes.AddRange(nodes);
         }
 
         public void RemoveNode(RuleNode node)
         {
             if (node == null) throw new ArgumentNullException(nameof(node));
-            Nodes.Remove(node);
+            Workflow.Nodes.Remove(node);
         }
         public void ResetNodes()
         {
 
-            Nodes = new();
+            Workflow.Nodes.Clear();
         }
 
         public void Activate() => IsActive = true;
@@ -124,10 +118,10 @@ namespace RulesEngine.Entities.WorkFlows.Rules
             RuleSpecialities.Add(speciality);
         }
 
-        public void GenerateUniqueNameAsync(int count,string workflowName)
+        public void GenerateUniqueNameAsync(int count, string workflowName)
         {
 
-            Name= $"{workflowName}-Rule-{count + 1}";
+            Name = $"{workflowName}-Rule-{count + 1}";
         }
     }
 }

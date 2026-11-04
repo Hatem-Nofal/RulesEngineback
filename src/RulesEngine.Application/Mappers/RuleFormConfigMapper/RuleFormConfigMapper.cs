@@ -13,8 +13,8 @@ namespace RulesEngine
         {
             destination.AllowNestedGroups = source.AllowNestedGroups;
             destination.Description = source.Description;
-            destination.FieldCount = source._RuleFormConfigFields.Count;
-            destination.WorkflowCount = source._WorkFlows.Count;
+            destination.FieldCount = source.RuleFormConfigFields.Count;
+            destination.WorkflowCount = source.WorkFlows.Count;
             destination.Name = source.Name;
             destination.StrategyKey = source.StrategyKey;
             destination.IsActive = source.IsActive;
@@ -30,8 +30,8 @@ namespace RulesEngine
             {
                 AllowNestedGroups = source.AllowNestedGroups,
                 Description = source.Description,
-                FieldCount = source._RuleFormConfigFields.Count,
-                WorkflowCount = source._WorkFlows.Count,
+                FieldCount = source.RuleFormConfigFields.Count,
+                WorkflowCount = source.WorkFlows.Count,
                 Name = source.Name,
                 StrategyKey = source.StrategyKey,
                 IsActive = source.IsActive,

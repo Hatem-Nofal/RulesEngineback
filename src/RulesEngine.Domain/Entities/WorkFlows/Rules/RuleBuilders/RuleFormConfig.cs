@@ -7,7 +7,7 @@ using Volo.Abp.Domain.Entities.Auditing;
 namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 {
     [Table("RuleFormConfigs", Schema = "RuleBuilders")]
-    public sealed class RuleFormConfig : FullAuditedEntity<Guid>
+    public sealed class RuleFormConfig : FullAuditedEntity<long>
     {
         public string Name { get; private set; }
         public string? Description { get; private set; }
@@ -15,22 +15,18 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
         public bool AllowNestedGroups { get; private set; } = false;
         public string? StrategyKey { get; private set; }
 
-        // EF mapping property - kept as list with private setter
-        public List<RuleFormConfigField> RuleFormConfigFields { get; private set; } = new();
+  
 
-        public List<WorkFlow> WorkFlows { get; private set; } = new();
+        private readonly List<WorkFlow> _workFlows = new();
 
-        [NotMapped]
-        public IReadOnlyCollection<RuleFormConfigField> _RuleFormConfigFields => RuleFormConfigFields.AsReadOnly();
+        public IReadOnlyCollection<WorkFlow> WorkFlows => _workFlows.AsReadOnly();
+        private readonly List<RuleFormConfigField> _ruleFormConfigFields = new();
 
-        [NotMapped]
-        public IReadOnlyCollection<WorkFlow> _WorkFlows => WorkFlows.AsReadOnly();
+        public IReadOnlyCollection<RuleFormConfigField> RuleFormConfigFields => _ruleFormConfigFields.AsReadOnly();
 
- 
         public RuleFormConfig(  string name, bool allowNestedGroups, string? description = null)
         {
-            Id = Guid.NewGuid();
-            Name = name ?? throw new ArgumentNullException(nameof(name));
+             Name = name ?? throw new ArgumentNullException(nameof(name));
             Description = description;
             StrategyKey = name.NormalizeSpace();
             AllowNestedGroups = allowNestedGroups;
@@ -39,23 +35,23 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
         public void AddField(RuleFormConfigField field)
         {
             if (field == null) throw new ArgumentNullException(nameof(field));
-            RuleFormConfigFields.Add(field);
+            _ruleFormConfigFields.Add(field);
         }
-        public void AddFields(IEnumerable<RuleFormConfigField> fields)
+        public void AddRuleFormConfigFields(IEnumerable<RuleFormConfigField> fields)
         {
             if (fields == null) throw new ArgumentNullException(nameof(fields));
-            RuleFormConfigFields.AddRange(fields);
+            _ruleFormConfigFields.AddRange(fields);
         }
 
         public void RemoveField(RuleFormConfigField field)
         {
             if (field == null) throw new ArgumentNullException(nameof(field));
-            RuleFormConfigFields.Remove(field);
+            _ruleFormConfigFields.Remove(field);
         }
 
         public void ResetRuleFormConfigFields( )
         {
-             RuleFormConfigFields=new();
+            _ruleFormConfigFields.Clear();
         }
         public void Update(string name, string? description , bool allowNestedGroups, bool isActive = true )
         {

@@ -5,7 +5,7 @@ using Volo.Abp.Domain.Entities;
 namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 {
     [Table("RuleFields", Schema = "RuleBuilders")]
-    public sealed class RuleField : Entity<Guid>
+    public sealed class RuleField : Entity<long>
     {
         public string Key { get; private set; }
         public string Label { get; private set; }
@@ -15,8 +15,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
  
         public RuleField(  string key, string label, string dataType, string? optionsJson = null)
         {
-            Id = Guid.CreateVersion7();
-            Key = key ?? throw new ArgumentNullException(nameof(key));
+             Key = key ?? throw new ArgumentNullException(nameof(key));
             Label = label ?? throw new ArgumentNullException(nameof(label));
             DataType = dataType ?? throw new ArgumentNullException(nameof(dataType));
             OptionsJson = optionsJson;

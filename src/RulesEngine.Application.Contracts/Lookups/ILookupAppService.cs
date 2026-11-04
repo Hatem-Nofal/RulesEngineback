@@ -10,13 +10,13 @@ namespace RulesEngine.Lookups
         Task<List<SelectedDropDownList>> GetActivityTypeDropDownList();
         Task<List<SelectedDropDownList>> GetDiagnosisDropDownList();
          Task<List<SelectedDropDownList>> GetSpecialitiesIdDropDownList(string searchTerm);
-        Task<List<SelectedDropDownListByGuid>> GetWorkflowsDropDownList();
+        Task<List<SelectedDropDownList>> GetWorkflowsDropDownList();
         Task<List<SelectedDropDownList>> GetGenericDrugsDropDownList(string searchTerm);
          Task<List<SelectedDropDownList>> GetDuplicateTherapyGroupsDropDownList(string searchTerm);
         Task<List<SelectedDropDownList>> GetMorbidityGroupsDropDownList(string searchTerm);
         Task<List<SelectedDropDownList>> GetBatchTypesDropDownList();
         Task<List<SelectedDropDownList>> GetActivitySubTypeDropDownListPaged(int activityTypeId, string searchTerm);
         Task<List<SelectedDropDownList>> GetDiagnosisDropDownListPaged(string searchTerm);
-        Task<List<SelectedDropDownListByGuid>> GetWorkflowsForCreateRuleDropDownList();
+        Task<List<SelectedDropDownList>> GetWorkflowsForCreateRuleDropDownList();
       }
 }

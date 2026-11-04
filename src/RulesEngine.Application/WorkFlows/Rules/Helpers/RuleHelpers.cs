@@ -105,7 +105,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
         }
 
 
-        public static void Flatten(RuleNodeDto dto, Guid ruleId, Guid? parentId, int order, List<RuleNode> output)
+        public static void Flatten(RuleNodeDto dto, long ruleId, Guid? parentId, int order, List<RuleNode> output)
         {
             var isGroup = dto.NodeType == RuleNodeType.Group;
 

@@ -9,7 +9,7 @@ namespace RulesEngine.WorkFlows.Dtos
     public class WorkflowPagedAndFilterDto : PagedAndSortedResultRequestDto
     {
         public string? Name { get; set; }
-        public Guid? RuleFormConfigId { get; set; }
+        public long? RuleFormConfigId { get; set; }
         public RejectionLevel? RejectionLevel { get; set; }
 
     }

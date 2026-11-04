@@ -12,7 +12,7 @@ public sealed class RulesEngineSnapshot
 {
     private static readonly IReadOnlyList<WorkflowPlan> NoPlans = Array.Empty<WorkflowPlan>();
 
-    private readonly Dictionary<Guid, WorkflowPlan> _byId = new();
+    private readonly Dictionary<long, WorkflowPlan> _byId = new();
     private readonly Dictionary<string, WorkflowPlan> _byName = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<WorkflowPlan>> _byNormalizedName = new(StringComparer.OrdinalIgnoreCase);
 
@@ -37,7 +37,7 @@ public sealed class RulesEngineSnapshot
     /// <summary>All active workflows, including those without rules.</summary>
     public IReadOnlyList<WorkflowPlan> Workflows { get; }
 
-    public bool TryGetById(Guid id, [NotNullWhen(true)] out WorkflowPlan? plan)
+    public bool TryGetById(long id, [NotNullWhen(true)] out WorkflowPlan? plan)
         => _byId.TryGetValue(id, out plan);
 
     public WorkflowPlan? FindByName(string name)

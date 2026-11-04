@@ -104,6 +104,7 @@ public class RulesEngineDbContext :
         {
             e.Property(x => x.Name).IsRequired().HasMaxLength(200);
             e.HasIndex(x => x.Name).IsUnique();
+            e.HasMany(x => x.Nodes).WithOne().HasForeignKey(x => x.WorkFlowId).OnDelete(DeleteBehavior.Cascade);
 
             e.HasOne(x => x.RuleformConfig)
                  .WithMany(x => x.WorkFlows)
@@ -148,7 +149,6 @@ public class RulesEngineDbContext :
         builder.Entity<Rule>(e =>
         {
             e.Property(x => x.Name).IsRequired().HasMaxLength(200);
-            e.HasMany(x => x.Nodes).WithOne().HasForeignKey(x => x.RuleId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Workflow)
        .WithMany(x => x.Rules)
        .HasForeignKey(x => x.WorkflowId)
@@ -165,9 +165,9 @@ public class RulesEngineDbContext :
             .HasForeignKey(x => x.ParentId)
             .OnDelete(DeleteBehavior.Restrict);
 
-            e.HasOne(x => x.Rule)
+            e.HasOne(x => x.WorkFlow)
             .WithMany(x => x.Nodes)
-            .HasForeignKey(x => x.RuleId)
+            .HasForeignKey(x => x.WorkFlowId)
             .OnDelete(DeleteBehavior.Restrict);
         });
         /* Include modules to your migration db context */

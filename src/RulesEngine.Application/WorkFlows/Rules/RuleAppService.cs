@@ -28,29 +28,29 @@ namespace RulesEngine.WorkFlows.Rules
 {
 
     [Authorize(RulesEnginePermissions.Rules)]
-    public class RuleAppService : CrudAppService<Rule, RuleDto, RuleListItemDto, Guid, RulePagedAndSortedResultRequestDto, CreateRuleDto, CreateRuleDto>, IRuleAppService
+    public class RuleAppService : CrudAppService<Rule, RuleDto, RuleListItemDto, long, RulePagedAndSortedResultRequestDto, CreateRuleDto, CreateRuleDto>, IRuleAppService
     {
         private readonly IRepository<RuleNode, Guid> _ruleNodeRepository;
         private readonly IWorkFlowRepository _workflowRepository;
-        private readonly IRepository<RuleField, Guid> _ruleFieldRepository;
+        private readonly IRepository<RuleField, long> _ruleFieldRepository;
         private readonly IRuleExpressionBuilder _expressionsBuilder;
         private readonly IRuleRepository _ruleRepository;
         private readonly IRepository<ActivitySubType> _activitySubTypeRepository;
         private readonly IRepository<Diagnosis> _diagnosisRepository;
-
         private readonly IRepository<Specialities> _specialitiesRepository;
         private readonly IRepository<GenericDrug> _genericDrugsRepository;
-
         private readonly IRepository<MorbidityGroup, int> _morbidityGroupRepository;
+        private const string ErrorsHeader = "Errors";
+        private const string ExcelContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
         private IRulesEngineManager EngineManager => LazyServiceProvider.LazyGetRequiredService<IRulesEngineManager>();
 
         public RuleAppService(
-            IRepository<Rule, Guid> repository,
+            IRepository<Rule, long> repository,
             IRepository<RuleNode, Guid> ruleNodeRepository,
            IWorkFlowRepository workflowRepository,
              IRuleExpressionBuilder expressionsBuilder,
             IRuleRepository ruleRepository,
-            IRepository<RuleField, Guid> ruleFieldRepository,
+            IRepository<RuleField, long> ruleFieldRepository,
             IRepository<ActivitySubType> activitySubTypeRepository,
             IRepository<Diagnosis> diagnosisRepository,
             IRepository<Specialities> specialitiesRepository,
@@ -97,7 +97,7 @@ namespace RulesEngine.WorkFlows.Rules
             return new PagedResultDto<RuleListItemDto>(total, items);
         }
 
-        public override async Task<RuleDto> GetAsync(Guid id)
+        public override async Task<RuleDto> GetAsync(long id)
         {
             var rule = await _ruleRepository.GetAsync(id)
                        ?? throw new KeyNotFoundException("Rule not found.");
@@ -108,7 +108,7 @@ namespace RulesEngine.WorkFlows.Rules
                 Name = rule.Name,
                 WorkflowId = rule.WorkflowId,
                 IsActive = rule.IsActive,
-                Root = !rule.Workflow.IsWorkflowLevel ? await RuleTreeMapper.ToTree(rule.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto(),
+                Root = !rule.Workflow.IsWorkflowLevel ? await RuleTreeMapper.ToTree(rule.Workflow.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto(),
                 Expression = rule.Expression,
                 WorkflowIsWorkflowLevel = rule.Workflow.IsWorkflowLevel,
                 ViolationMessage = rule.ViolationMessage ?? rule.Workflow.ViolationMessage,
@@ -121,17 +121,17 @@ namespace RulesEngine.WorkFlows.Rules
             return await SaveRuleAsync(input, null);
         }
 
-        public override async Task<RuleDto> UpdateAsync(Guid id, CreateRuleDto input)
+        public override async Task<RuleDto> UpdateAsync(long id, CreateRuleDto input)
         {
             return await UpdateRuleAsync(input, id);
         }
 
-        public override async Task DeleteAsync(Guid id)
+        public override async Task DeleteAsync(long id)
         {
             var rule = await Repository.GetAsync(x => x.Id == id);
 
             // One set-based DELETE for all nodes instead of loading them and deleting them one by one.
-            await _ruleNodeRepository.DeleteDirectAsync(n => n.RuleId == id);
+            await _ruleNodeRepository.DeleteDirectAsync(n => n.WorkFlowId == id);
 
             await Repository.HardDeleteAsync(rule);
             await EngineManager.ReloadAfterCommitAsync();
@@ -144,7 +144,7 @@ namespace RulesEngine.WorkFlows.Rules
         /// Loads the workflow's form config as a DTO: one query for the workflow (with its config and config fields)
         /// and one for the field catalog. Code that handles many rules (bulk import) calls this once and reuses the result.
         /// </summary>
-        private async Task<RuleFormConfigDto> LoadFormConfigAsync(Guid workflowId)
+        private async Task<RuleFormConfigDto> LoadFormConfigAsync(long workflowId)
         {
             var workflow = await _workflowRepository.GetAsync(workflowId)
                            ?? throw new RuleValidationException("Workflow not found.");
@@ -156,7 +156,7 @@ namespace RulesEngine.WorkFlows.Rules
         }
 
         /// <summary>Pure mapping; every field is found through a dictionary instead of a linear scan per property.</summary>
-        private static RuleFormConfigDto BuildFormConfigDto(RuleFormConfig config, IReadOnlyDictionary<Guid, RuleField> fieldsById)
+        private static RuleFormConfigDto BuildFormConfigDto(RuleFormConfig config, IReadOnlyDictionary<long, RuleField> fieldsById)
         {
             var fields = new List<RuleFormFieldDto>(config.RuleFormConfigFields.Count);
             foreach (var configField in config.RuleFormConfigFields)
@@ -211,11 +211,10 @@ namespace RulesEngine.WorkFlows.Rules
             prepared ??= await PrepareRuleAsync(input);
             var ruleDto = prepared.Dto;
 
-            var ruleId = Guid.CreateVersion7();
-
+ 
 
             var workflow = await _workflowRepository.GetAsync(input.WorkflowId);
-            var rule = new Rule(ruleId, input.WorkflowId, prepared.Expression, input.ViolationMessage ?? workflow.ViolationMessage);
+            var rule = new Rule(  input.WorkflowId, prepared.Expression, input.ViolationMessage ?? workflow.ViolationMessage);
 
             var count = await _ruleRepository.CountAsync(x => x.WorkflowId == input.WorkflowId);
 
@@ -230,9 +229,9 @@ namespace RulesEngine.WorkFlows.Rules
             await _ruleRepository.InsertAsync(rule);
 
 
-            if (rule.Nodes.Count > 0)
+            if (rule.Workflow.Nodes.Count > 0)
             {
-                await _ruleNodeRepository.InsertManyAsync(rule.Nodes);
+                await _ruleNodeRepository.InsertManyAsync(rule.Workflow.Nodes);
                 if (saveChanges)
                     await CurrentUnitOfWork.SaveChangesAsync();
             }
@@ -240,7 +239,7 @@ namespace RulesEngine.WorkFlows.Rules
             await EngineManager.ReloadAfterCommitAsync();   // once per unit of work, even for bulk uploads
             return ruleDto;
         }
-        private async Task<RuleDto> UpdateRuleAsync(CreateRuleDto input, Guid id, PreparedRule? prepared = null, bool saveChanges = true)
+        private async Task<RuleDto> UpdateRuleAsync(CreateRuleDto input, long id, PreparedRule? prepared = null, bool saveChanges = true)
         {
             prepared ??= await PrepareRuleAsync(input);
             var ruleDto = prepared.Dto;
@@ -254,7 +253,7 @@ namespace RulesEngine.WorkFlows.Rules
                 rule.Update(input.WorkflowId, prepared.Expression, input.ViolationMessage);
 
                 // Replace the whole tree: one set-based DELETE instead of loading and deleting every node separately.
-                await _ruleNodeRepository.DeleteDirectAsync(n => n.RuleId == rule.Id);
+                await _ruleNodeRepository.DeleteDirectAsync(n => n.WorkFlowId == rule.Id);
 
 
                 if (input.IsActive) rule.Activate(); else rule.Deactivate();
@@ -266,9 +265,9 @@ namespace RulesEngine.WorkFlows.Rules
 
                 await _ruleRepository.UpdateAsync(rule);
 
-                if (rule.Nodes.Count > 0)
+                if (rule.Workflow.Nodes.Count > 0)
                 {
-                    await _ruleNodeRepository.InsertManyAsync(rule.Nodes);
+                    await _ruleNodeRepository.InsertManyAsync(rule.Workflow.Nodes);
                     if (saveChanges)
                         await CurrentUnitOfWork.SaveChangesAsync();
                 }
@@ -286,7 +285,7 @@ namespace RulesEngine.WorkFlows.Rules
         public Task<RuleExpressionResultDto> PreviewExpression(RuleDto input) => _expressionsBuilder.BuildForRuleAsync(input);
 
 
-        public async Task<IRemoteStreamContent> GetRulesSampleAsync(Guid workflowId)
+        public async Task<IRemoteStreamContent> GetRulesSampleAsync(long workflowId)
         {
             var workflow = await _workflowRepository.GetAsync(workflowId)
                 ?? throw new KeyNotFoundException("Workflow not found.");
@@ -472,15 +471,15 @@ namespace RulesEngine.WorkFlows.Rules
                 var ruleIds = rules.Select(r => r.Id).ToList();
 
                 var allNodes = await _ruleNodeRepository.GetListAsync(
-                    n => ruleIds.Contains(n.RuleId));
+                    n => ruleIds.Contains(n.WorkFlowId));
 
                 // First node per (rule, field key): same result as the old FirstOrDefault scan, without
                 // rules x fields x nodes comparisons.
-                var nodeByRuleAndField = new Dictionary<(Guid RuleId, string FieldKey), RuleNode>();
+                var nodeByRuleAndField = new Dictionary<(long WorkFlowId, string FieldKey), RuleNode>();
                 foreach (var indexedNode in allNodes)
                 {
                     if (indexedNode.FieldKey is not null)
-                        nodeByRuleAndField.TryAdd((indexedNode.RuleId, indexedNode.FieldKey), indexedNode);
+                        nodeByRuleAndField.TryAdd((indexedNode.WorkFlowId, indexedNode.FieldKey), indexedNode);
                 }
 
                 foreach (var rule in rules)
@@ -567,7 +566,7 @@ namespace RulesEngine.WorkFlows.Rules
         /// Returns null on success; when any row has a problem, returns the same workbook with the problems
         /// written to an "Errors" column at the end of each affected row (several problems: comma separated).
         /// </summary>
-        public async Task<IRemoteStreamContent?> BulkUploadAsync(Guid workflowId, IRemoteStreamContent file)
+        public async Task<IRemoteStreamContent?> BulkUploadAsync(long workflowId, IRemoteStreamContent file)
         {
             if (file == null || file.ContentLength == 0) return null;
             var ruleFields = await _ruleFieldRepository.GetListAsync();
@@ -661,8 +660,8 @@ namespace RulesEngine.WorkFlows.Rules
                     var idText = ws.Cell(r, idIndex + 1).GetString()?.Trim();
                     if (!string.IsNullOrWhiteSpace(idText))
                     {
-                        if (Guid.TryParse(idText, out var parsedId)) row.ExistingId = parsedId;
-                        else row.Errors.Add($"Invalid ID '{idText}' (expected a GUID).");
+                        if (long.TryParse(idText, out var parsedId)) row.ExistingId = parsedId;
+                        else row.Errors.Add($"Invalid ID '{idText}' (expected a long).");
                     }
                 }
 
@@ -677,7 +676,7 @@ namespace RulesEngine.WorkFlows.Rules
                     }
                 }
 
-                var root = new RuleNodeDto { Id = Guid.NewGuid(), NodeType = RuleNodeType.Group };
+                var root = new RuleNodeDto {   NodeType = RuleNodeType.Group };
 
                 for (int c = 0; c < colKeys.Count; c++)
                 {
@@ -709,8 +708,7 @@ namespace RulesEngine.WorkFlows.Rules
 
                     var node = new RuleNodeDto
                     {
-                        Id = Guid.NewGuid(),
-                        NodeType = RuleNodeType.Condition,
+                         NodeType = RuleNodeType.Condition,
                         FieldKey = key,
                         Operator = operatorToUse,
                         IsMultiple = cfg.IsMultiple
@@ -815,8 +813,7 @@ namespace RulesEngine.WorkFlows.Rules
 
 
 
-        private const string ErrorsHeader = "Errors";
-        private const string ExcelContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+ 
 
         private async Task ValidateFieldActivityCodesAsync(UploadRow row, string fieldKey, string values)
         {
@@ -945,7 +942,7 @@ namespace RulesEngine.WorkFlows.Rules
             public UploadRow(int rowNumber) => RowNumber = rowNumber;
 
             public int RowNumber { get; }
-            public Guid? ExistingId { get; set; }
+            public long? ExistingId { get; set; }
             public CreateRuleDto? Dto { get; set; }
             public PreparedRule? Prepared { get; set; }
             public List<string> Errors { get; } = new();

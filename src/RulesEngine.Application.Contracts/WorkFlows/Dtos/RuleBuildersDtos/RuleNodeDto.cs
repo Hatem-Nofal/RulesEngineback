@@ -3,13 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using Volo.Abp.Application.Dtos;
 
 namespace RulesEngine.WorkFlows.Dtos.RuleBuildersDtos
 {
-    public class RuleNodeDto
+    public class RuleNodeDto:EntityDto<Guid>
     {
-        public Guid Id { get; set; }
-        public RuleNodeType NodeType { get; set; }
+         public RuleNodeType NodeType { get; set; }
         public LogicalOperator? LogicalOperator { get; set; }
         public LogicalOperator? LogicalJoinOperator { get; set; }
         public string? FieldKey { get; set; }

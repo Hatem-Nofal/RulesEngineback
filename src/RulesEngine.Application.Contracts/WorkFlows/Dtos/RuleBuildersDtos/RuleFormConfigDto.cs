@@ -6,7 +6,7 @@ namespace RulesEngine.WorkFlows.Dtos.RuleBuildersDtos
 {
     public class RuleFormConfigDto
     {
-        public Guid Id { get; set; }
+        public long Id { get; set; }
         public string Name { get; set; } = default!;
         public bool AllowNestedGroups { get; set; }
         public string? StrategyKey { get; set; }

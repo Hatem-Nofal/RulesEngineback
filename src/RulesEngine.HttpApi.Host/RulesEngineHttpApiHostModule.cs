@@ -8,12 +8,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi;
 using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
-using RulesEngine.CustomAppServices;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.EntityFrameworkCore;
 using RulesEngine.HealthChecks;
@@ -43,7 +41,6 @@ using Volo.Abp.Auditing;
 using Volo.Abp.Autofac;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Entities.Caching;
-using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.Security.Claims;
@@ -73,7 +70,12 @@ public class RulesEngineHttpApiHostModule : AbpModule
     {
         var hostingEnvironment = context.Services.GetHostingEnvironment();
         var configuration = context.Services.GetConfiguration();
-
+        PreConfigure<OpenIddictServerBuilder>(builder =>
+        {
+            // Add the password flow to the server configuration
+            builder.AllowPasswordFlow();
+            builder.AllowRefreshTokenFlow(); // Recommended if using password flow
+        });
         PreConfigure<OpenIddictBuilder>(builder =>
         {
             builder.AddValidation(options =>
@@ -162,7 +164,7 @@ public class RulesEngineHttpApiHostModule : AbpModule
                 !(new[] { "RuleApplication", "Identity" })
                     .Any(ns => type.Namespace?.Contains(ns, StringComparison.OrdinalIgnoreCase) ?? false);
         });
-        context.Services.AddEntityCache<WorkFlow, Guid>(
+        context.Services.AddEntityCache<WorkFlow, long>(
          new DistributedCacheEntryOptions
          {
              AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),

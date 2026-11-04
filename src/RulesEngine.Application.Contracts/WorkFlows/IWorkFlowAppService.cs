@@ -7,8 +7,8 @@ using Volo.Abp.Application.Services;
 
 namespace RulesEngine.WorkFlows
 {
-    public interface IWorkFlowAppService : ICrudAppService<WorkflowDto, WorkflowDto, Guid, WorkflowPagedAndFilterDto, SaveWorkflowDto, SaveWorkflowDto>
+    public interface IWorkFlowAppService : ICrudAppService<WorkflowDto, WorkflowDto, long, WorkflowPagedAndFilterDto, SaveWorkflowDto, SaveWorkflowDto>
     {
-        Task<WorkflowForRuleDto> GetWorkflowForRuleAsync(Guid workflowId);
+        Task<WorkflowForRuleDto> GetWorkflowForRuleAsync(long workflowId);
     }
 }

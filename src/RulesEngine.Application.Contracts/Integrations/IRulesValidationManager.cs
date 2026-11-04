@@ -8,7 +8,7 @@ namespace RulesEngine.Integrations
 {
     public interface IRulesValidationManager
     {
-        Task<ClaimValidationResponse> SpecificValidateClaimsByCodesExtended(List<Guid>? workflowIds, List<string>? workflownames, List<ClaimValidationByCodeRequestExtended> claims, CancellationToken cancellationToken = default);
+        Task<ClaimValidationResponse> SpecificValidateClaimsByCodesExtended(List<long>? workflowIds, List<string>? workflownames, List<ClaimValidationByCodeRequestExtended> claims, CancellationToken cancellationToken = default);
 
     }
 }

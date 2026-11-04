@@ -467,8 +467,11 @@ namespace RulesEngine.Migrations
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.Rule", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("datetime2")
@@ -518,8 +521,8 @@ namespace RulesEngine.Migrations
                     b.Property<int>("ViolationType")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("WorkflowId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("WorkflowId")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -542,8 +545,8 @@ namespace RulesEngine.Migrations
                     b.Property<bool?>("IsSecondary")
                         .HasColumnType("bit");
 
-                    b.Property<Guid>("RuleId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("RuleId")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -556,8 +559,11 @@ namespace RulesEngine.Migrations
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleField", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<string>("DataType")
                         .IsRequired()
@@ -587,8 +593,11 @@ namespace RulesEngine.Migrations
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<bool>("AllowNestedGroups")
                         .HasColumnType("bit");
@@ -649,8 +658,11 @@ namespace RulesEngine.Migrations
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfigField", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<string>("AllowedOperatorsJson")
                         .HasColumnType("nvarchar(max)");
@@ -694,11 +706,11 @@ namespace RulesEngine.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("RulefieldId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("RulefieldId")
+                        .HasColumnType("bigint");
 
-                    b.Property<Guid>("RuleformConfigId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("RuleformConfigId")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -711,8 +723,11 @@ namespace RulesEngine.Migrations
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleNode", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("datetime2")
@@ -763,11 +778,11 @@ namespace RulesEngine.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("ParentId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long?>("ParentId")
+                        .HasColumnType("bigint");
 
-                    b.Property<Guid>("RuleId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("RuleId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("ValueJson")
                         .HasColumnType("nvarchar(max)");
@@ -795,8 +810,8 @@ namespace RulesEngine.Migrations
                     b.Property<bool?>("IsSecondary")
                         .HasColumnType("bit");
 
-                    b.Property<Guid>("RuleId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("RuleId")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -815,8 +830,8 @@ namespace RulesEngine.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
-                    b.Property<Guid>("RuleId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("RuleId")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("SpecialitiesId")
                         .HasColumnType("int");
@@ -832,8 +847,11 @@ namespace RulesEngine.Migrations
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.WorkFlow", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -895,8 +913,8 @@ namespace RulesEngine.Migrations
                     b.Property<int>("RejectionLevel")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("RuleformConfigId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long?>("RuleformConfigId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("ViolationMessage")
                         .HasColumnType("nvarchar(max)");

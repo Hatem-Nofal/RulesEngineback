@@ -5,7 +5,7 @@ using Volo.Abp.Application.Dtos;
 
 namespace RulesEngine.WorkFlows.Dtos.RuleBuildersDtos
 {
-    public class FormConfigListDto:EntityDto<Guid>
+    public class FormConfigListDto:EntityDto<long>
     {
         public string Name { get; set; } = default!;
         public string? Description { get; set; }

@@ -14,7 +14,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 {
      
     public class RuleRepository
-: EfCoreRepository<RulesEngineDbContext, Rule, Guid>,
+: EfCoreRepository<RulesEngineDbContext, Rule, long>,
 IRuleRepository
     {
         private readonly RulesEngineDbContext _context;
@@ -32,14 +32,14 @@ IRuleRepository
             return list.ToList();
         }
 
-        public async Task<Rule> GetAsync(Guid id)
+        public async Task<Rule> GetAsync(long id)
         {
-            var w = await _context.Rules.AsNoTracking().Include(x=>x.Nodes).Include(x=>x.Workflow).ThenInclude(x=>x.RuleformConfig).ThenInclude(x=>x.RuleFormConfigFields).ThenInclude(x=>x.Rulefield).FirstOrDefaultAsync(x => x.Id == id)
+            var w = await _context.Rules.AsNoTracking().Include(x=>x.Workflow).ThenInclude(x => x.Nodes).Include(x=>x.Workflow).ThenInclude(x=>x.RuleformConfig).ThenInclude(x=>x.RuleFormConfigFields).ThenInclude(x=>x.Rulefield).FirstOrDefaultAsync(x => x.Id == id)
                     ?? throw new KeyNotFoundException("Workflow not found.");
             
             return w;
         }
-        public async Task<Rule> GetForUpdateAsync(Guid id)
+        public async Task<Rule> GetForUpdateAsync(long id)
         {
             return await _context.Rules.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
                     ?? throw new KeyNotFoundException("Workflow not found.");

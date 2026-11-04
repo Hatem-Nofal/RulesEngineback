@@ -207,21 +207,21 @@ namespace RulesEngine.Lookups
 
         }
 
-        public async Task<List<SelectedDropDownListByGuid>> GetWorkflowsDropDownList()
+        public async Task<List<SelectedDropDownList>> GetWorkflowsDropDownList()
         {
             var queryable = await _workFlowsRepository.GetQueryableAsync();
             var rows = await AsyncExecuter.ToListAsync(
                 queryable.Where(x => x.IsActive).Select(x => new { x.Id, x.Name }));
 
-            return rows.Select(x => new SelectedDropDownListByGuid(x.Id, x.Name, false)).ToList();
+            return rows.Select(x => new SelectedDropDownList(x.Id, x.Name, false)).ToList();
         }
-        public async Task<List<SelectedDropDownListByGuid>> GetWorkflowsForCreateRuleDropDownList()
+        public async Task<List<SelectedDropDownList>> GetWorkflowsForCreateRuleDropDownList()
         {
             var queryable = await _workFlowsRepository.GetQueryableAsync();
             var rows = await AsyncExecuter.ToListAsync(
                 queryable.Where(x => !x.IsWorkflowLevel && x.IsActive).Select(x => new { x.Id, x.Name }));
 
-            return rows.Select(x => new SelectedDropDownListByGuid(x.Id, x.Name, false)).ToList();
+            return rows.Select(x => new SelectedDropDownList(x.Id, x.Name, false)).ToList();
         }
 
         public async Task<List<SelectedDropDownList>> GetGenericDrugsDropDownList(string searchTerm)

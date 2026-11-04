@@ -6,7 +6,7 @@ namespace RulesEngine.WorkFlows.Dtos.RuleBuildersDtos
 {
     public class CreateFormConfigEditDto
     {
-        public Guid? Id { get; set; }
+        public long? Id { get; set; }
         public string Name { get; set; } = default!;
         public string? Description { get; set; }
         public bool IsActive { get; set; } = true;

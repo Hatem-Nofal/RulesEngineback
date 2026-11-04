@@ -17,7 +17,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
 
 
     public class WorkFlowRepository
-: EfCoreRepository<RulesEngineDbContext, WorkFlow, Guid>,
+: EfCoreRepository<RulesEngineDbContext, WorkFlow, long>,
 IWorkFlowRepository
     {
         private readonly RulesEngineDbContext _context;
@@ -32,7 +32,7 @@ IWorkFlowRepository
             return await _context.WorkFlows.AsNoTracking().OrderBy(x => x.Name).ToListAsync();
         }
 
-        public async Task<WorkFlow> GetAsync(Guid id)
+        public async Task<WorkFlow> GetAsync(long id)
         {
             var w = await _context.WorkFlows
                 //.Include(x=>x.Rules)
@@ -45,7 +45,7 @@ IWorkFlowRepository
 
             return w;
         }
-        public async Task<WorkFlow> GetDetailsAsync(Guid id)
+        public async Task<WorkFlow> GetDetailsAsync(long id)
         {
             var w = await _context.WorkFlows
                 .Include(x=>x.Rules)
@@ -58,8 +58,18 @@ IWorkFlowRepository
 
             return w;
         }
+        public async Task<WorkFlow> GetForUpdateAsync(long id)
+        {
+            var w = await _context.WorkFlows
+                .Include(x=>x.Rules)
+              
+                .AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
+                    ?? throw new KeyNotFoundException("Workflow not found.");
 
-        public async Task<Guid> CreateAsync(WorkFlow input)
+            return w;
+        }
+
+        public async Task<long> CreateAsync(WorkFlow input)
         {
             await ValidateAsync(input, null);
 
@@ -68,7 +78,7 @@ IWorkFlowRepository
             return input.Id;
         }
 
-        public async Task UpdateAsync(Guid id, WorkFlow input)
+        public async Task UpdateAsync(long id, WorkFlow input)
         {
             var w = await _context.WorkFlows.FirstOrDefaultAsync(x => x.Id == id)
                     ?? throw new KeyNotFoundException("Workflow not found.");
@@ -78,7 +88,7 @@ IWorkFlowRepository
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteAsync(Guid id)
+        public async Task DeleteAsync(long id)
         {
             var count = await _context.Rules.CountAsync(x => x.WorkflowId == id);
             if (count > 0)
@@ -88,7 +98,7 @@ IWorkFlowRepository
             if (deleted == 0) throw new KeyNotFoundException("Workflow not found.");
         }
 
-        private async Task ValidateAsync(WorkFlow input, Guid? currentId)
+        private async Task ValidateAsync(WorkFlow input, long? currentId)
         {
             var name = input.Name?.Trim();
             if (string.IsNullOrEmpty(name))

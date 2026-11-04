@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace RulesEngine.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class Init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,6 +16,9 @@ namespace RulesEngine.Migrations
 
             migrationBuilder.EnsureSchema(
                 name: "RuleBuilders");
+
+            migrationBuilder.EnsureSchema(
+                name: "Logers");
 
             migrationBuilder.CreateTable(
                 name: "AbpAuditLogExcelFiles",
@@ -616,27 +619,12 @@ namespace RulesEngine.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ProcedureGroup",
-                schema: "Lookups",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ProcedureGroupSystemCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ProcedureGroupName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ProcedureGroup", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "RuleFields",
                 schema: "RuleBuilders",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     Key = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
                     Label = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     DataType = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
@@ -652,7 +640,8 @@ namespace RulesEngine.Migrations
                 schema: "RuleBuilders",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
@@ -669,6 +658,28 @@ namespace RulesEngine.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RuleFormConfigs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RulesEngineExecutionLogs",
+                schema: "Logers",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    WorkFlowName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Rule = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ErrorType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ErrorMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClaimNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Expression = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Activity = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsViolated = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RulesEngineExecutionLogs", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -1077,9 +1088,10 @@ namespace RulesEngine.Migrations
                 schema: "RuleBuilders",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    RuleformConfigId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    RulefieldId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RuleformConfigId = table.Column<long>(type: "bigint", nullable: false),
+                    RulefieldId = table.Column<long>(type: "bigint", nullable: false),
                     Order = table.Column<int>(type: "int", nullable: false),
                     AllowedOperatorsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsMultiple = table.Column<bool>(type: "bit", nullable: false),
@@ -1115,13 +1127,16 @@ namespace RulesEngine.Migrations
                 name: "Workflows",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     NormalizedName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RejectionLevel = table.Column<int>(type: "int", nullable: false),
-                    RuleformConfigId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RuleformConfigId = table.Column<long>(type: "bigint", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    HasCustomeRule = table.Column<bool>(type: "bit", nullable: false),
+                    IsWorkflowLevel = table.Column<bool>(type: "bit", nullable: false),
+                    ViolationType = table.Column<int>(type: "int", nullable: false),
+                    ViolationMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ExtraProperties = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ConcurrencyStamp = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1195,8 +1210,7 @@ namespace RulesEngine.Migrations
                     IsCapitation = table.Column<bool>(type: "bit", nullable: false),
                     IsPreAuthorization = table.Column<bool>(type: "bit", nullable: false),
                     IsProtocol = table.Column<bool>(type: "bit", nullable: false),
-                    GenericDrugId = table.Column<int>(type: "int", nullable: true),
-                    ProcedureGroupId = table.Column<int>(type: "int", nullable: true)
+                    GenericDrugId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1223,12 +1237,6 @@ namespace RulesEngine.Migrations
                         column: x => x.GenericDrugId,
                         principalSchema: "Lookups",
                         principalTable: "GenericDrugs",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_Activity_sub_types_ProcedureGroup_ProcedureGroupId",
-                        column: x => x.ProcedureGroupId,
-                        principalSchema: "Lookups",
-                        principalTable: "ProcedureGroup",
                         principalColumn: "Id");
                 });
 
@@ -1299,9 +1307,10 @@ namespace RulesEngine.Migrations
                 name: "Rules",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    WorkflowId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    WorkflowId = table.Column<long>(type: "bigint", nullable: false),
                     ViolationType = table.Column<int>(type: "int", nullable: false),
                     ViolationMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
@@ -1360,7 +1369,7 @@ namespace RulesEngine.Migrations
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    RuleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RuleId = table.Column<long>(type: "bigint", nullable: false),
                     ActivitySubTypeId = table.Column<long>(type: "bigint", nullable: false),
                     IsSecondary = table.Column<bool>(type: "bit", nullable: true)
                 },
@@ -1388,7 +1397,7 @@ namespace RulesEngine.Migrations
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    RuleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RuleId = table.Column<long>(type: "bigint", nullable: false),
                     DiagnosisId = table.Column<long>(type: "bigint", nullable: false),
                     IsSecondary = table.Column<bool>(type: "bit", nullable: true)
                 },
@@ -1415,9 +1424,10 @@ namespace RulesEngine.Migrations
                 schema: "RuleBuilders",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    RuleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ParentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RuleId = table.Column<long>(type: "bigint", nullable: false),
+                    ParentId = table.Column<long>(type: "bigint", nullable: true),
                     NodeType = table.Column<int>(type: "int", nullable: false),
                     LogicalOperator = table.Column<int>(type: "int", nullable: true),
                     LogicalJoinOperator = table.Column<int>(type: "int", nullable: true),
@@ -1457,7 +1467,7 @@ namespace RulesEngine.Migrations
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    RuleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RuleId = table.Column<long>(type: "bigint", nullable: false),
                     SpecialitiesId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -1749,12 +1759,6 @@ namespace RulesEngine.Migrations
                 column: "LastUpdatedBy_Id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Activity_sub_types_ProcedureGroupId",
-                schema: "Lookups",
-                table: "Activity_sub_types",
-                column: "ProcedureGroupId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ActivitySubTypeDtgs_ActivitySubTypeId",
                 schema: "Lookups",
                 table: "ActivitySubTypeDtgs",
@@ -2034,6 +2038,10 @@ namespace RulesEngine.Migrations
                 schema: "RuleBuilders");
 
             migrationBuilder.DropTable(
+                name: "RulesEngineExecutionLogs",
+                schema: "Logers");
+
+            migrationBuilder.DropTable(
                 name: "RuleSpecialities");
 
             migrationBuilder.DropTable(
@@ -2093,10 +2101,6 @@ namespace RulesEngine.Migrations
 
             migrationBuilder.DropTable(
                 name: "GenericDrugs",
-                schema: "Lookups");
-
-            migrationBuilder.DropTable(
-                name: "ProcedureGroup",
                 schema: "Lookups");
 
             migrationBuilder.DropTable(
