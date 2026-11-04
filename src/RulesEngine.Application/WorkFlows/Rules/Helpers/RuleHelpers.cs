@@ -48,10 +48,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
             {
                 JsonElement? value = null;
 
-                if (n.ValueJson is not null)
-                {
-                    value = JsonSerializer.Deserialize<JsonElement>(n.ValueJson);
-                }
+                
 
                 var groupOp = n.LogicalOperator ?? LogicalOperator.And;
 
@@ -105,34 +102,27 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
         }
 
 
-        public static void Flatten(RuleNodeDto dto, long ruleId, Guid? parentId, int order, List<RuleNode> output)
+        public static void Flatten(RuleNodeDto dto, long workflowId, Guid? parentId, int order, List<RuleNode> output)
         {
             var isGroup = dto.NodeType == RuleNodeType.Group;
 
-            string? valueJson = null;
-            if (!isGroup && dto.Value.HasValue)
-            {
-                var v = dto.Value.Value;
-                if (v.ValueKind != JsonValueKind.Null && v.ValueKind != JsonValueKind.Undefined)
-                    valueJson = v.GetRawText();
-            }
+           
 
             var node = new RuleNode(
-              ruleId,
+              workflowId,
               parentId,
               dto.NodeType,
               isGroup ? (dto.LogicalOperator ?? LogicalOperator.And) : (LogicalOperator?)null,
               order > 0 ? (dto.LogicalJoinOperator ?? LogicalOperator.And) : (LogicalOperator?)null,
               isGroup ? null : dto.FieldKey,
               isGroup ? null : dto.Operator,
-              valueJson,
-              order
+               order
             );
             output.Add(node);
 
             if (isGroup)
                 for (var i = 0; i < dto.Children.Count; i++)
-                    Flatten(dto.Children[i], ruleId, node.Id, i, output);
+                    Flatten(dto.Children[i], workflowId, node.Id, i, output);
         }
         public static List<string> Strings(JsonElement v)
         {

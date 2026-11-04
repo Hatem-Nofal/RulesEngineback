@@ -9,51 +9,51 @@ using Volo.Abp.Uow;
 
 namespace RulesEngine.Data.Seeders
 {
-    public class RuleFieldDataSeederContributor : IDataSeedContributor,
-    ITransientDependency
-    {
-        private readonly IRepository<RuleField> _ruleFieldRepository;
+    //public class RuleFieldDataSeederContributor : IDataSeedContributor,
+    //ITransientDependency
+    //{
+    //    private readonly IRepository<RuleField> _ruleFieldRepository;
 
-        public RuleFieldDataSeederContributor(IRepository<RuleField> ruleFieldRepository)
-        {
-            _ruleFieldRepository = ruleFieldRepository;
-        }
+    //    public RuleFieldDataSeederContributor(IRepository<RuleField> ruleFieldRepository)
+    //    {
+    //        _ruleFieldRepository = ruleFieldRepository;
+    //    }
 
-        [UnitOfWork]
-        public async Task SeedAsync(DataSeedContext context)
-        {
+    //    [UnitOfWork]
+    //    public async Task SeedAsync(DataSeedContext context)
+    //    {
 
-            if (await _ruleFieldRepository.GetCountAsync() > 0)
-            {
-                return;
-            }
+    //        if (await _ruleFieldRepository.GetCountAsync() > 0)
+    //        {
+    //            return;
+    //        }
 
-            await _ruleFieldRepository.InsertManyAsync(new[]
-            {
-                new RuleField("Diagnoses", "Diagnoses", DataTypes.List),
-                new RuleField("Activities", "Activities", DataTypes.List),
-                new RuleField("ActivitiesQuantities", "Activities Quantities", DataTypes.Number),
-                new RuleField("ActivityQuantity", "Activity Quantity", DataTypes.Number),
-                new RuleField("DiagnosisCounts", "Diagnosis Counts", DataTypes.Number),
-                new RuleField("Activity", "Activity", DataTypes.List),
-                new RuleField("NationalId", "National ID", DataTypes.Number),
-                new RuleField("Age", "Age", DataTypes.Number),
-                new RuleField("Gender", "Gender", DataTypes.Enum, JsonSerializer.Serialize(new[] { "Male", "Female" })),
-                new RuleField("ClaimedNet", "Claimed Net", DataTypes.Decimal),
-                new RuleField("EnteredNet", "Entered Net", DataTypes.Decimal),
-                new RuleField("ClaimedGross", "Claimed Gross", DataTypes.Decimal),
-                new RuleField("EnteredGross", "Entered Gross", DataTypes.Decimal),
-                new RuleField("ClaimStartDate", "Claim Start Date", DataTypes.DateTime),
-                new RuleField("ClaimEndDate", "Claim End Date", DataTypes.DateTime),
-                new RuleField("BatchType", "Batch Type", DataTypes.List),
-                new RuleField("BatchServiceMonth", "Batch Service Month", DataTypes.Number),
-                new RuleField("BatchServiceYear", "Batch Service Year", DataTypes.Number),
-                new RuleField("ClaimTags", "Claim Tags", DataTypes.List),
-                new RuleField("SpecialitiesCode", "Specialities", DataTypes.List),
-                new RuleField("GenericGroup", "Generic Group", DataTypes.List),
-                new RuleField("GenericsGroups", "Generics Groups", DataTypes.List),
-                new RuleField("DiagnosisGroupCodes", "Diagnosis Groups", DataTypes.List),
-            });
-        }
-    }
+    //        await _ruleFieldRepository.InsertManyAsync(new[]
+    //        {
+    //            new RuleField("Diagnoses", "Diagnoses", DataTypes.List),
+    //            new RuleField("Activities", "Activities", DataTypes.List),
+    //            new RuleField("ActivitiesQuantities", "Activities Quantities", DataTypes.Number),
+    //            new RuleField("ActivityQuantity", "Activity Quantity", DataTypes.Number),
+    //            new RuleField("DiagnosisCounts", "Diagnosis Counts", DataTypes.Number),
+    //            new RuleField("Activity", "Activity", DataTypes.List),
+    //            new RuleField("NationalId", "National ID", DataTypes.Number),
+    //            new RuleField("Age", "Age", DataTypes.Number),
+    //            new RuleField("Gender", "Gender", DataTypes.Enum, JsonSerializer.Serialize(new[] { "Male", "Female" })),
+    //            new RuleField("ClaimedNet", "Claimed Net", DataTypes.Decimal),
+    //            new RuleField("EnteredNet", "Entered Net", DataTypes.Decimal),
+    //            new RuleField("ClaimedGross", "Claimed Gross", DataTypes.Decimal),
+    //            new RuleField("EnteredGross", "Entered Gross", DataTypes.Decimal),
+    //            new RuleField("ClaimStartDate", "Claim Start Date", DataTypes.DateTime),
+    //            new RuleField("ClaimEndDate", "Claim End Date", DataTypes.DateTime),
+    //            new RuleField("BatchType", "Batch Type", DataTypes.List),
+    //            new RuleField("BatchServiceMonth", "Batch Service Month", DataTypes.Number),
+    //            new RuleField("BatchServiceYear", "Batch Service Year", DataTypes.Number),
+    //            new RuleField("ClaimTags", "Claim Tags", DataTypes.List),
+    //            new RuleField("SpecialitiesCode", "Specialities", DataTypes.List),
+    //            new RuleField("GenericGroup", "Generic Group", DataTypes.List),
+    //            new RuleField("GenericsGroups", "Generics Groups", DataTypes.List),
+    //            new RuleField("DiagnosisGroupCodes", "Diagnosis Groups", DataTypes.List),
+    //        });
+    //    }
+    //}
 }

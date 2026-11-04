@@ -360,7 +360,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                 foreach (var activity in claim.Activities)
                 {
                     var args = plan.RejectionLevel == RejectionLevel.Claim
-                        ? claim.CreateAllActivityArgs(activity)
+                        ? claim.GetClaimLevelArgs()
                         : claim.CreateActivityArgs(activity);
 
                     await RunBatchesAsync(engine, plan, claim, activity.ActivityId, args, outcome, cancellationToken);
@@ -406,13 +406,18 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                                         .GetProperty("ViolationType")
                                         ?.GetValue(result.Rule)
                                         ?.ToString();
+                    var ruleId = long.Parse(result.Rule
+                                        .GetType()
+                                        .GetProperty("RuleId")
+                                        ?.GetValue(result.Rule)
+                                        ?.ToString() ?? "0");
 
                     var activityQuantity = RuleHelpers.GetPropertyValue("ActivityQuantity", result.Inputs);
                     int.TryParse(activityQuantity?.ToString(), out var maxDailyQuantity);
                     result.Inputs.TryGetValue("ctx", out var inputs);
                     if (result.IsSuccess)
                     {
-                        outcome.RulesEngineViolationLog.Add(RulesEngineExecutionLog.Create(plan.Name, ruleName, "", "",
+                        outcome.RulesEngineViolationLog.Add(RulesEngineExecutionLog.Create(plan.Name, plan.Id, ruleName, ruleId, "", "",
                                               claim.ClaimNumber, result.Rule.Expression, ((ActivityRuleContext)inputs)?.Activity, false));
 
                         continue;
@@ -432,7 +437,9 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                     });
                     outcome.RulesEngineViolationLog.Add(RulesEngineExecutionLog.Create(
                          plan.Name,
+                         plan.Id,
                          ruleName,
+                         ruleId,
                          violationType,
                         RuleHelpers.FormatMessage(result.ExceptionMessage, result.Inputs),
                                                 claim.ClaimNumber,

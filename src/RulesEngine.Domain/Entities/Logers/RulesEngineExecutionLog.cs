@@ -13,7 +13,9 @@ namespace RulesEngine.Entities.Logers
 
 
         public string WorkFlowName { get; private set; }
+        public long WorkFlowId { get; private set; }
         public string? Rule { get; private set; }
+        public long? RuleId { get; private set; }
         public string? ErrorType { get; private set; }
         public string? ErrorMessage { get; private set; }
         public string? ClaimNumber { get; private set; }
@@ -21,14 +23,16 @@ namespace RulesEngine.Entities.Logers
         public string Activity { get; private set; }
         public DateTime CreationTime { get; private set; } = DateTime.Now;
         public bool IsViolated { get; private set; } = false;
-        public static RulesEngineExecutionLog Create(string workFlowName, string? rule, string? errorType, string? errorMessage, string? claimNumber, string expression, string activity, bool isViolated)
+        public static RulesEngineExecutionLog Create(string workFlowName, long workFlowId, string? rule, long? ruleId, string? errorType, string? errorMessage, string? claimNumber, string expression, string activity, bool isViolated)
         {
             return new RulesEngineExecutionLog()
             {
 
 
                 WorkFlowName = workFlowName,
+                WorkFlowId = workFlowId,
                 Rule = rule,
+                RuleId = ruleId,
                 ErrorType = errorType,
                 ErrorMessage = errorMessage,
                 ClaimNumber = claimNumber,

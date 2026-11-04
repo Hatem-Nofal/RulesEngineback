@@ -1304,6 +1304,47 @@ namespace RulesEngine.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RuleNodes",
+                schema: "RuleBuilders",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    WorkFlowId = table.Column<long>(type: "bigint", nullable: false),
+                    ParentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    NodeType = table.Column<int>(type: "int", nullable: false),
+                    LogicalOperator = table.Column<int>(type: "int", nullable: true),
+                    LogicalJoinOperator = table.Column<int>(type: "int", nullable: true),
+                    FieldKey = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    Operator = table.Column<int>(type: "int", nullable: true),
+                    ValueJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Order = table.Column<int>(type: "int", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    DeleterId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RuleNodes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RuleNodes_RuleNodes_ParentId",
+                        column: x => x.ParentId,
+                        principalSchema: "RuleBuilders",
+                        principalTable: "RuleNodes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RuleNodes_Workflows_WorkFlowId",
+                        column: x => x.WorkFlowId,
+                        principalTable: "Workflows",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Rules",
                 columns: table => new
                 {
@@ -1417,48 +1458,6 @@ namespace RulesEngine.Migrations
                         principalTable: "Rules",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "RuleNodes",
-                schema: "RuleBuilders",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    RuleId = table.Column<long>(type: "bigint", nullable: false),
-                    ParentId = table.Column<long>(type: "bigint", nullable: true),
-                    NodeType = table.Column<int>(type: "int", nullable: false),
-                    LogicalOperator = table.Column<int>(type: "int", nullable: true),
-                    LogicalJoinOperator = table.Column<int>(type: "int", nullable: true),
-                    FieldKey = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
-                    Operator = table.Column<int>(type: "int", nullable: true),
-                    ValueJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Order = table.Column<int>(type: "int", nullable: false),
-                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CreatorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    LastModifierId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
-                    DeleterId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RuleNodes", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_RuleNodes_RuleNodes_ParentId",
-                        column: x => x.ParentId,
-                        principalSchema: "RuleBuilders",
-                        principalTable: "RuleNodes",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_RuleNodes_Rules_RuleId",
-                        column: x => x.RuleId,
-                        principalTable: "Rules",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -1883,10 +1882,10 @@ namespace RulesEngine.Migrations
                 column: "ParentId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RuleNodes_RuleId",
+                name: "IX_RuleNodes_WorkFlowId",
                 schema: "RuleBuilders",
                 table: "RuleNodes",
-                column: "RuleId");
+                column: "WorkFlowId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Rules_WorkflowId",

@@ -22,12 +22,11 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 
         public string? FieldKey { get; private set; }
         public RuleOperator? Operator { get; private set; }
-        public string? ValueJson { get; private set; }
-        public int Order { get; private set; }
+         public int Order { get; private set; }
 
         public RuleNode() { }
 
-        public RuleNode(long workFlowId,  Guid? parentId,  RuleNodeType nodeType, LogicalOperator? logicalOperator, LogicalOperator? logicalJoinOperator, string? fieldKey, RuleOperator? @operator, string? valueJson, int order)
+        public RuleNode(long workFlowId,  Guid? parentId,  RuleNodeType nodeType, LogicalOperator? logicalOperator, LogicalOperator? logicalJoinOperator, string? fieldKey, RuleOperator? @operator,   int order)
         {
             Id = Guid.CreateVersion7();
 
@@ -38,8 +37,7 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
             LogicalJoinOperator = logicalJoinOperator;
             FieldKey = fieldKey;
             Operator = @operator;
-            ValueJson = valueJson;
-            Order = order;
+             Order = order;
         }
 
         public void SetParent(RuleNode parent)
@@ -48,12 +46,11 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
             ParentId = parent?.Id;
         }
 
-        public void UpdateCriteria(string? fieldKey, RuleOperator? op, string? valueJson, LogicalOperator? logical = null, LogicalOperator? joinOperator = null)
+        public void UpdateCriteria(string? fieldKey, RuleOperator? op,   LogicalOperator? logical = null, LogicalOperator? joinOperator = null)
         {
             FieldKey = fieldKey;
             Operator = op;
-            ValueJson = valueJson;
-            LogicalOperator = logical;
+             LogicalOperator = logical;
             LogicalJoinOperator = joinOperator;
         }
     }

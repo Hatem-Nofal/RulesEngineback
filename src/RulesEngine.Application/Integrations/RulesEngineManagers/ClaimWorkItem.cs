@@ -121,37 +121,7 @@ internal sealed class ClaimWorkItem
         })
     };
 
-    public RuleParameter[] CreateAllActivityArgs(ClaimActivityRequestDto activity) => new[]
-    {
-        new RuleParameter("ctx", new AllActivityRuleContext
-        {
-            Diagnoses = _diagnosisCodes,
-            DiagnosisCounts = _diagnosisCounts,
-            Activity = _activityCodeById[activity.ActivityId],
-            ActivitiesQuantities = _activityCodeCounts,
-            NationalId = _claim.Patientnid,
-            ClaimedNet = _claim.ClaimedNet,
-            EnteredNet = _claim.EnteredNet,
-            ClaimedGross = _claim.ClaimedGross,
-            EnteredGross = _claim.EnteredGross,
-            ClaimStartDate = _claim.ClaimStartDate,
-            ClaimEndDate = _claim.ClaimEndDate,
-            BatchType = _claim.BatchType,
-            BatchServiceMonth = _claim.BatchServiceMonth,
-            BatchServiceYear = _claim.BatchServiceYear,
-            ClaimTags = _claimTags,
-            Age = Age,
-            Gender = Gender,
-            Activities = GetOtherActivities(activity),
-            SpecialitiesCode=_specialitiesCode,
-            GenericGroup=activity.GenericCode,
-            GenericsGroups=_genericsGroups,
-            DiagnosisGroupCodes=_diagnosisGroupCodes,
-            DtgCodeCounts=_dtgCodeCounts
-
-        })
-    };
-
+    
     public RuleParameter[] CreateActivityArgs(ClaimActivityRequestDto activity) => new[]
     {
         new RuleParameter("ctx", new ActivityRuleContext

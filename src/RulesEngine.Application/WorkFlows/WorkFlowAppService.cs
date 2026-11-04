@@ -1,18 +1,23 @@
-﻿using RulesEngine.Entities.WorkFlows;
+﻿using DocumentFormat.OpenXml.Bibliography;
+using Microsoft.AspNetCore.Authorization;
+using RulesEngine.Entities.Lookups;
+using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
+using RulesEngine.Permissions;
 using RulesEngine.Repositories.WorkFlows;
 using RulesEngine.WorkFlows.Dtos;
+using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
+using RulesEngine.WorkFlows.Rules.Helpers;
+using RulesEngine.WorkFlows.Rules.RuleExpressionBuilders;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
-using Microsoft.AspNetCore.Authorization;
-using RulesEngine.Permissions;
-using System.Linq.Dynamic.Core;
 
 namespace RulesEngine.WorkFlows
 {
@@ -23,13 +28,18 @@ namespace RulesEngine.WorkFlows
         private readonly IRepository<RuleFormConfig, long> _ruleFormConfigRepository;
         private readonly IRepository<Rule, long> _ruleRepository;
         private readonly IRepository<RuleNode, Guid> _ruleNodeRepository;
+        private readonly IRuleExpressionBuilder _expressionsBuilder;
+        private readonly IRepository<ActivitySubType> _activitySubTypeRepository;
 
-        public WorkFlowAppService(IRepository<WorkFlow, long> repository, IWorkFlowRepository workFlowRepository, IRepository<RuleFormConfig, long> ruleFormConfigRepository, IRepository<Rule, long> ruleRepository, IRepository<RuleNode, Guid> ruleNodeRepository) : base(repository)
+
+        public WorkFlowAppService(IRepository<WorkFlow, long> repository, IWorkFlowRepository workFlowRepository, IRepository<RuleFormConfig, long> ruleFormConfigRepository, IRepository<Rule, long> ruleRepository, IRepository<RuleNode, Guid> ruleNodeRepository, IRuleExpressionBuilder expressionsBuilder, IRepository<ActivitySubType> activitySubTypeRepository) : base(repository)
         {
             _workFlowRepository = workFlowRepository;
             _ruleFormConfigRepository = ruleFormConfigRepository;
             _ruleRepository = ruleRepository;
             _ruleNodeRepository = ruleNodeRepository;
+            _expressionsBuilder = expressionsBuilder;
+            _activitySubTypeRepository = activitySubTypeRepository;
         }
 
         public override async Task<PagedResultDto<WorkflowDto>> GetListAsync(WorkflowPagedAndFilterDto input)
@@ -66,8 +76,10 @@ namespace RulesEngine.WorkFlows
             var workflow = await _workFlowRepository.GetDetailsAsync(id);
             var configs = (await _ruleFormConfigRepository.GetListAsync()).ToDictionary(x => x.Id, x => x.Name);
             var count = await _ruleRepository.CountAsync(x => x.WorkflowId == id);
-            return Map(workflow, configs, new Dictionary<long, int> { [id] = count });
-
+            var formConfig = await _expressionsBuilder.LoadFormConfigAsync(id);
+            var workflowDto = Map(workflow, configs, new Dictionary<long, int> { [id] = count });
+            workflowDto.Root = !workflow.IsWorkflowLevel ? await RuleTreeMapper.ToTree(workflow.Nodes.OrderBy(x => x.Order).ToList(), workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto();
+            return workflowDto;
         }
 
         public override async Task<WorkflowDto> CreateAsync(SaveWorkflowDto input)
@@ -81,6 +93,20 @@ namespace RulesEngine.WorkFlows
                     throw new RuleValidationException($"If WorkFlow IsWorkflowLevel , RuleExpression is require !");
 
                 workflow.AddRule(Rule.CreateRuleForCustomeWorkflow("Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression, input.ViolationMessage, input.ViolationType));
+            }
+            else
+            {
+                var flatNodes = new List<RuleNode>();
+                RuleTreeMapper.Flatten(input.Root, workflow.Id, null, 0, flatNodes);
+                workflow.AddNodes(flatNodes);
+
+
+
+                if (workflow.Nodes.Count > 0)
+                {
+                    await _ruleNodeRepository.InsertManyAsync(workflow.Nodes);
+                    await CurrentUnitOfWork.SaveChangesAsync();
+                }
             }
             await _workFlowRepository.InsertAsync(workflow);
 
@@ -112,6 +138,22 @@ namespace RulesEngine.WorkFlows
                 {
                     var rule = Rule.CreateRuleForCustomeWorkflow("Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression, input.ViolationMessage, input.ViolationType);
                     await _ruleRepository.InsertAsync(rule);
+                }
+            }
+            else
+            {
+                await _ruleNodeRepository.DeleteDirectAsync(n => n.WorkFlowId == workflow.Id);
+
+                var flatNodes = new List<RuleNode>();
+                RuleTreeMapper.Flatten(input.Root, workflow.Id, null, 0, flatNodes);
+                workflow.AddNodes(flatNodes);
+
+
+
+                if (workflow.Nodes.Count > 0)
+                {
+                    await _ruleNodeRepository.InsertManyAsync(workflow.Nodes);
+                    await CurrentUnitOfWork.SaveChangesAsync();
                 }
             }
 

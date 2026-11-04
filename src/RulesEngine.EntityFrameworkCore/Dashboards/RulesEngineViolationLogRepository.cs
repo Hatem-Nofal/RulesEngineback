@@ -23,7 +23,8 @@ IRulesEngineViolationLogRepository
         public async Task<DashboardDetails> GetDashboardDetails(DashboardFilter input)
         {
             var query = _context.RulesEngineViolationLogs.AsNoTracking();
-            query = query.WhereIf(!string.IsNullOrEmpty(input.Activity), x => x.Activity.Contains(input.Activity)).
+            query = query
+                .Where(x => x.IsViolated).WhereIf(!string.IsNullOrEmpty(input.Activity), x => x.Activity.Contains(input.Activity)).
                 WhereIf(!string.IsNullOrEmpty(input.WorkFlowName), x => x.WorkFlowName.Contains(input.WorkFlowName)).
                 WhereIf(input.FromDate.HasValue, x => x.CreationTime >= input.FromDate).
                 WhereIf(input.ToDate.HasValue, x => x.CreationTime <= input.ToDate);
@@ -59,6 +60,6 @@ IRulesEngineViolationLogRepository
 
         }
 
-     
+
     }
 }

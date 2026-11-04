@@ -24,12 +24,6 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         public bool IsActive { get; private set; } = true;
         public string Expression { get; private set; }
 
-    
-
-        public ICollection<RuleDiagnosis> RuleDiagnosis { get; private set; } = new List<RuleDiagnosis>();
-        public ICollection<RuleActivitySubType> RuleActivitySubTypes { get; private set; } = new List<RuleActivitySubType>();
-        public ICollection<RuleSpecialities> RuleSpecialities { get; private set; } = new List<RuleSpecialities>();
-
         public Rule()
         {
 
@@ -76,48 +70,12 @@ namespace RulesEngine.Entities.WorkFlows.Rules
 
         }
 
-        public void AddNode(RuleNode node)
-        {
-            if (node == null) throw new ArgumentNullException(nameof(node));
-            Workflow.Nodes.Add(node);
-        }
-        public void AddNodes(List<RuleNode> nodes)
-        {
-            Workflow.Nodes.AddRange(nodes);
-        }
-
-        public void RemoveNode(RuleNode node)
-        {
-            if (node == null) throw new ArgumentNullException(nameof(node));
-            Workflow.Nodes.Remove(node);
-        }
-        public void ResetNodes()
-        {
-
-            Workflow.Nodes.Clear();
-        }
+ 
 
         public void Activate() => IsActive = true;
         public void Deactivate() => IsActive = false;
 
-        public void AddDiagnosis(RuleDiagnosis diagnosis)
-        {
-            if (diagnosis == null) throw new ArgumentNullException(nameof(diagnosis));
-            RuleDiagnosis.Add(diagnosis);
-        }
-
-        public void AddActivitySubType(RuleActivitySubType activitySubType)
-        {
-            if (activitySubType == null) throw new ArgumentNullException(nameof(activitySubType));
-            RuleActivitySubTypes.Add(activitySubType);
-        }
-
-        public void AddSpeciality(RuleSpecialities speciality)
-        {
-            if (speciality == null) throw new ArgumentNullException(nameof(speciality));
-            RuleSpecialities.Add(speciality);
-        }
-
+       
         public void GenerateUniqueNameAsync(int count, string workflowName)
         {
 

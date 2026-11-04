@@ -67,7 +67,8 @@ internal static class RulesEngineSnapshotFactory
                 Enabled = r.IsActive,
                 ErrorMessage = r.ViolationMessage,
                 Expression = r.Expression,
-                ViolationType=r.ViolationType
+                ViolationType=r.ViolationType,
+                RuleId=r.Id
              });
         }
         return mapped;

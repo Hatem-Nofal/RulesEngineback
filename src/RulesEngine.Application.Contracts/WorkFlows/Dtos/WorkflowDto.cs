@@ -1,4 +1,5 @@
 ﻿using RulesEngine.Common.Enums;
+using RulesEngine.WorkFlows.Dtos.RuleBuildersDtos;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -16,7 +17,9 @@ namespace RulesEngine.WorkFlows.Dtos
         public bool IsWorkflowLevel { get; set; } = false;
         public string? RuleExpression { get;  set; }
         public string? ViolationMessage { get;  set; }
-        public ViolationType ViolationType { get;  set; } 
+        public ViolationType ViolationType { get;  set; }
+        public RuleNodeDto Root { get; set; } = default!;
+
 
 
     }

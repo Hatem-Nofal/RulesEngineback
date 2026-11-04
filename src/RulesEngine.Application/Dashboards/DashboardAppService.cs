@@ -31,6 +31,8 @@ namespace RulesEngine.Dashboards
         public async Task<ActivityViolationsDto> GetActivityViolationsCounts(DashboardFilterDto input)
         {
             var activityViolationsCounts = (await _rulesEngineViolationLogRepository.GetQueryableAsync()).
+                                Where(x => x.IsViolated).
+
                 WhereIf(!string.IsNullOrEmpty(input.Activity), x => x.Activity.Contains(input.Activity)).
                 WhereIf(!string.IsNullOrEmpty(input.WorkFlowName), x => x.WorkFlowName.Contains(input.WorkFlowName)).
                 WhereIf(input.FromDate.HasValue, x => x.CreationTime >= input.FromDate).
@@ -51,6 +53,8 @@ namespace RulesEngine.Dashboards
         public async Task<ClaimNumberViolationsDto> GetClaimNumberViolationsCounts(DashboardFilterDto input)
         {
             var claimNumberViolationsCounts = (await _rulesEngineViolationLogRepository.GetQueryableAsync()).
+                                Where(x => x.IsViolated).
+
                 WhereIf(!string.IsNullOrEmpty(input.ClaimNumber), x => x.ClaimNumber.Contains(input.ClaimNumber)).
                 WhereIf(!string.IsNullOrEmpty(input.WorkFlowName), x => x.WorkFlowName.Contains(input.WorkFlowName)).
                 WhereIf(input.FromDate.HasValue, x => x.CreationTime >= input.FromDate).
@@ -74,6 +78,8 @@ namespace RulesEngine.Dashboards
 
 
             var ruleViolationsCount = (await _rulesEngineViolationLogRepository.GetQueryableAsync()).
+                                Where(x => x.IsViolated).
+
                 WhereIf(!string.IsNullOrEmpty(input.Activity), x => x.Activity.Contains(input.Activity)).
                 WhereIf(!string.IsNullOrEmpty(input.WorkFlowName), x => x.WorkFlowName.Contains(input.WorkFlowName)).
                 WhereIf(input.FromDate.HasValue, x => x.CreationTime >= input.FromDate).
@@ -119,6 +125,7 @@ namespace RulesEngine.Dashboards
 
 
             var workflowViolationsCount = (await _rulesEngineViolationLogRepository.GetQueryableAsync()).
+                Where(x=>x.IsViolated).
                 WhereIf(!string.IsNullOrEmpty(input.WorkFlowName), x => x.WorkFlowName.Contains(input.WorkFlowName)).
                 WhereIf(!string.IsNullOrEmpty(input.Activity), x => x.Activity.Contains(input.Activity)).
                 WhereIf(!string.IsNullOrEmpty(input.ClaimNumber), x => x.ClaimNumber.Contains(input.ClaimNumber)).

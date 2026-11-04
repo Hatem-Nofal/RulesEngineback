@@ -1,4 +1,6 @@
 using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Office2010.Excel;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authorization;
 using RulesEngine.Common.Enums;
 using RulesEngine.Common.Extensions;
@@ -101,6 +103,7 @@ namespace RulesEngine.WorkFlows.Rules
         {
             var rule = await _ruleRepository.GetAsync(id)
                        ?? throw new KeyNotFoundException("Rule not found.");
+          var  formConfig = await _expressionsBuilder.LoadFormConfigAsync(rule.WorkflowId);
 
             return new RuleDto
             {
@@ -108,7 +111,7 @@ namespace RulesEngine.WorkFlows.Rules
                 Name = rule.Name,
                 WorkflowId = rule.WorkflowId,
                 IsActive = rule.IsActive,
-                Root = !rule.Workflow.IsWorkflowLevel ? await RuleTreeMapper.ToTree(rule.Workflow.Nodes.OrderBy(x => x.Order).ToList(), rule.Workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto(),
+                Root = !rule.Workflow.IsWorkflowLevel ? await _expressionsBuilder.ReverseBuild(rule.Expression, formConfig.Fields) : new RuleNodeDto(),
                 Expression = rule.Expression,
                 WorkflowIsWorkflowLevel = rule.Workflow.IsWorkflowLevel,
                 ViolationMessage = rule.ViolationMessage ?? rule.Workflow.ViolationMessage,
@@ -144,47 +147,9 @@ namespace RulesEngine.WorkFlows.Rules
         /// Loads the workflow's form config as a DTO: one query for the workflow (with its config and config fields)
         /// and one for the field catalog. Code that handles many rules (bulk import) calls this once and reuses the result.
         /// </summary>
-        private async Task<RuleFormConfigDto> LoadFormConfigAsync(long workflowId)
-        {
-            var workflow = await _workflowRepository.GetAsync(workflowId)
-                           ?? throw new RuleValidationException("Workflow not found.");
-            var config = workflow.RuleformConfig
-                         ?? throw new RuleValidationException("This workflow has no form config assigned.");
-
-            var ruleFields = await _ruleFieldRepository.GetListAsync();
-            return BuildFormConfigDto(config, ruleFields.ToDictionary(x => x.Id));
-        }
+      
 
         /// <summary>Pure mapping; every field is found through a dictionary instead of a linear scan per property.</summary>
-        private static RuleFormConfigDto BuildFormConfigDto(RuleFormConfig config, IReadOnlyDictionary<long, RuleField> fieldsById)
-        {
-            var fields = new List<RuleFormFieldDto>(config.RuleFormConfigFields.Count);
-            foreach (var configField in config.RuleFormConfigFields)
-            {
-                if (!fieldsById.TryGetValue(configField.RulefieldId, out var field))
-                    throw new RuleValidationException("The workflow's form config references a field that no longer exists.");
-
-                fields.Add(new RuleFormFieldDto
-                {
-                    Id = configField.RulefieldId,
-                    Key = field.Key,
-                    DataType = field.DataType,
-                    AllowedOperators = ListExtensions.DeserializeIntList(configField.AllowedOperatorsJson),
-                    Label = field.Label,
-                    Options = ListExtensions.DeserializeStringList(field.OptionsJson),
-                    IsMultiple = configField.IsMultiple
-                });
-            }
-
-            return new RuleFormConfigDto
-            {
-                Id = config.Id,
-                Name = config.Name,
-                AllowNestedGroups = config.AllowNestedGroups,
-                StrategyKey = config.StrategyKey,
-                Fields = fields
-            };
-        }
 
         /// <summary>
         /// Validates the rule tree against the workflow's form config and builds the expression. Never writes.
@@ -194,7 +159,7 @@ namespace RulesEngine.WorkFlows.Rules
         {
 
 
-            formConfig ??= await LoadFormConfigAsync(input.WorkflowId);
+            formConfig ??= await _expressionsBuilder.LoadFormConfigAsync(input.WorkflowId);
 
             RuleTreeValidator.Validate(input.Root, formConfig);
             var ruleDto = ObjectMapper.Map<CreateRuleDto, RuleDto>(input);
@@ -211,30 +176,23 @@ namespace RulesEngine.WorkFlows.Rules
             prepared ??= await PrepareRuleAsync(input);
             var ruleDto = prepared.Dto;
 
- 
+
 
             var workflow = await _workflowRepository.GetAsync(input.WorkflowId);
-            var rule = new Rule(  input.WorkflowId, prepared.Expression, input.ViolationMessage ?? workflow.ViolationMessage);
+            var rule = new Rule(input.WorkflowId, prepared.Expression, input.ViolationMessage ?? workflow.ViolationMessage);
 
             var count = await _ruleRepository.CountAsync(x => x.WorkflowId == input.WorkflowId);
 
 
             if (input.IsActive) rule.Activate(); else rule.Deactivate();
 
-            var flatNodes = new List<RuleNode>();
-            RuleTreeMapper.Flatten(input.Root, rule.Id, null, 0, flatNodes);
-            rule.AddNodes(flatNodes);
+
             rule.GenerateUniqueNameAsync(count, workflow.Name);
+
+
 
             await _ruleRepository.InsertAsync(rule);
 
-
-            if (rule.Workflow.Nodes.Count > 0)
-            {
-                await _ruleNodeRepository.InsertManyAsync(rule.Workflow.Nodes);
-                if (saveChanges)
-                    await CurrentUnitOfWork.SaveChangesAsync();
-            }
 
             await EngineManager.ReloadAfterCommitAsync();   // once per unit of work, even for bulk uploads
             return ruleDto;
@@ -253,24 +211,14 @@ namespace RulesEngine.WorkFlows.Rules
                 rule.Update(input.WorkflowId, prepared.Expression, input.ViolationMessage);
 
                 // Replace the whole tree: one set-based DELETE instead of loading and deleting every node separately.
-                await _ruleNodeRepository.DeleteDirectAsync(n => n.WorkFlowId == rule.Id);
 
 
                 if (input.IsActive) rule.Activate(); else rule.Deactivate();
 
-                var flatNodes = new List<RuleNode>();
-                RuleTreeMapper.Flatten(input.Root, rule.Id, null, 0, flatNodes);
-                rule.AddNodes(flatNodes);
 
 
                 await _ruleRepository.UpdateAsync(rule);
 
-                if (rule.Workflow.Nodes.Count > 0)
-                {
-                    await _ruleNodeRepository.InsertManyAsync(rule.Workflow.Nodes);
-                    if (saveChanges)
-                        await CurrentUnitOfWork.SaveChangesAsync();
-                }
 
                 await EngineManager.ReloadAfterCommitAsync();
             }
@@ -303,14 +251,19 @@ namespace RulesEngine.WorkFlows.Rules
 
             var configFieldIds = configFields
                 .Select(x => x.RulefieldId)
-                .ToHashSet();
+                .ToList();
 
             var fields = (await _ruleFieldRepository.GetListAsync(
                 x => configFieldIds.Contains(x.Id)))
                 .OrderBy(f => configFields.FindIndex(
                     cf => cf.RulefieldId == f.Id))
                 .ToList();
+            var lookup = fields.ToDictionary(x => x.Id);
 
+            var fieldsList = configFieldIds
+                .Where(id => lookup.ContainsKey(id))
+                .Select(id => lookup[id])
+                .ToList();
             using var workbook = new XLWorkbook();
 
             var ws = workbook.Worksheets.Add("RulesSample");
@@ -322,10 +275,10 @@ namespace RulesEngine.WorkFlows.Rules
             ws.Cell(1, 3).Value = "ID";
 
             // For each field we will have two columns: <FieldKey> and <FieldKey>Operators
-            for (int i = 0; i < fields.Count; i++)
+            for (int i = 0; i < fieldsList.Count; i++)
             {
-                ws.Cell(1, 4 + i * 2).Value = fields[i].Key;
-                ws.Cell(1, 5 + i * 2).Value = fields[i].Key + "Operators";
+                ws.Cell(1, 4 + i * 2).Value = fieldsList[i].Key;
+                ws.Cell(1, 5 + i * 2).Value = fieldsList[i].Key + "Operators";
             }
 
             ws.Row(1).Style.Font.SetBold();
@@ -334,9 +287,9 @@ namespace RulesEngine.WorkFlows.Rules
             // Each field gets its own options column and named range.
             const int lastRowValidation = 1000;
 
-            for (int i = 0; i < fields.Count; i++)
+            for (int i = 0; i < fieldsList.Count; i++)
             {
-                var f = fields[i];
+                var f = fieldsList[i];
 
                 if (string.IsNullOrWhiteSpace(f.OptionsJson))
                     continue;
@@ -398,7 +351,7 @@ namespace RulesEngine.WorkFlows.Rules
 
             // Add operator options in the Options sheet and a named range.
             var operatorNames = Enum.GetNames(typeof(RuleOperator)).ToList();
-            int operatorOptionsCol = fields.Count + 1; // after per-field options columns
+            int operatorOptionsCol = fieldsList.Count + 1; // after per-field options columns
             for (int j = 0; j < operatorNames.Count; j++)
             {
                 optionsSheet.Cell(j + 1, operatorOptionsCol).Value = operatorNames[j];
@@ -411,7 +364,7 @@ namespace RulesEngine.WorkFlows.Rules
             );
 
             // Assign the operator named range to each operator column we created earlier.
-            for (int i = 0; i < fields.Count; i++)
+            for (int i = 0; i < fieldsList.Count; i++)
             {
                 int operatorCol = 5 + i * 2; // matching header placement
                 var opValidation = ws.Range(2, operatorCol, lastRowValidation, operatorCol).CreateDataValidation();
@@ -436,9 +389,9 @@ namespace RulesEngine.WorkFlows.Rules
                 ws.Cell(row, 1).Value = "Sample rule";
                 ws.Cell(row, 2).Value = true;
 
-                for (int i = 0; i < fields.Count; i++)
+                for (int i = 0; i < fieldsList.Count; i++)
                 {
-                    var f = fields[i];
+                    var f = fieldsList[i];
                     int fieldCol = 4 + i * 2;
                     int operatorCol = fieldCol + 1;
 
@@ -465,57 +418,42 @@ namespace RulesEngine.WorkFlows.Rules
 
                     ws.Cell(row, fieldCol).Value = value;
                 }
+
             }
             else
             {
-                var ruleIds = rules.Select(r => r.Id).ToList();
-
-                var allNodes = await _ruleNodeRepository.GetListAsync(
-                    n => ruleIds.Contains(n.WorkFlowId));
-
-                // First node per (rule, field key): same result as the old FirstOrDefault scan, without
-                // rules x fields x nodes comparisons.
-                var nodeByRuleAndField = new Dictionary<(long WorkFlowId, string FieldKey), RuleNode>();
-                foreach (var indexedNode in allNodes)
-                {
-                    if (indexedNode.FieldKey is not null)
-                        nodeByRuleAndField.TryAdd((indexedNode.WorkFlowId, indexedNode.FieldKey), indexedNode);
-                }
+                var formConfig = await _expressionsBuilder.LoadFormConfigAsync(workflowId);
 
                 foreach (var rule in rules)
                 {
+                    var rootNode = await _expressionsBuilder.ReverseBuild(rule.Expression, formConfig.Fields);
+
+                    var nodeByFieldKey = new Dictionary<string, RuleNodeDto>(StringComparer.OrdinalIgnoreCase);
+                    FlattenRuleTree(rootNode, nodeByFieldKey);
+
                     ws.Cell(row, 1).Value = rule.Name;
                     ws.Cell(row, 2).Value = rule.IsActive;
                     ws.Cell(row, 3).Value = rule.Id.ToString();
 
-                    for (int i = 0; i < fields.Count; i++)
+                    for (int i = 0; i < fieldsList.Count; i++)
                     {
-                        var f = fields[i];
+                        var f = fieldsList[i];
                         int fieldCol = 4 + i * 2;
                         int operatorCol = fieldCol + 1;
 
-                        nodeByRuleAndField.TryGetValue((rule.Id, f.Key), out var node);
-
-                        // Fill operator cell if present for this field's node
-                        if (node?.Operator != null)
-                            ws.Cell(row, operatorCol).Value = node.Operator.Value.ToString();
-
-                        string cellValue = string.Empty;
-
-                        if (node?.ValueJson != null)
+                        if (nodeByFieldKey.TryGetValue(f.Key, out var node))
                         {
-                            try
-                            {
-                                using var doc = JsonDocument.Parse(node.ValueJson);
-                                var element = doc.RootElement;
+                            if (node.Operator != null)
+                                ws.Cell(row, operatorCol).Value = node.Operator.Value.ToString();
 
+                            string cellValue = string.Empty;
+
+                            if (node.Value.HasValue)
+                            {
+                                var element = node.Value.Value;
                                 if (element.ValueKind == JsonValueKind.Array)
                                 {
-                                    var parts = element.EnumerateArray()
-                                        .Select(x => x.ToString())
-                                        .ToArray();
-
-                                    cellValue = string.Join(",", parts);
+                                    cellValue = string.Join(",", element.EnumerateArray().Select(x => x.ToString()));
                                 }
                                 else if (element.ValueKind == JsonValueKind.String)
                                 {
@@ -526,29 +464,43 @@ namespace RulesEngine.WorkFlows.Rules
                                     cellValue = element.ToString();
                                 }
                             }
-                            catch (JsonException)
-                            {
-                                cellValue = node.ValueJson;
-                            }
-                        }
 
-                        ws.Cell(row, fieldCol).Value = cellValue;
+                            ws.Cell(row, fieldCol).Value = cellValue;
+                        }
+                        else
+                        {
+                            ws.Cell(row, fieldCol).Value = string.Empty;
+                            ws.Cell(row, operatorCol).Value = string.Empty;
+                        }
                     }
 
                     row++;
                 }
+
+                static void FlattenRuleTree(RuleNodeDto node, IDictionary<string, RuleNodeDto> nodeByFieldKey)
+                {
+                    if (node == null)
+                        return;
+
+                    if (node.NodeType == RuleNodeType.Condition && !string.IsNullOrWhiteSpace(node.FieldKey))
+                        nodeByFieldKey[node.FieldKey] = node;
+
+                    foreach (var child in node.Children)
+                        FlattenRuleTree(child, nodeByFieldKey);
+                }
+
+                // Basic formatting
+                ws.Columns().AdjustToContents();
+
+                // Preserve the dropdown columns' width within reasonable limits.
+                for (int col = 1; col <= 3 + fieldsList.Count * 2; col++)
+                {
+                    if (ws.Column(col).Width > 40)
+                        ws.Column(col).Width = 40;
+                }
+
+               
             }
-
-            // Basic formatting
-            ws.Columns().AdjustToContents();
-
-            // Preserve the dropdown columns' width within reasonable limits.
-            for (int col = 1; col <= 3 + fields.Count * 2; col++)
-            {
-                if (ws.Column(col).Width > 40)
-                    ws.Column(col).Width = 40;
-            }
-
             var stream = new MemoryStream();
             workbook.SaveAs(stream);
             stream.Position = 0;
@@ -616,7 +568,7 @@ namespace RulesEngine.WorkFlows.Rules
             if (config == null) throw new RuleValidationException("This workflow has no form config assigned.");
 
             // Built once for the whole sheet: used to validate every row and to build every expression.
-            var formConfigDto = BuildFormConfigDto(config, fieldsById);
+            var formConfigDto = RuleExpressionBuilder.BuildFormConfigDto(config, fieldsById);
 
             var allowed = new Dictionary<string, (RuleFormConfigField Config, RuleField Field)>();
             foreach (var configField in config.RuleFormConfigFields)
@@ -676,7 +628,7 @@ namespace RulesEngine.WorkFlows.Rules
                     }
                 }
 
-                var root = new RuleNodeDto {   NodeType = RuleNodeType.Group };
+                var root = new RuleNodeDto { NodeType = RuleNodeType.Group };
 
                 for (int c = 0; c < colKeys.Count; c++)
                 {
@@ -708,7 +660,7 @@ namespace RulesEngine.WorkFlows.Rules
 
                     var node = new RuleNodeDto
                     {
-                         NodeType = RuleNodeType.Condition,
+                        NodeType = RuleNodeType.Condition,
                         FieldKey = key,
                         Operator = operatorToUse,
                         IsMultiple = cfg.IsMultiple
@@ -813,7 +765,7 @@ namespace RulesEngine.WorkFlows.Rules
 
 
 
- 
+
 
         private async Task ValidateFieldActivityCodesAsync(UploadRow row, string fieldKey, string values)
         {

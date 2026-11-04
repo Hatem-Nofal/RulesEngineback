@@ -158,6 +158,7 @@ public class RulesEngineDbContext :
 
         builder.Entity<RuleNode>(e =>
         {
+            e.HasKey(x => x.Id);
             e.Property(x => x.FieldKey).HasMaxLength(128);
             // NoAction: checked at end of statement, so cascade/bulk deletes of a whole tree succeed.
             e.HasOne(x => x.Parent)

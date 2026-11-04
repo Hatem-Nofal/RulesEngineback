@@ -58,6 +58,12 @@ namespace RulesEngine.Migrations
                     b.Property<string>("Rule")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<long?>("RuleId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("WorkFlowId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("WorkFlowName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -531,32 +537,6 @@ namespace RulesEngine.Migrations
                     b.ToTable("Rules");
                 });
 
-            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleActivitySubType", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("ActivitySubTypeId")
-                        .HasColumnType("bigint");
-
-                    b.Property<bool?>("IsSecondary")
-                        .HasColumnType("bit");
-
-                    b.Property<long>("RuleId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ActivitySubTypeId");
-
-                    b.HasIndex("RuleId");
-
-                    b.ToTable("RuleActivitySubTypes");
-                });
-
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleField", b =>
                 {
                     b.Property<long>("Id")
@@ -723,11 +703,8 @@ namespace RulesEngine.Migrations
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleNode", b =>
                 {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("datetime2")
@@ -778,71 +755,19 @@ namespace RulesEngine.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("int");
 
-                    b.Property<long?>("ParentId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<long>("RuleId")
+                    b.Property<long>("WorkFlowId")
                         .HasColumnType("bigint");
-
-                    b.Property<string>("ValueJson")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ParentId");
 
-                    b.HasIndex("RuleId");
+                    b.HasIndex("WorkFlowId");
 
                     b.ToTable("RuleNodes", "RuleBuilders");
-                });
-
-            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleDiagnosis", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("DiagnosisId")
-                        .HasColumnType("bigint");
-
-                    b.Property<bool?>("IsSecondary")
-                        .HasColumnType("bit");
-
-                    b.Property<long>("RuleId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DiagnosisId");
-
-                    b.HasIndex("RuleId");
-
-                    b.ToTable("RuleDiagnosis");
-                });
-
-            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleSpecialities", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("RuleId")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("SpecialitiesId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RuleId");
-
-                    b.HasIndex("SpecialitiesId");
-
-                    b.ToTable("RuleSpecialities");
                 });
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.WorkFlow", b =>
@@ -2999,25 +2924,6 @@ namespace RulesEngine.Migrations
                     b.Navigation("Workflow");
                 });
 
-            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleActivitySubType", b =>
-                {
-                    b.HasOne("RulesEngine.Entities.Lookups.ActivitySubType", "Activity_Sub_Type")
-                        .WithMany()
-                        .HasForeignKey("ActivitySubTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.Rule", "Rule")
-                        .WithMany("RuleActivitySubTypes")
-                        .HasForeignKey("RuleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Activity_Sub_Type");
-
-                    b.Navigation("Rule");
-                });
-
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfigField", b =>
                 {
                     b.HasOne("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleField", "Rulefield")
@@ -3044,53 +2950,15 @@ namespace RulesEngine.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.Rule", "Rule")
+                    b.HasOne("RulesEngine.Entities.WorkFlows.WorkFlow", "WorkFlow")
                         .WithMany("Nodes")
-                        .HasForeignKey("RuleId")
+                        .HasForeignKey("WorkFlowId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Parent");
 
-                    b.Navigation("Rule");
-                });
-
-            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleDiagnosis", b =>
-                {
-                    b.HasOne("RulesEngine.Entities.Lookups.Diagnosis", "Diagnosis")
-                        .WithMany()
-                        .HasForeignKey("DiagnosisId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.Rule", "Rule")
-                        .WithMany("RuleDiagnosis")
-                        .HasForeignKey("RuleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Diagnosis");
-
-                    b.Navigation("Rule");
-                });
-
-            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleSpecialities", b =>
-                {
-                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.Rule", "Rule")
-                        .WithMany("RuleSpecialities")
-                        .HasForeignKey("RuleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("RulesEngine.Entities.Lookups.Specialities", "Specialitiy")
-                        .WithMany()
-                        .HasForeignKey("SpecialitiesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Rule");
-
-                    b.Navigation("Specialitiy");
+                    b.Navigation("WorkFlow");
                 });
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.WorkFlow", b =>
@@ -3325,17 +3193,6 @@ namespace RulesEngine.Migrations
                     b.Navigation("Diagnoses");
                 });
 
-            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.Rule", b =>
-                {
-                    b.Navigation("Nodes");
-
-                    b.Navigation("RuleActivitySubTypes");
-
-                    b.Navigation("RuleDiagnosis");
-
-                    b.Navigation("RuleSpecialities");
-                });
-
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", b =>
                 {
                     b.Navigation("RuleFormConfigFields");
@@ -3345,6 +3202,8 @@ namespace RulesEngine.Migrations
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.WorkFlow", b =>
                 {
+                    b.Navigation("Nodes");
+
                     b.Navigation("Rules");
                 });
 

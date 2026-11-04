@@ -6,5 +6,6 @@ namespace RulesEngine.Common.Dtos
     public class CustomEngineRule : EngineRule
     {
         public ViolationType ViolationType { get; set; }
+        public long RuleId { get; set; }
     }
 }

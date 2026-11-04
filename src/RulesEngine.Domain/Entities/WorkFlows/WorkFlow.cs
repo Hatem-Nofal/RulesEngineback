@@ -94,7 +94,26 @@ namespace RulesEngine.Entities.WorkFlows
         {
             RuleformConfigId = ruleFormConfigId;
         }
+        public void AddNode(RuleNode node)
+        {
+            if (node == null) throw new ArgumentNullException(nameof(node));
+            Nodes.Add(node);
+        }
+        public void AddNodes(List<RuleNode> nodes)
+        {
+            Nodes.AddRange(nodes);
+        }
 
+        public void RemoveNode(RuleNode node)
+        {
+            if (node == null) throw new ArgumentNullException(nameof(node));
+            Nodes.Remove(node);
+        }
+        public void ResetNodes()
+        {
+
+            Nodes.Clear();
+        }
     }
 
 }
