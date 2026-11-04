@@ -428,7 +428,7 @@ namespace RulesEngine.WorkFlows.Rules
                 {
                     var rootNode = await _expressionsBuilder.ReverseBuild(rule.Expression, formConfig.Fields);
 
-                    var nodeByFieldKey = new Dictionary<string, RuleNodeDto>(StringComparer.OrdinalIgnoreCase);
+                    var nodeByFieldKey = new Dictionary<string, Queue<RuleNodeDto>>(StringComparer.OrdinalIgnoreCase);
                     FlattenRuleTree(rootNode, nodeByFieldKey);
 
                     ws.Cell(row, 1).Value = rule.Name;
@@ -441,7 +441,11 @@ namespace RulesEngine.WorkFlows.Rules
                         int fieldCol = 4 + i * 2;
                         int operatorCol = fieldCol + 1;
 
-                        if (nodeByFieldKey.TryGetValue(f.Key, out var node))
+                        var node = nodeByFieldKey.TryGetValue(f.Key, out var queue) && queue.Count > 0
+                            ? queue.Dequeue()
+                            : null;
+
+                        if (node != null)
                         {
                             if (node.Operator != null)
                                 ws.Cell(row, operatorCol).Value = node.Operator.Value.ToString();
@@ -474,19 +478,24 @@ namespace RulesEngine.WorkFlows.Rules
                         }
                     }
 
+                    static void FlattenRuleTree(RuleNodeDto node, IDictionary<string, Queue<RuleNodeDto>> nodeByFieldKey)
+                    {
+                        if (node == null)
+                            return;
+
+                        if (node.NodeType == RuleNodeType.Condition && !string.IsNullOrWhiteSpace(node.FieldKey))
+                        {
+                            if (!nodeByFieldKey.TryGetValue(node.FieldKey, out var queue))
+                                nodeByFieldKey[node.FieldKey] = queue = new Queue<RuleNodeDto>();
+
+                            queue.Enqueue(node);
+                        }
+
+                        foreach (var child in node.Children)
+                            FlattenRuleTree(child, nodeByFieldKey);
+                    }
+
                     row++;
-                }
-
-                static void FlattenRuleTree(RuleNodeDto node, IDictionary<string, RuleNodeDto> nodeByFieldKey)
-                {
-                    if (node == null)
-                        return;
-
-                    if (node.NodeType == RuleNodeType.Condition && !string.IsNullOrWhiteSpace(node.FieldKey))
-                        nodeByFieldKey[node.FieldKey] = node;
-
-                    foreach (var child in node.Children)
-                        FlattenRuleTree(child, nodeByFieldKey);
                 }
 
                 // Basic formatting
@@ -498,9 +507,8 @@ namespace RulesEngine.WorkFlows.Rules
                     if (ws.Column(col).Width > 40)
                         ws.Column(col).Width = 40;
                 }
-
-               
             }
+
             var stream = new MemoryStream();
             workbook.SaveAs(stream);
             stream.Position = 0;
