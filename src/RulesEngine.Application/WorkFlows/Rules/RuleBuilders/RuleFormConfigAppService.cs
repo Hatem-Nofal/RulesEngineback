@@ -53,7 +53,6 @@ public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormC
                 Key = x.Rulefield.Key,
                 Label = x.Rulefield.Label,
                 Options = ListExtensions.DeserializeStringList(x.Rulefield.OptionsJson),
-                IsDefault = x.IsDefault,
                 IsDeleted = x.IsDeleted
 
 
@@ -100,7 +99,7 @@ public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormC
             Name = config.Name,
             AllowNestedGroups = config.AllowNestedGroups,
             StrategyKey = config.StrategyKey,
-            Fields = config.RuleFormConfigFields.OrderBy(x => x.Order).Select(x =>
+            Fields = config.RuleFormConfigFields.OrderBy(x => x.CreationTime).Select(x =>
             {
                 var f = catalog[x.RulefieldId];
                 return new RuleFormFieldDto
@@ -146,7 +145,7 @@ public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormC
     public override async Task<RuleFormConfigDto> CreateAsync(CreateFormConfigEditDto input)
     {
         var newRruleFormConfig = new RuleFormConfig(input.Name?.Trim(), input.AllowNestedGroups, input.Description?.Trim());
-        newRruleFormConfig.AddRuleFormConfigFields(input.Fields.Select((x, i) => new RuleFormConfigField(newRruleFormConfig.Id, x.FieldId, i + 1, x.IsMultiple, x.IsDefault, $"[{string.Join(",", x.AllowedOperators)}]")).ToList());
+        newRruleFormConfig.AddRuleFormConfigFields(input.Fields.Select((x, i) => new RuleFormConfigField(newRruleFormConfig.Id, x.FieldId,  x.IsMultiple,  $"[{string.Join(",", x.AllowedOperators)}]")).ToList());
         var ruleFormConfig = await _ruleFormConfigsRepository.CreateAsync(newRruleFormConfig);
         return await MapToGetOutputDtoAsync(ruleFormConfig);
 
@@ -158,7 +157,7 @@ public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormC
         rruleFormConfig.Update(input.Name?.Trim(), input.Description?.Trim(), input.AllowNestedGroups);
         await _ruleFormConfigFieldRepository.DeleteDirectAsync(n => n.RuleformConfigId == id);
         rruleFormConfig.ResetRuleFormConfigFields();
-        rruleFormConfig.AddRuleFormConfigFields(input.Fields.Where(x => x.IsDeleted == false).Select((x, i) => new RuleFormConfigField(rruleFormConfig.Id, x.FieldId, i + 1, x.IsMultiple, x.IsDefault, $"[{string.Join(",", x.AllowedOperators)}]")).ToList());
+        rruleFormConfig.AddRuleFormConfigFields(input.Fields.Where(x => x.IsDeleted == false).Select((x, i) => new RuleFormConfigField(rruleFormConfig.Id, x.FieldId, x.IsMultiple,  $"[{string.Join(",", x.AllowedOperators)}]")).ToList());
         var ruleFormConfig = await _ruleFormConfigsRepository.UpdateAsync(id, rruleFormConfig);
 
         return await MapToGetOutputDtoAsync(ruleFormConfig);

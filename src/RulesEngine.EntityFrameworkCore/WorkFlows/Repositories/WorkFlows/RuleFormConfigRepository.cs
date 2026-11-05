@@ -159,7 +159,6 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
         private static List<RuleFormConfigField> BuildFields(RuleFormConfig input, Dictionary<long, RuleField> catalog)
         {
             var list = new List<RuleFormConfigField>();
-            var order = 0;
             foreach (var f in input.RuleFormConfigFields)
             {
                 if (!catalog.TryGetValue(f.RulefieldId, out var field))
@@ -168,7 +167,7 @@ namespace RulesEngine.WorkFlows.Repositories.WorkFlows
                 if (!string.IsNullOrEmpty(f.AllowedOperatorsJson))
                     allowedJson = JsonSerializer.Serialize(f.AllowedOperatorsJson);
 
-                var cfgField = new RuleFormConfigField(input.Id,f.RulefieldId, order++, f.IsMultiple, f.IsDefault, allowedJson);
+                var cfgField = new RuleFormConfigField(input.Id,f.RulefieldId,  f.IsMultiple, allowedJson);
                 list.Add(cfgField);
             }
 

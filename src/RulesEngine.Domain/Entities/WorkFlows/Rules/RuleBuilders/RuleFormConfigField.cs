@@ -21,40 +21,33 @@ namespace RulesEngine.Entities.WorkFlows.Rules.RuleBuilders
 
         public RuleField Rulefield { get; private set; }
 
-        public int Order { get; private set; }
         public string? AllowedOperatorsJson { get; private set; }
         public bool IsMultiple { get; private set; }
-        public bool IsDefault { get; private set; }
 
         public RuleFormConfigField()
         {
             
         }
-        public RuleFormConfigField( long formConfigId, long ruleFieldId, int order, bool isMultiple, bool isDefault, string? allowedOperatorsJson = null)
+        public RuleFormConfigField( long formConfigId, long ruleFieldId,  bool isMultiple,  string? allowedOperatorsJson = null)
         {
  
             RuleformConfigId = formConfigId;
             RulefieldId = ruleFieldId;
-            Order = order;
             AllowedOperatorsJson = allowedOperatorsJson;
             IsMultiple = isMultiple;
-            IsDefault = isDefault;
         }
-        public void Update( long formConfigId, long ruleFieldId, int order, bool isMultiple, bool isDefault, string? allowedOperatorsJson = null)
+        public void Update( long formConfigId, long ruleFieldId,  bool isMultiple, string? allowedOperatorsJson = null)
         {
              
 
             RuleformConfigId = formConfigId;
             RulefieldId = ruleFieldId;
-            Order = order;
             AllowedOperatorsJson = allowedOperatorsJson;
             IsMultiple = isMultiple;
-            IsDefault = isDefault;
         }
 
-        public void Update(int order, string? allowedOperatorsJson = null)
+        public void Update( string? allowedOperatorsJson = null)
         {
-            Order = order;
             AllowedOperatorsJson = allowedOperatorsJson;
         }
         public void UpdateRuleFormConfigId(long ruleFormConfigId)

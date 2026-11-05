@@ -245,8 +245,7 @@ namespace RulesEngine.WorkFlows.Rules
                     "This workflow has no form config assigned.");
 
             var configFields = config.RuleFormConfigFields
-                .Where(x => x.IsDefault)
-                .OrderBy(f => f.Order)
+                .OrderBy(f => f.CreationTime)
                 .ToList();
 
             var configFieldIds = configFields
