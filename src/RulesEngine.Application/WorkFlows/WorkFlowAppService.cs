@@ -105,10 +105,10 @@ namespace RulesEngine.WorkFlows
                 if (workflow.Nodes.Count > 0)
                 {
                     await _ruleNodeRepository.InsertManyAsync(workflow.Nodes);
-                    await CurrentUnitOfWork.SaveChangesAsync();
                 }
             }
             await _workFlowRepository.InsertAsync(workflow);
+            await CurrentUnitOfWork.SaveChangesAsync();
 
             return Map(workflow, new Dictionary<long, string>(), new Dictionary<long, int> { [workflow.Id] = 0 });
         }

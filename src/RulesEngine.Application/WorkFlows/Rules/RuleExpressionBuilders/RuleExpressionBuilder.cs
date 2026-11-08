@@ -1,5 +1,6 @@
 using RulesEngine.Common.Enums;
 using RulesEngine.Common.Extensions;
+using RulesEngine.Entities.Lookups;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.Repositories.WorkFlows;
@@ -28,13 +29,15 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
     private readonly IRuleFormConfigAppService _forms;
     private readonly IWorkFlowRepository _workflowRepository;
     private readonly IRepository<RuleField, long> _ruleFieldRepository;
+    private readonly IRepository<ActivitySubType, long> _activitySubTypeRepository;
 
-    public RuleExpressionBuilder(IRuleExpressionStrategy strategy, IRuleFormConfigAppService forms, IWorkFlowRepository workflowRepository, IRepository<RuleField, long> ruleFieldRepository)
+    public RuleExpressionBuilder(IRuleExpressionStrategy strategy, IRuleFormConfigAppService forms, IWorkFlowRepository workflowRepository, IRepository<RuleField, long> ruleFieldRepository, IRepository<ActivitySubType, long> activitySubTypeRepository)
     {
         _strategy = strategy;
         _forms = forms;
         _workflowRepository = workflowRepository;
         _ruleFieldRepository = ruleFieldRepository;
+        _activitySubTypeRepository = activitySubTypeRepository;
     }
 
     public async Task<RuleExpressionResultDto> BuildForRuleAsync(RuleDto rule)
@@ -133,7 +136,6 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
         };
     }
 
-
     private static string StripOuterFinalization(string expression)
     {
         var trimmed = expression.Trim();
@@ -148,20 +150,80 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
         return trimmed;
     }
 
-    private static RuleNodeDto ParseOr(List<Token> tokens, ref int index, IReadOnlyDictionary<string, RuleFormFieldDto> fields)
+    private RuleNodeDto ParseOr(List<Token> tokens, ref int index, IReadOnlyDictionary<string, RuleFormFieldDto> fields)
     {
         var left = ParseAnd(tokens, ref index, fields);
 
         while (Match(tokens, ref index, TokenType.Or))
         {
             var right = ParseAnd(tokens, ref index, fields);
+            if (CanMergeSameFieldCondition(left, right))
+            {
+                left = MergeSameFieldCondition(left, right);
+                continue;
+            }
+
             left = Combine(left, right, LogicalOperator.Or);
         }
 
         return left;
     }
 
-    private static RuleNodeDto ParseAnd(List<Token> tokens, ref int index, IReadOnlyDictionary<string, RuleFormFieldDto> fields)
+    private static bool CanMergeSameFieldCondition(RuleNodeDto left, RuleNodeDto right)
+    {
+        if (left.NodeType != RuleNodeType.Condition || right.NodeType != RuleNodeType.Condition)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(left.FieldKey) || string.IsNullOrWhiteSpace(right.FieldKey))
+            return false;
+
+        if (!string.Equals(left.FieldKey, right.FieldKey, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (left.Operator != right.Operator)
+            return false;
+
+        return left.Operator is RuleOperator.Contains or RuleOperator.NotContains or RuleOperator.Equal or RuleOperator.NotEqual;
+    }
+
+    private static RuleNodeDto MergeSameFieldCondition(RuleNodeDto left, RuleNodeDto right)
+    {
+        var values = new List<string>();
+        values.AddRange(ExtractConditionValues(left.Value));
+        values.AddRange(ExtractConditionValues(right.Value));
+
+        var unique = values
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new RuleNodeDto
+        {
+            NodeType = RuleNodeType.Condition,
+            FieldKey = left.FieldKey,
+            Operator = left.Operator,
+            Value = JsonSerializer.SerializeToElement(unique),
+            IsMultiple = true,
+            ActivityTypeId = left.ActivityTypeId ?? right.ActivityTypeId
+        };
+    }
+
+    private static List<string> ExtractConditionValues(JsonElement? value)
+    {
+        if (!value.HasValue)
+            return new List<string>();
+
+        var element = value.Value;
+        if (element.ValueKind == JsonValueKind.Array)
+            return RuleTreeMapper.Strings(element);
+
+        if (element.ValueKind == JsonValueKind.String)
+            return string.IsNullOrWhiteSpace(element.GetString()) ? new List<string>() : new List<string> { element.GetString()! };
+
+        return new List<string>();
+    }
+
+    private RuleNodeDto ParseAnd(List<Token> tokens, ref int index, IReadOnlyDictionary<string, RuleFormFieldDto> fields)
     {
         var left = ParsePrimary(tokens, ref index, fields);
 
@@ -174,7 +236,7 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
         return left;
     }
 
-    private static RuleNodeDto ParsePrimary(List<Token> tokens, ref int index, IReadOnlyDictionary<string, RuleFormFieldDto> fields)
+    private RuleNodeDto ParsePrimary(List<Token> tokens, ref int index, IReadOnlyDictionary<string, RuleFormFieldDto> fields)
     {
         if (Match(tokens, ref index, TokenType.Not))
             return Negate(ParsePrimary(tokens, ref index, fields));
@@ -189,7 +251,7 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
         return ParseCondition(tokens, ref index, fields);
     }
 
-    private static RuleNodeDto ParseCondition(List<Token> tokens, ref int index, IReadOnlyDictionary<string, RuleFormFieldDto> fields)
+    private RuleNodeDto ParseCondition(List<Token> tokens, ref int index, IReadOnlyDictionary<string, RuleFormFieldDto> fields)
     {
         if (tokens[index].Type == TokenType.Identifier && index + 1 < tokens.Count && tokens[index + 1].Type == TokenType.LParen)
             return ParseMethodCall(tokens, ref index, fields);
@@ -205,7 +267,7 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
         return CreateCondition(fieldKey, op, value, field);
     }
 
-    private static RuleNodeDto ParseMethodCall(List<Token> tokens, ref int index, IReadOnlyDictionary<string, RuleFormFieldDto> fields)
+    private RuleNodeDto ParseMethodCall(List<Token> tokens, ref int index, IReadOnlyDictionary<string, RuleFormFieldDto> fields)
     {
         var methodNameToken = Expect(tokens, ref index, TokenType.Identifier, "method name");
         var methodName = methodNameToken.Text;
@@ -278,11 +340,24 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
         }
     }
 
-    private static RuleNodeDto CreateCondition(string fieldKey, RuleOperator op, object value, RuleFormFieldDto field)
+    private RuleNodeDto CreateCondition(string fieldKey, RuleOperator op, object value, RuleFormFieldDto field)
     {
         var payload = value is string[] arr ? arr : value;
         var element = JsonSerializer.SerializeToElement(payload);
-        var isMultiple = field.IsMultiple || field.DataType == "List" || field.DataType == "Enum";
+        var isMultiple = field.IsMultiple &&( field.DataType == "List" || field.DataType == "Enum");
+
+        var activityCodes = value switch
+        {
+            JsonElement json => RuleTreeMapper.Strings(json),
+            string[] stringArray => stringArray.ToList(),
+            IEnumerable<string> enumerable => enumerable.ToList(),
+            string s => new List<string> { s },
+            _ => new List<string>()
+        };
+
+        var typeId = activityCodes.Count > 0
+            ? _activitySubTypeRepository.FirstOrDefaultAsync(x => activityCodes.Contains(x.iqvia_code)).GetAwaiter().GetResult()
+            : null;
 
         return new RuleNodeDto
         {
@@ -290,7 +365,8 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
             FieldKey = fieldKey,
             Operator = op,
             Value = element,
-            IsMultiple = isMultiple
+            IsMultiple = isMultiple,
+            ActivityTypeId = typeId?.ActivityType_id
         };
     }
 
@@ -492,11 +568,15 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
             {
                 var start = i;
                 i++;
+
                 while (i < text.Length && (char.IsDigit(text[i]) || text[i] == '.'))
                     i++;
 
                 var literal = text.Substring(start, i - start);
-                tokens.Add(new Token(TokenType.Number, literal, decimal.TryParse(literal, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : literal));
+                tokens.Add(new Token(
+                    TokenType.Number,
+                    literal,
+                    decimal.TryParse(literal, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : literal));
                 continue;
             }
 
@@ -531,13 +611,17 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
         return false;
     }
 
-    private static Token Expect(List<Token> tokens, ref int index, TokenType type, string name)
+    private static Token Expect(List<Token> tokens, ref int index, TokenType type, string expectation, string? text = null)
     {
         if (index >= tokens.Count || tokens[index].Type != type)
-            throw new RuleValidationException($"Expected {name} in expression.");
+            throw new RuleValidationException($"Expected {expectation} in expression.");
 
         var token = tokens[index];
         index++;
+
+        if (!string.IsNullOrEmpty(text) && token.Text != text)
+            throw new RuleValidationException($"Expected '{text}' but found '{token.Text}'.");
+
         return token;
     }
 

@@ -208,14 +208,36 @@ public sealed class RuleExpressionStrategyBase : IRuleExpressionStrategy
            : throw new RuleValidationException("Expected an array value.");
 
     protected static string Num(JsonElement v) =>
-        v.ValueKind == JsonValueKind.Number
-            ? v.GetInt32().ToString(CultureInfo.InvariantCulture)
-            : throw new RuleValidationException("Expected a numeric value.");
-    protected static string Decimal(JsonElement v) =>
-        v.ValueKind == JsonValueKind.Number
-            ? v.GetDecimal().ToString(CultureInfo.InvariantCulture)
-            : throw new RuleValidationException("Expected a numeric value.");
+      v.ValueKind switch
+      {
+          JsonValueKind.Number when v.TryGetInt32(out var number)
+              => number.ToString(CultureInfo.InvariantCulture),
 
+          JsonValueKind.String when int.TryParse(
+              v.GetString(),
+              NumberStyles.Integer,
+              CultureInfo.InvariantCulture,
+              out var number)
+              => number.ToString(CultureInfo.InvariantCulture),
+
+          _ => throw new RuleValidationException("Expected an integer value.")
+      };
+
+    protected static string Decimal(JsonElement v) =>
+        v.ValueKind switch
+        {
+            JsonValueKind.Number when v.TryGetDecimal(out var number)
+                => number.ToString(CultureInfo.InvariantCulture),
+
+            JsonValueKind.String when decimal.TryParse(
+                v.GetString(),
+                NumberStyles.Number,
+                CultureInfo.InvariantCulture,
+                out var number)
+                => number.ToString(CultureInfo.InvariantCulture),
+
+            _ => throw new RuleValidationException("Expected a numeric value.")
+        };
     protected static string GetDateTime(JsonElement v)
     {
         if (v.ValueKind != JsonValueKind.String)

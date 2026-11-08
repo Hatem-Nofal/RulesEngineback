@@ -218,7 +218,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
         public static List<string> ValidateWitErrors(RuleNodeDto root, RuleFormConfigDto config)
         {
-            var allowed = config.Fields.ToDictionary(f => f.Key);
+            var allowed = config.Fields.ToList();
 
             return WalkWitErrors(root, allowed, config.AllowNestedGroups, isRoot: true);
 
@@ -226,7 +226,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
 
 
-        private static List<string> WalkWitErrors(RuleNodeDto n, Dictionary<string, RuleFormFieldDto> allowed, bool allowNested, bool isRoot)
+        private static List<string> WalkWitErrors(RuleNodeDto n, List<RuleFormFieldDto> allowed, bool allowNested, bool isRoot)
         {
             var errors = new List<string>();
             if (n.NodeType == RuleNodeType.Group)
@@ -249,7 +249,8 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
             // Every check below dereferences what the previous one proved, so each failure returns immediately
             // (the old version kept going and threw NullReferenceException / InvalidOperationException instead of
             // reporting the problem).
-            if (n.FieldKey is null || !allowed.TryGetValue(n.FieldKey, out var field))
+            var field = allowed.FirstOrDefault(f => f.Key == n.FieldKey);
+            if (n.FieldKey is null || field is null)
             {
                 errors.Add($"Field '{n.FieldKey}' is not allowed for this workflow.");
                 return errors;
