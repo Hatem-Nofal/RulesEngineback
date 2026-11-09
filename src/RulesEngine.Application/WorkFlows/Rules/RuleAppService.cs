@@ -328,7 +328,7 @@ namespace RulesEngine.WorkFlows.Rules
                 var rule = await _ruleRepository.GetForUpdateAsync(id);
 
 
-                rule.Update(input.WorkflowId, prepared.Expression, input.ViolationMessage);
+                rule.Update( prepared.Expression, input.ViolationMessage,input.ViolationType);
 
                 // Replace the whole tree: one set-based DELETE instead of loading and deleting every node separately.
 
@@ -383,6 +383,10 @@ namespace RulesEngine.WorkFlows.Rules
                 .Where(id => lookup.ContainsKey(id))
                 .Select(id => lookup[id])
                 .ToList();
+            var layout = workflow.IsWorkflowLevel
+                ? null
+                : RuleLayout.FromNodes(await _ruleNodeRepository.GetListAsync(n => n.WorkFlowId == workflowId));
+
             using var workbook = new XLWorkbook();
 
             var ws = workbook.Worksheets.Add("RulesSample");
@@ -512,6 +516,18 @@ namespace RulesEngine.WorkFlows.Rules
             // Hide the sheet containing dropdown options.
             optionsSheet.Hide();
 
+            // Show how the columns are grouped; bulk upload rebuilds every rule with exactly this shape.
+            if (layout != null)
+            {
+                var layoutSheet = workbook.Worksheets.Add("Layout");
+                layoutSheet.Cell(1, 1).Value = "How the columns are grouped in each generated rule";
+                layoutSheet.Cell(1, 1).Style.Font.SetBold();
+                layoutSheet.Cell(2, 1).Value = layout.Describe(
+                    (key, occurrence) => GetFieldHeaderLabel(key, occurrence, duplicateCounts.GetValueOrDefault(key, 1)));
+                layoutSheet.Cell(2, 1).Style.Alignment.WrapText = true;
+                layoutSheet.Column(1).Width = 120;
+            }
+
             // Populate sample row or existing rules.
             var rules = (await Repository.GetListAsync(
                 r => r.WorkflowId == workflowId))
@@ -531,7 +547,8 @@ namespace RulesEngine.WorkFlows.Rules
                     int operatorCol = fieldCol + 1;
 
                     // default operator = Equal, default value = first option (if available)
-                    ws.Cell(row, operatorCol).Value = RuleOperator.Equal.ToString();
+                    var occurrence = fieldsList.Take(i + 1).Count(x => string.Equals(x.Key, f.Key, StringComparison.OrdinalIgnoreCase));
+                    ws.Cell(row, operatorCol).Value = (layout?.DefaultOperatorFor(f.Key, occurrence) ?? RuleOperator.Equal).ToString();
 
                     string value = string.Empty;
 
@@ -707,6 +724,12 @@ namespace RulesEngine.WorkFlows.Rules
 
             // Built once for the whole sheet: used to validate every row and to build every expression.
             var formConfigDto = RuleExpressionBuilder.BuildFormConfigDto(config, fieldsById);
+
+            // The workflow's saved rule layout (groups + AND/OR joins). Each row is poured into this shape so the
+            // generated expression keeps its grouping instead of becoming one flat AND list.
+            var layout = workflow.IsWorkflowLevel
+                ? null
+                : RuleLayout.FromNodes(await _ruleNodeRepository.GetListAsync(n => n.WorkFlowId == workflowId));
 
             var allowedByKey = new List<(RuleFormConfigField Config, RuleField Field)>();
             foreach (var configField in config.RuleFormConfigFields)
@@ -1059,7 +1082,7 @@ namespace RulesEngine.WorkFlows.Rules
             // ---- Phase 1: read + validate every row. Nothing is written to the database here. ----
             for (int r = 2; r <= lastRow; r++)
             {
-           
+
                 var row = new UploadRow(r);
                 rows.Add(row);
 
@@ -1084,7 +1107,7 @@ namespace RulesEngine.WorkFlows.Rules
                     }
                 }
 
-                var root = new RuleNodeDto { NodeType = RuleNodeType.Group };
+                var conditions = new List<LayoutCondition>();
 
                 for (int c = 0; c < rawHeaderKeys.Count; c++)
                 {
@@ -1108,7 +1131,7 @@ namespace RulesEngine.WorkFlows.Rules
                     var field = allowedField.Value.Field;
 
                     // Determine operator for this field (per-row operator column named '<FieldKey>Operators')
-                    var operatorToUse = RuleOperator.Equal;
+                    var operatorToUse = layout?.DefaultOperatorFor(key, occurrenceIndex) ?? RuleOperator.Equal;
                     if (operatorIndexByField.TryGetValue((key, occurrenceIndex), out var opIdx))
                     {
                         var opCellStr = ws.Cell(r, opIdx + 1).GetString()?.Trim();
@@ -1135,12 +1158,11 @@ namespace RulesEngine.WorkFlows.Rules
                     }
                     else
                     {
-                        
+
                         node.Value = JsonDocument.Parse(JsonSerializer.Serialize(val)).RootElement;
                     }
 
-                    if (root.Children.Count > 0) node.LogicalJoinOperator = LogicalOperator.And;
-                    root.Children.Add(node);
+                    conditions.Add(new LayoutCondition(key, occurrenceIndex, node));
 
                     if (string.Equals(key, "Activity", StringComparison.OrdinalIgnoreCase)
                         || string.Equals(key, "Activities", StringComparison.OrdinalIgnoreCase))
@@ -1168,6 +1190,7 @@ namespace RulesEngine.WorkFlows.Rules
 
                 if (row.Errors.Count > 0) continue;   // cell-level problems found: no point validating the whole rule
 
+                var root = layout != null ? layout.Bind(conditions) : RuleLayout.BuildFlat(conditions);
                 row.Dto = new CreateRuleDto { WorkflowId = workflowId, IsActive = isActive, Root = root };
 
                 // Report every problem of the row at once, so the user can fix the whole row in a single pass.

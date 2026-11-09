@@ -44,11 +44,12 @@ namespace RulesEngine.Entities.WorkFlows.Rules
             rule.ViolationType = violationType;
             return rule;
         }
-        public void Update(long workflowId, string expression, string? violationMessage)
+        public void Update(  string expression, string? violationMessage, ViolationType violationType)
         {
-            WorkflowId = workflowId;
-            Expression = expression;
+             Expression = expression;
             ViolationMessage = violationMessage;
+             ViolationType = violationType;
+
 
         }
         public void UpdateExpression(string expression)

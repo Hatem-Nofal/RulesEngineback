@@ -238,7 +238,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
                 for (var i = 0; i < n.Children.Count; i++)
                 {
-                    if (i > 0 && n.Children[i].LogicalJoinOperator is null)
+                    if (i > 0 && n.Children[i].LogicalJoinOperator is null&&n.Children.All(x=>!x.LogicalJoinOperator.HasValue))
                         errors.Add("Choose AND / OR before every item after the first.");
 
                     errors.AddRange(WalkWitErrors(n.Children[i], allowed, allowNested, isRoot: false));
@@ -289,7 +289,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
             // Collection operators take one value or several (any of / all of / none of)
             if (isList && field.IsMultiple && value.ValueKind == JsonValueKind.Array && value.GetArrayLength() == 0)
                 errors.Add($"Select at least one value for '{field.Label}'.");
-            if (isList && !field.IsMultiple && value.ValueKind == JsonValueKind.Array)
+            if (isList && !field.IsMultiple && value.ValueKind == JsonValueKind.Array && value.GetArrayLength()>1)
                 errors.Add($"'{field.Label}' expects a single value.");
             return errors;
 

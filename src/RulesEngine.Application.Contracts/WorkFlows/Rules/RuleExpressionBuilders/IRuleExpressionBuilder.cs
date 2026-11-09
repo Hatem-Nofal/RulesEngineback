@@ -17,6 +17,7 @@ namespace RulesEngine.WorkFlows.Rules.RuleExpressionBuilders
         /// config (bulk import), so no database lookup happens per rule.
         /// </summary>
         Task<RuleExpressionResultDto> BuildForRuleAsync(RuleDto rule, RuleFormConfigDto config);
+        Task<RuleExpressionResultDto> BuildForBulkRuleAsync(RuleDto rule, RuleFormConfigDto config);
         Task<RuleExpressionResultDto> Build(RuleNodeDto root, string? strategyKey, IReadOnlyDictionary<string, FieldMapDto> fields);
 
         /// <summary>
