@@ -365,12 +365,10 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
         switch (plan.RejectionLevel)
         {
             case RejectionLevel.Activity:
-            case RejectionLevel.Claim:
+            
                 foreach (var activity in claim.Activities)
                 {
-                    var args = plan.RejectionLevel == RejectionLevel.Claim
-                        ? claim.GetClaimLevelArgs()
-                        : claim.CreateActivityArgs(activity);
+                    var args = claim.CreateActivityArgs(activity);
 
                     await RunBatchesAsync(engine, plan, claim, activity.ActivityId, args, outcome, cancellationToken);
                 }
