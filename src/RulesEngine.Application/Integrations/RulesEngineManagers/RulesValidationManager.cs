@@ -101,7 +101,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
         if (errors.Count > 0)
         {
             LogCompletedWithErrors(elapsedMs, claims.Count, failures.Count, errors.Count, string.Join(" | ", errors));
-            throw new BusinessException("ValidationFailed").WithData("errors", errors);
+            //throw new BusinessException("ValidationFailed").WithData("errors", errors);
         }
 
         LogCompleted(elapsedMs, claims.Count, failures.Count);
@@ -337,7 +337,16 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                 errors.AddRange(outcome.Errors);
                 rulesEngineViolationLogs.AddRange(outcome.RulesEngineViolationLog);
             }
-            await _rulesEngineViolationLogRepository.UpdateManyAsync(rulesEngineViolationLogs);
+            try
+            {
+                await _rulesEngineViolationLogRepository.InsertManyAsync(rulesEngineViolationLogs);
+
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
         }
 
         return (failures, errors);

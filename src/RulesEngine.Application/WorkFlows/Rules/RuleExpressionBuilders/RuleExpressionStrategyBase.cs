@@ -11,7 +11,7 @@ namespace RulesEngine.WorkFlows.Rules.RuleExpressionBuilders;
 
 
 
- 
+
 
 /// <summary>
 /// Shared rendering. A concrete strategy only declares its field map (and may override any 
@@ -29,7 +29,7 @@ public sealed class RuleExpressionStrategyBase : IRuleExpressionStrategy
     }
 
 
-    public  string RenderCondition(RuleNodeDto node, FieldMapDto field)
+    public string RenderCondition(RuleNodeDto node, FieldMapDto field)
     {
         if (node.Operator is null)
             throw new RuleValidationException($"Missing operator for '{node.FieldKey}'.");
@@ -39,22 +39,22 @@ public sealed class RuleExpressionStrategyBase : IRuleExpressionStrategy
         var op = node.Operator.Value;
         var value = node.Value.Value;
 
-        
-            return field.Kind switch
-            {
-                FieldKind.List when node.IsMultiple => RenderMultipleSelect(field, op, value),
-                FieldKind.List => RenderCollection(field, op, value),
-                FieldKind.Number => RenderNumber(field, op, value),
-                FieldKind.Text => RenderText(field, op, value),
-                FieldKind.Decimal => RenderDecimal(field, op, value),
-                FieldKind.DateTime => RenderDateTime(field, op, value),
-                _ => throw new RuleValidationException($"Unsupported field kind for '{node.FieldKey}'.")
-            };
-    
+
+        return field.Kind switch
+        {
+            FieldKind.List when node.IsMultiple => RenderMultipleSelect(field, op, value),
+            FieldKind.List => RenderCollection(field, op, value),
+            FieldKind.Number => RenderNumber(field, op, value),
+            FieldKind.Text => RenderText(field, op, value),
+            FieldKind.Decimal => RenderDecimal(field, op, value),
+            FieldKind.DateTime => RenderDateTime(field, op, value),
+            _ => throw new RuleValidationException($"Unsupported field kind for '{node.FieldKey}'.")
+        };
+
     }
 
-   
-    public  string RenderGroup(RuleNodeDto group, IReadOnlyList<RenderedItem> items, bool isRoot)
+
+    public string RenderGroup(RuleNodeDto group, IReadOnlyList<RenderedItem> items, bool isRoot)
     {
         var runs = new List<List<string>>();
         for (var i = 0; i < items.Count; i++)
@@ -77,13 +77,13 @@ public sealed class RuleExpressionStrategyBase : IRuleExpressionStrategy
     /// The tree describes when the item is BLOCKED, so the validity expression is its negation.
     /// Override in a strategy that wants the raw condition instead.
     /// </summary>
-    public  string Finalize(string condition) => $"!({condition})";
+    public string Finalize(string condition) => $"!({condition})";
 
     // ----- per-kind rendering -----
 
-    protected  string RenderCollection(FieldMapDto f, RuleOperator op, JsonElement v)
+    protected string RenderCollection(FieldMapDto f, RuleOperator op, JsonElement v)
     {
-         return op switch
+        return op switch
         {
             RuleOperator.Equal => $"{f.key}=={Str(v)}",
             RuleOperator.NotEqual => $"{f.key}!={Str(v)}",
@@ -103,30 +103,22 @@ public sealed class RuleExpressionStrategyBase : IRuleExpressionStrategy
             };
         }
 
-        if (items.Count > 2)
-        {
-            var encoded = LargeRuleLists.Encode(items);
-            var expr = $"LargeRuleLists.AnyCodes({f.key}, {Quote(encoded)})";
-            return op switch
-            {
-                RuleOperator.Contains => expr,
-                RuleOperator.NotContains => $"({expr})",
-                _ => throw Unsupported(f, op)
-            };
-        }
 
-        var parts = items.Select(s => $"{f.key}.Contains({Quote(s)})").ToList();
-        var exprSmall = parts.Count == 1 ? parts[0] : $"({string.Join(" || ", parts)})";
+        var encoded = LargeRuleLists.Encode(items);
+        var expr = $"LargeRuleLists.AnyCodes({f.key}, {Quote(encoded)})";
         return op switch
         {
-            RuleOperator.Contains => exprSmall,
-            RuleOperator.NotContains => $"({exprSmall})",
+            RuleOperator.Contains => expr,
+            RuleOperator.NotContains => $"({expr})",
             _ => throw Unsupported(f, op)
         };
+
+
+
     }
 
 
-    protected  string RenderNumber(FieldMapDto f, RuleOperator op, JsonElement v)
+    protected string RenderNumber(FieldMapDto f, RuleOperator op, JsonElement v)
     {
         var symbol = op switch
         {
@@ -140,7 +132,7 @@ public sealed class RuleExpressionStrategyBase : IRuleExpressionStrategy
         };
         return $"{f.key} {symbol} {Num(v)}";
     }
-    protected  string RenderDecimal(FieldMapDto f, RuleOperator op, JsonElement v)
+    protected string RenderDecimal(FieldMapDto f, RuleOperator op, JsonElement v)
     {
         var symbol = op switch
         {
@@ -170,7 +162,7 @@ public sealed class RuleExpressionStrategyBase : IRuleExpressionStrategy
         return $"{f.key} {symbol} {GetDateTime(v)}";
     }
 
-    protected  string RenderText(FieldMapDto f, RuleOperator op, JsonElement v)
+    protected string RenderText(FieldMapDto f, RuleOperator op, JsonElement v)
     {
         switch (op)
         {
@@ -179,15 +171,15 @@ public sealed class RuleExpressionStrategyBase : IRuleExpressionStrategy
             case RuleOperator.NotEqual:
                 return $"{f.key} != {Str(v)}";
             case RuleOperator.Contains:
-            {
-                var parts = Strings(v).Select(s => $"{f.key} == {Quote(s)}").ToList();
-                return parts.Count == 1 ? parts[0] : $"({string.Join(" || ", parts)})";
-            }
+                {
+                    var parts = Strings(v).Select(s => $"{f.key} == {Quote(s)}").ToList();
+                    return parts.Count == 1 ? parts[0] : $"({string.Join(" || ", parts)})";
+                }
             case RuleOperator.NotContains:
-            {
-                var parts = Strings(v).Select(s => $"{f.key} == {Quote(s)}").ToList();
-                return $"!({string.Join(" || ", parts)})";
-            }
+                {
+                    var parts = Strings(v).Select(s => $"{f.key} == {Quote(s)}").ToList();
+                    return $"!({string.Join(" || ", parts)})";
+                }
             default:
                 throw Unsupported(f, op);
         }

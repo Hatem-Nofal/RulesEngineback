@@ -12,10 +12,10 @@ public class Program
 {
     public async static Task<int> Main(string[] args)
     {
-        Log.Logger = new LoggerConfiguration()
-            .WriteTo.Async(c => c.File("Logs/logs.txt"))
-            .WriteTo.Async(c => c.Console())
-            .CreateBootstrapLogger();
+        //Log.Logger = new LoggerConfiguration()
+        //    .WriteTo.Async(c => c.File("Logs/logs.txt"))
+        //    .WriteTo.Async(c => c.Console())
+        //    .CreateBootstrapLogger();
 
         try
         {
@@ -24,13 +24,7 @@ public class Program
             builder.Host
                 .AddAppSettingsSecretsJson()
                 .UseAutofac()
-                .UseSerilog((context, services, loggerConfiguration) =>
-                {
-                    loggerConfiguration
-                        .ReadFrom.Configuration(context.Configuration)
-                        .ReadFrom.Services(services)
-                        .WriteTo.Async(c => c.AbpStudio(services));
-                });
+                .UseSerilog();
             await builder.AddApplicationAsync<RulesEngineHttpApiHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();

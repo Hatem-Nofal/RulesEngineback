@@ -76,9 +76,13 @@ namespace RulesEngine.WorkFlows
             var workflow = await _workFlowRepository.GetDetailsAsync(id);
             var configs = (await _ruleFormConfigRepository.GetListAsync()).ToDictionary(x => x.Id, x => x.Name);
             var count = await _ruleRepository.CountAsync(x => x.WorkflowId == id);
-            var formConfig = await _expressionsBuilder.LoadFormConfigAsync(id);
+            var formConfig = !workflow.IsWorkflowLevel? await _expressionsBuilder.LoadFormConfigAsync(id):null;
             var workflowDto = Map(workflow, configs, new Dictionary<long, int> { [id] = count });
-            workflowDto.Root = !workflow.IsWorkflowLevel ? await RuleTreeMapper.ToTree(workflow.Nodes.OrderBy(x => x.Order).ToList(), workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto();
+            if (formConfig is not null)
+            {
+                workflowDto.Root = !workflow.IsWorkflowLevel ? await RuleTreeMapper.ToTree(workflow.Nodes.OrderBy(x => x.Order).ToList(), workflow.RuleformConfig.RuleFormConfigFields.ToList(), _activitySubTypeRepository) : new RuleNodeDto();
+
+            }
             return workflowDto;
         }
 

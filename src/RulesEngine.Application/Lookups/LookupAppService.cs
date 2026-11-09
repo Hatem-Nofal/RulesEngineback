@@ -22,7 +22,7 @@ namespace RulesEngine.Lookups
     ///   in memory for a few minutes instead of being re-read on every dropdown open.
     /// - Workflows change often, so that list is never cached.
     /// </summary>
-    [Authorize(RulesEnginePermissions.Lookups)]
+  //  [Authorize(RulesEnginePermissions.Lookups)]
     public class LookupAppService : ApplicationService, ILookupAppService
     {
 

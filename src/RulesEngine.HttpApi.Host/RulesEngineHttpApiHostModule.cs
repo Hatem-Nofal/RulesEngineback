@@ -138,13 +138,14 @@ public class RulesEngineHttpApiHostModule : AbpModule
         ConfigureUrls(configuration);
         ConfigureBundles(hostingEnvironment);
         ConfigureConventionalControllers();
-        ConfigureHealthChecks(context);
+       // ConfigureHealthChecks(context);
         ConfigureSwagger(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
         ConfigureSerilog(configuration, hostingEnvironment);
         ConfigureSignalR(context);
         ConfigureCustomConfigurations(context);
+        ConfigureExceptionFilter(context);
 
         Configure<AbpAuditingOptions>(options =>
         {
@@ -172,7 +173,14 @@ public class RulesEngineHttpApiHostModule : AbpModule
          });
 
     }
+    private void ConfigureExceptionFilter(ServiceConfigurationContext context)
+    {
+        context.Services.AddControllersWithViews(options =>
+        {
+            options.Filters.Add<CustomExceptionFilter>();
+        });
 
+    }
     private void ConfigureStudio(IHostEnvironment hostingEnvironment)
     {
         if (hostingEnvironment.IsProduction())
@@ -341,11 +349,11 @@ public class RulesEngineHttpApiHostModule : AbpModule
             .WriteTo.Async(a => a.Console(), bufferSize: 1 * 1024 * 1024)
 
             // Optional Seq sink
-            .WriteTo.Seq(seqUrl,
-                batchPostingLimit: 25,
-                period: TimeSpan.FromSeconds(1),
-                bufferSizeLimitBytes: 2 * 1024 * 1024,
-                eventBodyLimitBytes: 256 * 1024)
+            //.WriteTo.Seq(seqUrl,
+            //    batchPostingLimit: 25,
+            //    period: TimeSpan.FromSeconds(1),
+            //    bufferSizeLimitBytes: 2 * 1024 * 1024,
+            //    eventBodyLimitBytes: 256 * 1024)
 
             // Filters: include only errors or specific HTTP methods
             .Filter.ByIncludingOnly(evt =>

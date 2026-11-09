@@ -1,10 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
+using RulesEngine.Permissions;
+using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Threading;
-using Microsoft.AspNetCore.Authorization;
-using RulesEngine.Permissions;
 
 namespace RulesEngine.Integrations
 {
@@ -12,15 +13,13 @@ namespace RulesEngine.Integrations
     public class IntegrationsAppService : ApplicationService, IIntegrationsAppService
     {
         private readonly IRulesValidationManager _rulesValidationManager;
-        private readonly ILogger<IntegrationsAppService> _logger;
-
-        public IntegrationsAppService(IRulesValidationManager rulesValidationManager, ILogger<IntegrationsAppService> logger)
+ 
+        public IntegrationsAppService(IRulesValidationManager rulesValidationManager )
         {
             _rulesValidationManager = rulesValidationManager;
-            _logger = logger;
-        }
+         }
 
-        public async Task<ClaimValidationResponse> ValidateClaimsIntegrationExtended(ClaimValidation input)
+        public async Task<ClaimValidationResponse> ValidateClaimsIntegrationExtended(ClaimValidation input, CancellationToken cancellationToken = default)
         {
             if ((input.workflows == null || input.workflows.Count == 0) && (input.workflownames == null || input.workflownames.Count == 0))
                 throw new UserFriendlyException("Workflows are required (either workflows ids or workflownames)");
@@ -32,8 +31,8 @@ namespace RulesEngine.Integrations
             var result = await _rulesValidationManager.SpecificValidateClaimsByCodesExtended(
                 input.workflows,
                 input.workflownames,
-                input.ClaimValidationRequests,
-                LazyServiceProvider.LazyGetRequiredService<ICancellationTokenProvider>().Token);
+                input.ClaimValidationRequests, cancellationToken
+                );
             return result;
         }
     }
