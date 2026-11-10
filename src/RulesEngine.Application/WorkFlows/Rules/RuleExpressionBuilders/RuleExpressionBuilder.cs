@@ -52,17 +52,11 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
         RuleTreeValidator.Validate(rule.Root, config);
 
         var fields = config.Fields
-            .GroupBy(f => f.Key)
-            .ToDictionary(
-                g => g.Key,
-                g =>
-                {
-                    var f = g.Last();
-                    return new FieldMapDto(
-                        f.Key ?? throw new RuleValidationException(
-                            $"Field '{f.Label}' has no context path in form config '{config.Name}'."),
-                        FieldMapDto.KindOf(f.DataType));
-                });
+         .Select(f => new FieldMapDto(
+             f.Key ?? throw new RuleValidationException(
+                 $"Field '{f.Label}' has no context path in form config '{config.Name}'."),
+             FieldMapDto.KindOf(f.DataType)))
+         .ToList();
 
         return await Build(rule.Root, config.StrategyKey, fields);
     }
@@ -71,22 +65,16 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
         RuleTreeValidator.ValidateWitErrors(rule.Root, config);
 
         var fields = config.Fields
-            .GroupBy(f => f.Key)
-            .ToDictionary(
-                g => g.Key,
-                g =>
-                {
-                    var f = g.Last();
-                    return new FieldMapDto(
-                        f.Key ?? throw new RuleValidationException(
-                            $"Field '{f.Label}' has no context path in form config '{config.Name}'."),
-                        FieldMapDto.KindOf(f.DataType));
-                });
+       .Select(f => new FieldMapDto(
+           f.Key ?? throw new RuleValidationException(
+               $"Field '{f.Label}' has no context path in form config '{config.Name}'."),
+           FieldMapDto.KindOf(f.DataType)))
+       .ToList();
 
         return await Build(rule.Root, config.StrategyKey, fields);
     }
 
-    public async Task<RuleExpressionResultDto> Build(RuleNodeDto root, string? strategyKey, IReadOnlyDictionary<string, FieldMapDto> fields)
+    public async Task<RuleExpressionResultDto> Build(RuleNodeDto root, string? strategyKey, IReadOnlyList< FieldMapDto> fields)
     {
         var condition = Render(root, _strategy, fields, isRoot: true);
         return new RuleExpressionResultDto(_strategy.Key, condition, _strategy.Finalize(condition));
@@ -665,11 +653,12 @@ public class RuleExpressionBuilder : IRuleExpressionBuilder
     }
 
     private static string Render(RuleNodeDto node, IRuleExpressionStrategy strategy,
-        IReadOnlyDictionary<string, FieldMapDto> fields, bool isRoot)
+        IReadOnlyList<FieldMapDto> fields, bool isRoot)
     {
         if (node.NodeType == RuleNodeType.Condition)
         {
-            if (node.FieldKey is null || !fields.TryGetValue(node.FieldKey, out var map))
+            var map = fields.FirstOrDefault(x => x.key == node.FieldKey);
+            if (node.FieldKey is null || map is null)
                 throw new RuleValidationException($"Field '{node.FieldKey}' is not part of this form config.");
 
             return strategy.RenderCondition(node, map);

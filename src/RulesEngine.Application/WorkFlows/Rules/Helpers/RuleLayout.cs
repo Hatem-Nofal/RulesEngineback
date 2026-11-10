@@ -57,7 +57,10 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
                         NodeType = RuleNodeType.Condition,
                         FieldKey = n.FieldKey,
                         Operator = n.Operator,
-                        LogicalJoinOperator = join
+                        LogicalJoinOperator = join,
+                        Id=n.Id,
+                        
+                        
                     };
                     slots[SlotId(key, seen[key])] = leaf;
                     return leaf;
@@ -68,7 +71,9 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
                 {
                     NodeType = RuleNodeType.Group,
                     LogicalOperator = groupOp,
-                    LogicalJoinOperator = join
+                    LogicalJoinOperator = join,
+                    Id=n.Id,
+                    
                 };
 
                 var children = byParent[n.Id].OrderBy(c => c.Order).ToList();
@@ -103,7 +108,7 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
 
             var seen = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             var root = Instantiate(_root, pending, seen, isRoot: true)
-                       ?? new RuleNodeDto { NodeType = RuleNodeType.Group, LogicalOperator = _root.LogicalOperator ?? LogicalOperator.And };
+                       ?? new RuleNodeDto { NodeType = RuleNodeType.Group, LogicalOperator = _root.LogicalOperator ?? LogicalOperator.And,Id=_root.Id };
 
             // Only one group survived (the others were blank): hoist its items so we don't emit a redundant "((...))".
             while (root.Children.Count == 1 && root.Children[0].NodeType == RuleNodeType.Group)
@@ -157,7 +162,8 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
             {
                 NodeType = RuleNodeType.Group,
                 LogicalOperator = template.LogicalOperator,
-                LogicalJoinOperator = template.LogicalJoinOperator
+                LogicalJoinOperator = template.LogicalJoinOperator,
+                Id=template.Id
             };
 
             foreach (var child in template.Children)

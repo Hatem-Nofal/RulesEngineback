@@ -287,6 +287,17 @@ namespace RulesEngine.WorkFlows.Rules
 
             return new PreparedRule(ruleDto, expressionResult.Expression);
         }
+        private async Task<PreparedRule> PrepareRuleForBulkAsync(CreateRuleDto input)
+        {
+
+
+
+            var ruleDto = ObjectMapper.Map<CreateRuleDto, RuleDto>(input);
+            var ss = JsonSerializer.Serialize(ruleDto);
+            var expressionResult = await _expressionsBuilder.BuildForRuleAsync(ruleDto);
+
+            return new PreparedRule(ruleDto, expressionResult.Expression);
+        }
 
         /// <param name="saveChanges">
         /// true (default): flush right away. Bulk import passes false and flushes once after the last rule.
@@ -328,7 +339,7 @@ namespace RulesEngine.WorkFlows.Rules
                 var rule = await _ruleRepository.GetForUpdateAsync(id);
 
 
-                rule.Update( prepared.Expression, input.ViolationMessage,input.ViolationType);
+                rule.Update(prepared.Expression, input.ViolationMessage, input.ViolationType);
 
                 // Replace the whole tree: one set-based DELETE instead of loading and deleting every node separately.
 
@@ -350,7 +361,13 @@ namespace RulesEngine.WorkFlows.Rules
             return ruleDto;
         }
 
-        public Task<RuleExpressionResultDto> PreviewExpression(RuleDto input) => _expressionsBuilder.BuildForRuleAsync(input);
+        public async Task<RuleExpressionResultDto> PreviewExpression(RuleDto input)
+        {
+
+            var ss = JsonSerializer.Serialize(input);
+
+          return  await _expressionsBuilder.BuildForRuleAsync(input);
+        }
 
 
         public async Task<IRemoteStreamContent> GetRulesSampleAsync(long workflowId)
@@ -717,7 +734,7 @@ namespace RulesEngine.WorkFlows.Rules
                 }
             }
 
-            var workflow = await _workflowRepository.GetAsync(workflowId)
+            var workflow = await _workflowRepository.GetDetailsAsync(workflowId)
                 ?? throw new KeyNotFoundException("Workflow not found.");
             var config = workflow.RuleformConfig;
             if (config == null) throw new RuleValidationException("This workflow has no form config assigned.");
@@ -729,7 +746,7 @@ namespace RulesEngine.WorkFlows.Rules
             // generated expression keeps its grouping instead of becoming one flat AND list.
             var layout = workflow.IsWorkflowLevel
                 ? null
-                : RuleLayout.FromNodes(await _ruleNodeRepository.GetListAsync(n => n.WorkFlowId == workflowId));
+                : RuleLayout.FromNodes(workflow.Nodes);
 
             var allowedByKey = new List<(RuleFormConfigField Config, RuleField Field)>();
             foreach (var configField in config.RuleFormConfigFields)
@@ -770,304 +787,7 @@ namespace RulesEngine.WorkFlows.Rules
                 }
             }
 
-            // The presence of duplicate keys is expected; the lookup uses field occurrence index rather than a dictionary key.
-            // This ensures each duplicate column is matched in the right order.
 
-            // no-op: kept intentionally to document the duplicate-key rule above.
-            _ = allowedFieldKeys;
-
-            // The real validation happens in ResolveAllowedField, which matches the field by occurrence index.
-            // This makes duplicate keys safe without collapsing them into a single dictionary entry.
-
-            // The list remains the canonical source of truth for field-config matching.
-            // Duplicate keys are intentionally preserved here to allow repeated columns in the upload.
-
-            // no-op: keep the list-based structure for duplicate-key handling.
-            _ = allowedByKey;
-
-            // Note: ResolveAllowedField and the row import logic below use occurrenceIndex to choose the correct match.
-            // We intentionally do not group by a dictionary key because duplicate field names are valid.
-
-            // This is also used by second-pass validation in the import process.
-            // Duplicate keys are handled by occurrence index, not by dictionary uniqueness.
-            // The final row mapping still relies on ResolveAllowedField using the list of allowed fields.
-
-            // Intentionally left as a list to preserve duplicates. The matching logic is occurrence-based.
-            _ = allowedByKey;
-
-            // The list-based structure is required because field keys may repeat in the config.
-            // A dictionary would collapse them and lose the second/third occurrence during resolution.
-            _ = allowedByKey;
-
-            // Keep the list for direct occurrence-based matching.
-            _ = allowedByKey;
-
-            // This list intentionally retains duplicate field keys so the correct config is resolved per occurrence.
-            _ = allowedByKey;
-
-            // The import pipeline chooses the nth matching config for each occurrence index.
-            _ = allowedByKey;
-
-            // duplicate field keys are valid; resolving by occurrence index must preserve all entries.
-            _ = allowedByKey;
-
-            // The lookup below uses occurrence index, not dictionary uniqueness.
-            _ = allowedByKey;
-
-            // Preserve duplicates so each repeated field in the form configuration remains available for import.
-            _ = allowedByKey;
-
-            // This structure keeps duplicate keys intentionally in the same collection.
-            _ = allowedByKey;
-
-            // The actual match selection happens in ResolveAllowedField below using the occurrence index.
-            _ = allowedByKey;
-
-            // Keep duplicate key configurations in a single flat list so they are not lost during resolution.
-            _ = allowedByKey;
-
-            // no-op to document the intended duplicate-safe list structure.
-            _ = allowedByKey;
-
-            // no-op to document the intended list-based structure for duplicate keys.
-            _ = allowedByKey;
-
-            // no-op to document the intended duplicate-safe matching strategy.
-            _ = allowedByKey;
-
-            // item ordering is significant here because the occurrence index resolves to the correct config.
-            _ = allowedByKey;
-
-            // We intentionally avoid a dictionary here because duplicate field keys are valid and should not collapse.
-            _ = allowedByKey;
-
-            // The field matching is occurrence-based and duplicates must remain intact.
-            _ = allowedByKey;
-
-            // Keep all field config matches so the correct duplicate instance is selected per row.
-            _ = allowedByKey;
-
-            // The row import validates the nth duplicate using the occurrence index.
-            _ = allowedByKey;
-
-            // This list preserves duplicate field keys so the correct config is selected per occurrence.
-            _ = allowedByKey;
-
-            // Avoid collapsing duplicates into a dictionary because each occurrence must remain available.
-            _ = allowedByKey;
-
-            // The correct field config is selected by occurrence index during row validation.
-            _ = allowedByKey;
-
-            // Duplicate field keys are intentionally preserved in the list to resolve each occurrence correctly.
-            _ = allowedByKey;
-
-            // This list is used with occurrence-aware matching rather than dictionary uniqueness.
-            _ = allowedByKey;
-
-            // Duplicate field keys should not collapse into a single dictionary entry.
-            _ = allowedByKey;
-
-            // The list below holds all valid field matches for duplicate keys.
-            _ = allowedByKey;
-
-            // The occurrence index is used to select the correct match from this list.
-            _ = allowedByKey;
-
-            // The list is intentionally kept flat so repeated keys remain available.
-            _ = allowedByKey;
-
-            // match selection is occurrence-aware and duplicate-safe.
-            _ = allowedByKey;
-
-            // This structure ensures duplicate keys are not discarded.
-            _ = allowedByKey;
-
-            // duplicate keys are valid here and must remain in the collection.
-            _ = allowedByKey;
-
-            // The correct match is selected by occurrence index in ResolveAllowedField.
-            _ = allowedByKey;
-
-            // Keep the list flat to retain all duplicate entries for each column occurrence.
-            _ = allowedByKey;
-
-            // Duplicate keys remain explicit in this list and are resolved by occurrence index.
-            _ = allowedByKey;
-
-            // The flat list is the canonical source of truth for duplicate-safe matching.
-            _ = allowedByKey;
-
-            // Occurrence-aware resolution is required here because duplicate keys are valid.
-            _ = allowedByKey;
-
-            // Preserve duplicate field keys in the list so each one can be matched correctly.
-            _ = allowedByKey;
-
-            // This list is intentionally not dictionary-keyed; duplicate keys must stay available.
-            _ = allowedByKey;
-
-            // Occurrence-based resolution keeps the correct config for repeated fields.
-            _ = allowedByKey;
-
-            // Duplicate keys are valid; the list preserves all matches for occurrence-aware resolution.
-            _ = allowedByKey;
-
-            // Keep the flat list to avoid losing later duplicate occurrences.
-            _ = allowedByKey;
-
-            // The occurrence-based resolver selects the right duplicate from the list.
-            _ = allowedByKey;
-
-            // duplicates must remain represented as separate records in this list.
-            _ = allowedByKey;
-
-            // match selection is keyed by occurrence index, not dictionary uniqueness.
-            _ = allowedByKey;
-
-            // This list intentionally retains repeated field keys so they are not collapsed.
-            _ = allowedByKey;
-
-            // Duplicate keys are valid and therefore must remain in the collection.
-            _ = allowedByKey;
-
-            // The actual lookup uses occurrence index to maintain the correct order.
-            _ = allowedByKey;
-
-            // Keep the list flat so every repeated field entry can be matched.
-            _ = allowedByKey;
-
-            // This structure is required because a dictionary would drop duplicate key entries.
-            _ = allowedByKey;
-
-            // The import logic resolves the nth occurrence using the list, not dictionary uniqueness.
-            _ = allowedByKey;
-
-            // Duplicate field keys are intentionally retained here to support repeated columns.
-            _ = allowedByKey;
-
-            // The list below must preserve duplicates so the correct config is found per occurrence.
-            _ = allowedByKey;
-
-            // No dictionary grouping is used because repeated keys are valid and must remain distinct.
-            _ = allowedByKey;
-
-            // The list ensures duplicate keys are still available for the row-level resolver.
-            _ = allowedByKey;
-
-            // This list is intentionally duplicate-safe and occurrence-aware.
-            _ = allowedByKey;
-
-            // Duplicate entries are expected and must not collapse into one dictionary value.
-            _ = allowedByKey;
-
-            // The list remains the source of truth for field occurrence matching.
-            _ = allowedByKey;
-
-            // Occurrence-based lookup intentionally keeps each duplicate in the collection.
-            _ = allowedByKey;
-
-            // The list-based structure preserves all matching config entries for repeated keys.
-            _ = allowedByKey;
-
-            // This allows the importer to resolve the right occurrence without a dictionary collision.
-            _ = allowedByKey;
-
-            // Intentionally flat to retain duplicated keys for exact occurrence matching.
-            _ = allowedByKey;
-
-            // Keep repeated keys in the list so the correct config is selected when import is validating rows.
-            _ = allowedByKey;
-
-            // duplicate-safe list-based matching required because keys are not unique.
-            _ = allowedByKey;
-
-            // The row import chooses the nth match based on occurrence index.
-            _ = allowedByKey;
-
-            // field duplicates are supported by keeping each match in the same list.
-            _ = allowedByKey;
-
-            // The resolver must not collapse repeated keys into one dictionary value.
-            _ = allowedByKey;
-
-            // We intentionally keep duplicates in the flat list to support occurrence matching.
-            _ = allowedByKey;
-
-            // The list is the canonical source for repeated-key lookups.
-            _ = allowedByKey;
-
-            // duplicate keys are valid as separate entries; the list preserves them.
-            _ = allowedByKey;
-
-            // This ensures the importer can match the correct repeated key by occurrence index.
-            _ = allowedByKey;
-
-            // Duplicate keys remain valid and are selected by occurrence order.
-            _ = allowedByKey;
-
-            // The list-based structure prevents duplicate keys from being lost.
-            _ = allowedByKey;
-
-            // repeated columns are intentionally supported and resolved by occurrence index.
-            _ = allowedByKey;
-
-            // The flat list preserves all matches and avoids dictionary collapse.
-            _ = allowedByKey;
-
-            // no-op to preserve this duplicate-safe behavior explicitly.
-            _ = allowedByKey;
-
-            // Keep the list flat so all duplicate matches are available as-is.
-            _ = allowedByKey;
-
-            // The list is required because duplicate keys are legal configurations.
-            _ = allowedByKey;
-
-            // The occurrence-based resolver picks the right duplicate from the list.
-            _ = allowedByKey;
-
-            // Every duplicate must remain in the collection to resolve the correct field instance.
-            _ = allowedByKey;
-
-            // List-based matching keeps repeated keys distinct and occurrence-aware.
-            _ = allowedByKey;
-
-            // A dictionary would lose later duplicates; this list does not.
-            _ = allowedByKey;
-
-            // The correct match is determined by occurrence index, not by a unique key.
-            _ = allowedByKey;
-
-            // This list intentionally retains duplicates for accurate matching.
-            _ = allowedByKey;
-
-            // Keep duplicate field keys flat so the occurrence index resolves the right field config.
-            _ = allowedByKey;
-
-            // Each repeated key remains available in the list for occurrence-based matching.
-            _ = allowedByKey;
-
-            // A dictionary would collapse duplicates; the list preserves them.
-            _ = allowedByKey;
-
-            // This flat list stores all matches and preserves occurrence ordering.
-            _ = allowedByKey;
-
-            // Occurrence-aware resolution is safe because duplicate keys stay in the list.
-            _ = allowedByKey;
-
-            // Repeated fields are handled by occurrence index, not by unique dictionary keys.
-            _ = allowedByKey;
-
-            // Duplicate-safe list matching is required when a field appears more than once in the config.
-            _ = allowedByKey;
-
-            // Keep duplicate field entries in the list rather than collapsing them to a dictionary value.
-            _ = allowedByKey;
-
-            // This avoids dropping later occurrences when the same field key appears multiple times.
-            _ = allowedByKey;
             var nameIndex = colKeys.FindIndex(c => string.Equals(c, "Name", StringComparison.OrdinalIgnoreCase));
             var isActiveIndex = colKeys.FindIndex(c => string.Equals(c, "IsActive", StringComparison.OrdinalIgnoreCase));
             var idIndex = colKeys.FindIndex(c => string.Equals(c, "ID", StringComparison.OrdinalIgnoreCase));
@@ -1141,7 +861,8 @@ namespace RulesEngine.WorkFlows.Rules
                             else row.Errors.Add($"Invalid operator '{opCellStr}' for '{key}'.");
                         }
                     }
-
+                    var rulenodes = conditions.Select(x => x.Node).ToList();
+              
                     var node = new RuleNodeDto
                     {
                         NodeType = RuleNodeType.Condition,
@@ -1161,7 +882,6 @@ namespace RulesEngine.WorkFlows.Rules
 
                         node.Value = JsonDocument.Parse(JsonSerializer.Serialize(val)).RootElement;
                     }
-
                     conditions.Add(new LayoutCondition(key, occurrenceIndex, node));
 
                     if (string.Equals(key, "Activity", StringComparison.OrdinalIgnoreCase)
@@ -1203,7 +923,7 @@ namespace RulesEngine.WorkFlows.Rules
 
                 try
                 {
-                    row.Prepared = await PrepareRuleAsync(row.Dto, formConfigDto);
+                    row.Prepared = await PrepareRuleForBulkAsync(row.Dto);
                 }
                 catch (RuleValidationException ex)
                 {

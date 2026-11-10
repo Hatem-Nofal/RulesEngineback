@@ -398,12 +398,26 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
             {
                 await batch.EnsureCompiledAsync(engine, args, cancellationToken);
                 var results = await engine.ExecuteAllRulesAsync(batch.Name, args, cancellationToken);
-
-                for (var i = 0; i < results.Count; i++)
+                var failuresResults = results.Where(x => !x.IsSuccess).ToList();
+                for (var i = 0; i < failuresResults.Count(); i++)
                 {
-                    var result = results[i];
+                    var result = failuresResults[i];
+                  
 
+                    if (result.IsSuccess)
+                    {
+                        //outcome.RulesEngineViolationLog.Add(RulesEngineExecutionLog.Create(plan.Name, plan.Id, ruleName, ruleId, "", "",
+                        //                      claim.ClaimNumber, result.Rule.Expression, ((ActivityRuleContext)inputs)?.Activity, false));
+
+                        continue;
+                    }
                     var ruleName = result.Rule.RuleName;
+                    result.Inputs.TryGetValue("ctx", out var inputs);
+                    var ruleId = long.Parse(result.Rule
+                                      .GetType()
+                                      .GetProperty("RuleId")
+                                      ?.GetValue(result.Rule)
+                                      ?.ToString() ?? "0");
                     if (!string.IsNullOrEmpty(result.ExceptionMessage))
                         LogRuleThrew(ruleName, plan.Name, claim.ClaimNumber, activityId, result.ExceptionMessage);
                     var ruleType = result.Rule.GetType();
@@ -413,22 +427,10 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                                         .GetProperty("ViolationType")
                                         ?.GetValue(result.Rule)
                                         ?.ToString();
-                    var ruleId = long.Parse(result.Rule
-                                        .GetType()
-                                        .GetProperty("RuleId")
-                                        ?.GetValue(result.Rule)
-                                        ?.ToString() ?? "0");
+                  
 
                     var activityQuantity = RuleHelpers.GetPropertyValue("ActivityQuantity", result.Inputs);
                     int.TryParse(activityQuantity?.ToString(), out var maxDailyQuantity);
-                    result.Inputs.TryGetValue("ctx", out var inputs);
-                    if (result.IsSuccess)
-                    {
-                        outcome.RulesEngineViolationLog.Add(RulesEngineExecutionLog.Create(plan.Name, plan.Id, ruleName, ruleId, "", "",
-                                              claim.ClaimNumber, result.Rule.Expression, ((ActivityRuleContext)inputs)?.Activity, false));
-
-                        continue;
-                    }
 
                     outcome.Failures.Add(new ClaimValidationResultDto
                     {

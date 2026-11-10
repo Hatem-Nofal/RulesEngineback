@@ -18,10 +18,10 @@ namespace RulesEngine.WorkFlows.Rules.RuleExpressionBuilders
         /// </summary>
         Task<RuleExpressionResultDto> BuildForRuleAsync(RuleDto rule, RuleFormConfigDto config);
         Task<RuleExpressionResultDto> BuildForBulkRuleAsync(RuleDto rule, RuleFormConfigDto config);
-        Task<RuleExpressionResultDto> Build(RuleNodeDto root, string? strategyKey, IReadOnlyDictionary<string, FieldMapDto> fields);
+        Task<RuleExpressionResultDto> Build(RuleNodeDto root, string? strategyKey, IReadOnlyList< FieldMapDto> fields);
 
         /// <summary>
-        /// Reverse of <see cref="Build(RuleNodeDto, string?, IReadOnlyDictionary{string, FieldMapDto})"/>.
+        /// Reverse of <see cref="Build(RuleNodeDto, string?, IReadOnlyList{FieldMapDto})"/>.
         /// Parses the generated expression back into a rule tree using the provided workflow fields.
         /// </summary>
         Task<RuleNodeDto> ReverseBuild(string expression, IReadOnlyList<RuleFormFieldDto> fields);
