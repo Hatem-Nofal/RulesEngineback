@@ -23,7 +23,10 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         public string? ViolationMessage { get; private set; }
         public bool IsActive { get; private set; } = true;
         public string Expression { get; private set; }
+        public List<RuleAuditLog> RuleAuditLogs { get; private set; } = new();
 
+        [NotMapped]
+        public IReadOnlyCollection<RuleAuditLog> _ruleAuditLog => RuleAuditLogs.AsReadOnly();
         public Rule()
         {
 
@@ -44,11 +47,11 @@ namespace RulesEngine.Entities.WorkFlows.Rules
             rule.ViolationType = violationType;
             return rule;
         }
-        public void Update(  string expression, string? violationMessage, ViolationType violationType)
+        public void Update(string expression, string? violationMessage, ViolationType violationType)
         {
-             Expression = expression;
+            Expression = expression;
             ViolationMessage = violationMessage;
-             ViolationType = violationType;
+            ViolationType = violationType;
 
 
         }
@@ -71,16 +74,22 @@ namespace RulesEngine.Entities.WorkFlows.Rules
 
         }
 
- 
+
 
         public void Activate() => IsActive = true;
         public void Deactivate() => IsActive = false;
 
-       
+
         public void GenerateUniqueNameAsync(int count, string workflowName)
         {
 
             Name = $"{workflowName}-Rule-{count + 1}";
+        }
+
+        public void AddRuleAuditLog(RuleAuditLog ruleAuditLog)
+        {
+            if (ruleAuditLog == null) throw new ArgumentNullException(nameof(ruleAuditLog));
+            RuleAuditLogs.Add(ruleAuditLog);
         }
     }
 }

@@ -82,6 +82,7 @@ public class RulesEngineDbContext :
     public DbSet<ActivitySubTypeDtg> ActivitySubTypeDtgs { get; set; }
     public DbSet<BatchType> BatchTypes { get; set; }
     public DbSet<RulesEngineExecutionLog> RulesEngineViolationLogs { get; set; }
+    public DbSet<RuleAuditLog> RuleAuditLogs { get; set; }
 
     #endregion
 

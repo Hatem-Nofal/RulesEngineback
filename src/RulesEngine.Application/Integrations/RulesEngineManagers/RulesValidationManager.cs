@@ -3,6 +3,7 @@ using RulesEngine.Common.Enums;
 using RulesEngine.Common.Helper;
 using RulesEngine.Entities.Logers;
 using RulesEngine.Entities.Lookups;
+using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.Integrations;
 using RulesEngine.Integrations.RulesEngineManagers;
 using RulesEngine.Models;
@@ -16,6 +17,7 @@ using Volo.Abp;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Linq;
+using static FastExpressionCompiler.ExpressionCompiler;
 
 namespace RulesEngine.IntegrationsNew.RulesEngineManagers;
 
@@ -365,7 +367,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
         switch (plan.RejectionLevel)
         {
             case RejectionLevel.Activity:
-            
+
                 foreach (var activity in claim.Activities)
                 {
                     var args = claim.CreateActivityArgs(activity);
@@ -398,11 +400,21 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
             {
                 await batch.EnsureCompiledAsync(engine, args, cancellationToken);
                 var results = await engine.ExecuteAllRulesAsync(batch.Name, args, cancellationToken);
+                if (results.All(x => x.IsSuccess))
+                {
+                    var result = results.FirstOrDefault();
+
+                    result.Inputs.TryGetValue("ctx", out var inputs);
+
+                    outcome.RulesEngineViolationLog.Add(RulesEngineExecutionLog.Create(plan.Name, plan.Id, "", null, "", "",
+                                        claim.ClaimNumber, "", ((ActivityRuleContext)inputs)?.Activity, false));
+                    continue;
+                }
                 var failuresResults = results.Where(x => !x.IsSuccess).ToList();
                 for (var i = 0; i < failuresResults.Count(); i++)
                 {
                     var result = failuresResults[i];
-                  
+
 
                     if (result.IsSuccess)
                     {
@@ -427,7 +439,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                                         .GetProperty("ViolationType")
                                         ?.GetValue(result.Rule)
                                         ?.ToString();
-                  
+
 
                     var activityQuantity = RuleHelpers.GetPropertyValue("ActivityQuantity", result.Inputs);
                     int.TryParse(activityQuantity?.ToString(), out var maxDailyQuantity);
@@ -451,8 +463,9 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
                          ruleId,
                          violationType,
                         RuleHelpers.FormatMessage(result.ExceptionMessage, result.Inputs),
-                                                claim.ClaimNumber,
-                        result.Rule.Expression, ((ActivityRuleContext)inputs)?.Activity, true));
+                         claim.ClaimNumber,
+                        result.Rule.Expression,
+                        ((ActivityRuleContext)inputs)?.Activity, true));
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

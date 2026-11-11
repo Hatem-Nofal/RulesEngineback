@@ -38,7 +38,7 @@ namespace RulesEngine.Entities.WorkFlows
         public List<RuleNode> Nodes { get; private set; } = new();
 
         [NotMapped]
-        public IReadOnlyCollection<RuleNode> _Nodes => Nodes.AsReadOnly();
+        public IReadOnlyCollection<RuleNode> _nodes => Nodes.AsReadOnly();
         public WorkFlow()
         {
 

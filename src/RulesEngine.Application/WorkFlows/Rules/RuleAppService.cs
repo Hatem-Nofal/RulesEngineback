@@ -320,7 +320,7 @@ namespace RulesEngine.WorkFlows.Rules
 
             rule.GenerateUniqueNameAsync(count, workflow.Name);
 
-
+            rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, prepared.Expression));
 
             await _ruleRepository.InsertAsync(rule);
 
@@ -346,6 +346,7 @@ namespace RulesEngine.WorkFlows.Rules
 
                 if (input.IsActive) rule.Activate(); else rule.Deactivate();
 
+                rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, prepared.Expression));
 
 
                 await _ruleRepository.UpdateAsync(rule);
@@ -366,7 +367,7 @@ namespace RulesEngine.WorkFlows.Rules
 
             var ss = JsonSerializer.Serialize(input);
 
-          return  await _expressionsBuilder.BuildForRuleAsync(input);
+            return await _expressionsBuilder.BuildForRuleAsync(input);
         }
 
 
@@ -862,7 +863,7 @@ namespace RulesEngine.WorkFlows.Rules
                         }
                     }
                     var rulenodes = conditions.Select(x => x.Node).ToList();
-              
+
                     var node = new RuleNodeDto
                     {
                         NodeType = RuleNodeType.Condition,
@@ -946,19 +947,29 @@ namespace RulesEngine.WorkFlows.Rules
             // ---- Any problem: give the user their own sheet back, annotated. Nothing has been saved. ----
 
             // ---- Phase 2: everything is valid; save. All rows are written in one flush (one transaction). ----
-            foreach (var row in rows.Where(x => !x.Errors.Any()))
+            var newRules = rows.Where(x =>! x.ExistingId.HasValue).ToList();
+            var updateRules = rows.Where(x => x.ExistingId.HasValue).ToList();
+            if (newRules.Any())
             {
-                if (row.ExistingId.HasValue)
-                {
-                    await UpdateRuleAsync(row.Dto!, row.ExistingId.Value, row.Prepared, saveChanges: false);
-
-                }
-                else
-                {
-                    await SaveRuleAsync(row.Dto!, row.Prepared, saveChanges: false);
-
-                }
+                await SaveBulkRulesAsync(newRules);
             }
+            if (updateRules.Any())
+            {
+                await UpdateBulkRulesAsync(updateRules);
+            }
+            //foreach (var row in rows.Where(x => !x.Errors.Any()))
+            //{
+            //    if (row.ExistingId.HasValue)
+            //    {
+            //        await UpdateRuleAsync(row.Dto!, row.ExistingId.Value, row.Prepared, saveChanges: false);
+
+            //    }
+            //    else
+            //    {
+            //        await SaveRuleAsync(row.Dto!, row.Prepared, saveChanges: false);
+
+            //    }
+            //}
 
             if (rows.Count > 0 && rows.Any(x => x.Errors.Count() > 0))
                 await CurrentUnitOfWork.SaveChangesAsync();
@@ -967,6 +978,71 @@ namespace RulesEngine.WorkFlows.Rules
                 return BuildErrorWorkbook(wb, ws, lastRow, rows.Where(x => x.Errors.Any()).ToList(), workflow.Name);
 
             return null;
+        }
+
+
+
+
+
+
+        private async Task SaveBulkRulesAsync(List<UploadRow> rows)
+        {
+            var rules = new List<Rule>();
+            foreach (var row in rows)
+            {
+                row.Prepared ??= await PrepareRuleAsync(row.Dto);
+                var ruleDto = row.Prepared.Dto;
+
+
+
+                var workflow = await _workflowRepository.GetAsync(row.Dto.WorkflowId);
+                var rule = new Rule(row.Dto.WorkflowId, row.Prepared.Expression, row.Dto.ViolationMessage ?? workflow.ViolationMessage);
+
+                var count = await _ruleRepository.CountAsync(x => x.WorkflowId == row.Dto.WorkflowId);
+
+
+                if (row.Dto.IsActive) rule.Activate(); else rule.Deactivate();
+
+
+                rule.GenerateUniqueNameAsync(rules.Count(), workflow.Name);
+
+                rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, row.Prepared.Expression));
+                rules.Add(rule);
+            }
+            await _ruleRepository.InsertManyAsync(rules);
+
+            await EngineManager.ReloadAfterCommitAsync();   // once per unit of work, even for bulk uploads
+        }
+        private async Task UpdateBulkRulesAsync(List<UploadRow> rows)
+        {
+            var rules = new List<Rule>();
+            foreach (var row in rows)
+            {
+                row.Prepared ??= await PrepareRuleAsync(row.Dto);
+                var ruleDto = row.Prepared.Dto;
+
+
+                _ruleRepository.DisableTracking();
+                var rule = await _ruleRepository.GetForUpdateAsync(row.ExistingId.Value);
+
+
+                rule.Update(row.Prepared.Expression, row.Dto.ViolationMessage, row.Dto.ViolationType);
+
+                // Replace the whole tree: one set-based DELETE instead of loading and deleting every node separately.
+
+
+                if (row.Dto.IsActive) rule.Activate(); else rule.Deactivate();
+
+                rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, row.Prepared.Expression));
+                rules.Add(rule);
+
+            }
+
+            await _ruleRepository.UpdateManyAsync(rules);
+
+
+            await EngineManager.ReloadAfterCommitAsync();
+
         }
 
 
