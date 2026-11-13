@@ -4,6 +4,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authorization;
 using RulesEngine.Common.Enums;
 using RulesEngine.Common.Extensions;
+using RulesEngine.Common.Helper;
 using RulesEngine.Entities.Lookups;
 using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules;
@@ -308,7 +309,8 @@ namespace RulesEngine.WorkFlows.Rules
 
 
             rule.GenerateUniqueNameAsync(count, workflow.Name);
-
+            string exceptionMessage = RuleHelpers.ReplacePlaceholders(workflow.ViolationMessage, input.Root);
+            rule.UpdateExceptionMessage(exceptionMessage);
             rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, prepared.Expression));
 
             await _ruleRepository.InsertAsync(rule);
@@ -327,6 +329,7 @@ namespace RulesEngine.WorkFlows.Rules
                 _ruleRepository.DisableTracking();
                 var rule = await _ruleRepository.GetForUpdateAsync(id);
 
+                var workflow = await _workflowRepository.GetAsync(input.WorkflowId);
 
                 rule.Update(prepared.Expression, input.ViolationMessage, input.ViolationType);
 
@@ -334,7 +337,8 @@ namespace RulesEngine.WorkFlows.Rules
 
 
                 if (input.IsActive) rule.Activate(); else rule.Deactivate();
-
+                string exceptionMessage = RuleHelpers.ReplacePlaceholders(workflow.ViolationMessage, input.Root);
+                rule.UpdateExceptionMessage(exceptionMessage);
                 rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, prepared.Expression));
 
 
@@ -694,6 +698,7 @@ namespace RulesEngine.WorkFlows.Rules
         public async Task<IRemoteStreamContent?> BulkUploadAsync(long workflowId, IRemoteStreamContent file)
         {
             if (file == null || file.ContentLength == 0) return null;
+            var workflow = await _workflowRepository.GetAsync(workflowId);
 
             var ruleFields = await _ruleFieldRepository.GetListAsync();
             var fieldsById = ruleFields.ToDictionary(x => x.Id);
@@ -728,7 +733,6 @@ namespace RulesEngine.WorkFlows.Rules
 
             // Workflow + form config + config fields only. (GetDetailsAsync also joins every existing rule and node:
             // for a workflow with thousands of rules that is a huge, useless result set.)
-            var workflow = await _workflowRepository.GetAsync(workflowId);
             var config = workflow.RuleformConfig;
             if (config == null) throw new RuleValidationException("This workflow has no form config assigned.");
 
@@ -925,7 +929,7 @@ namespace RulesEngine.WorkFlows.Rules
                 await SaveBulkRulesAsync(workflow, newRows);
 
             if (updateRows.Count > 0)
-                await UpdateBulkRulesAsync(updateRows, rulesToUpdate);
+                await UpdateBulkRulesAsync(workflow, updateRows, rulesToUpdate);
 
             await CurrentUnitOfWork!.SaveChangesAsync();
             await EngineManager.ReloadAfterCommitAsync();   // once per unit of work, however many rules changed
@@ -948,7 +952,10 @@ namespace RulesEngine.WorkFlows.Rules
 
                 if (row.IsActive) rule.Activate(); else rule.Deactivate();
 
-                rule.GenerateUniqueNameAsync(names.Next() - 1, workflow.Name);   // produces "{workflow}-Rule-{n}"
+                rule.GenerateUniqueNameAsync(names.Next() - 1, workflow.Name);
+                var root = RuleLayout.BuildFlat(row.Conditions);
+                string exceptionMessage = RuleHelpers.ReplacePlaceholders(workflow.ViolationMessage, root);
+                rule.UpdateExceptionMessage(exceptionMessage);
                 rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, row.Expression!));
                 rules.Add(rule);
             }
@@ -956,7 +963,7 @@ namespace RulesEngine.WorkFlows.Rules
             await _ruleRepository.InsertManyAsync(rules);
         }
 
-        private async Task UpdateBulkRulesAsync(List<UploadRow> rows, Dictionary<long, Rule> loadedRules)
+        private async Task UpdateBulkRulesAsync(WorkFlow workflow, List<UploadRow> rows, Dictionary<long, Rule> loadedRules)
         {
             var changed = new List<Rule>(rows.Count);
             foreach (var row in rows)
@@ -971,6 +978,10 @@ namespace RulesEngine.WorkFlows.Rules
                 // message and type (the previous code overwrote both with null/default).
                 rule.UpdateExpression(row.Expression!);
                 if (row.IsActive) rule.Activate(); else rule.Deactivate();
+                
+                var root = RuleLayout.BuildFlat(row.Conditions);
+                string exceptionMessage = RuleHelpers.ReplacePlaceholders(workflow.ViolationMessage, root);
+                rule.UpdateExceptionMessage(exceptionMessage);
 
                 rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, row.Expression!));
                 changed.Add(rule);
