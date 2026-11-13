@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using RulesEngine.Common.Enums;
 using RulesEngine.Repositories.WorkFlows;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp.DependencyInjection;
@@ -54,8 +56,10 @@ public class RulesEngineManager : IRulesEngineManager, ISingletonDependency
         if (state is null)
             return await LoadFirstSnapshotAsync(cancellationToken).ConfigureAwait(false);
 
-        if (IsFreshnessCheckDue())
-            await RefreshIfChangedAsync(cancellationToken).ConfigureAwait(false);
+        // The staleness check (and a rebuild + warm-up when something changed) runs in the background: requests keep
+        // using the current, already-compiled snapshot instead of waiting for it.
+        if (TryClaimFreshnessCheck())
+            _ = Task.Run(() => RefreshIfChangedAsync(CancellationToken.None));
 
         return (_state ?? state).Snapshot;
     }
@@ -107,8 +111,14 @@ public class RulesEngineManager : IRulesEngineManager, ISingletonDependency
         }
     }
 
-    private bool IsFreshnessCheckDue()
-        => Environment.TickCount64 - Volatile.Read(ref _lastFreshnessCheck) >= FreshnessCheckIntervalMs;
+    /// <summary>True for exactly one caller per interval: the one that wins the compare-and-swap on the timestamp.</summary>
+    private bool TryClaimFreshnessCheck()
+    {
+        var now = Environment.TickCount64;
+        var last = Volatile.Read(ref _lastFreshnessCheck);
+        return now - last >= FreshnessCheckIntervalMs
+               && Interlocked.CompareExchange(ref _lastFreshnessCheck, now, last) == last;
+    }
 
     /// <summary>Never throws (other than cancellation): on any failure the current snapshot keeps serving.</summary>
     private async Task RefreshIfChangedAsync(CancellationToken cancellationToken)
@@ -119,11 +129,6 @@ public class RulesEngineManager : IRulesEngineManager, ISingletonDependency
 
         try
         {
-            if (!IsFreshnessCheckDue())
-                return;
-
-            Volatile.Write(ref _lastFreshnessCheck, Environment.TickCount64);
-
             using var scope = _scopeFactory.CreateScope();
             var repository = scope.ServiceProvider.GetRequiredService<IWorkFlowRepository>();
             var current = await repository.GetRulesFingerprintAsync(cancellationToken).ConfigureAwait(false);
@@ -157,6 +162,23 @@ public class RulesEngineManager : IRulesEngineManager, ISingletonDependency
         }
     }
 
+    /// <summary>Compiles every batch of the new snapshot in parallel (each batch compiles exactly once).</summary>
+    private static Task WarmUpAsync(RulesEngineSnapshot snapshot, CancellationToken cancellationToken)
+    {
+        var claimArgs = ClaimWorkItem.CreateWarmupArgs(RejectionLevel.Claim);
+        var activityArgs = ClaimWorkItem.CreateWarmupArgs(RejectionLevel.Activity);
+
+        var work = snapshot.Workflows
+            .SelectMany(plan => plan.Batches.Select(batch =>
+                (Batch: batch, Args: plan.RejectionLevel == RejectionLevel.Activity ? activityArgs : claimArgs)))
+            .ToList();
+
+        return Parallel.ForEachAsync(
+            work,
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = cancellationToken },
+            async (item, token) => await item.Batch.EnsureCompiledAsync(snapshot.Engine, item.Args, token).ConfigureAwait(false));
+    }
+
     /// <summary>Caller must hold <see cref="_reloadLock"/>.</summary>
     private async Task BuildAndPublishAsync(CancellationToken cancellationToken)
     {
@@ -173,10 +195,17 @@ public class RulesEngineManager : IRulesEngineManager, ISingletonDependency
 
             var snapshot = RulesEngineSnapshotFactory.Create(workflows);
 
+            // Compile everything BEFORE the snapshot becomes visible, so no request ever pays for (or waits on) compilation.
+            await WarmUpAsync(snapshot, cancellationToken).ConfigureAwait(false);
+
             _state = new LoadedState(snapshot, fingerprint);
             Volatile.Write(ref _lastFreshnessCheck, Environment.TickCount64);
 
-            _logger.LogInformation("Rules engine loaded: {WorkflowCount} workflow(s)", snapshot.Workflows.Count);
+            var anchored = snapshot.Workflows.Sum(p => p.AnchoredRuleCount);
+            var common = snapshot.Workflows.Sum(p => p.CommonRuleCount);
+            _logger.LogInformation(
+                "Rules engine loaded: {WorkflowCount} workflow(s); activity-level rules: {Anchored} anchored to specific activity codes (skipped for other activities), {Common} evaluated for every activity",
+                snapshot.Workflows.Count, anchored, common);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {

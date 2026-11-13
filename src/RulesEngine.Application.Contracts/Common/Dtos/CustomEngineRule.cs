@@ -7,5 +7,7 @@ namespace RulesEngine.Common.Dtos
     {
         public ViolationType ViolationType { get; set; }
         public long RuleId { get; set; }
+        public string? ExceptionMessage { get;  set; }
+
     }
 }

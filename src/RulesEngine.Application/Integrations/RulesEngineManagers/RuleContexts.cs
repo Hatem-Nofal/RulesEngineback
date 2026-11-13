@@ -1,3 +1,4 @@
+using RulesEngine.Common.Helpers;
 using RulesEngine.Entities.Lookups;
 using RulesEngine.Integrations;
 using RulesEngine.Lookups;
@@ -29,14 +30,14 @@ public abstract class RuleContextBase
     public Dictionary<string, int> DtgCodeCounts { get; set; }
     public string? NationalId { get; init; }
     public int Age { get; init; }
-    public string Gender { get; init; } 
+    public string Gender { get; init; }
 
 }
 
 /// <summary>Context for workflows with RejectionLevel.Claim.</summary>
 public sealed class ClaimRuleContext : RuleContextBase
 {
-     public Dictionary<string, int> ActivitiesQuantities { get; init; } = new();
+    public Dictionary<string, int> ActivitiesQuantities { get; init; } = new();
 
     public List<string> Activities { get; init; } = new();
 }
@@ -46,7 +47,7 @@ public sealed class AllActivityRuleContext : RuleContextBase
 {
     public string? Activity { get; init; }
     public Dictionary<string, int> ActivitiesQuantities { get; init; } = new();
- 
+
     public List<string> Activities { get; init; } = new();
     public string? GenericGroup { get; init; }
     public List<string> GenericsGroups { get; init; } = new();
@@ -62,7 +63,7 @@ public sealed class ActivityRuleContext : RuleContextBase
     public List<string> DiagnosisGroupCodes { get; init; } = new();
 
     public Dictionary<string, int> MedicationCounts { get; init; } = new();
- 
+
     public List<string> Activities { get; init; } = new();
     public decimal? ActivityQuantity { get; init; }
     public Dictionary<string, decimal> MedicationQuantities { get; init; } = new();
@@ -79,6 +80,10 @@ public static class RuleContextTypes
     {
         typeof(ClaimRuleContext),
         typeof(AllActivityRuleContext),
-        typeof(ActivityRuleContext)
+        typeof(ActivityRuleContext),
+
+        // Rule expressions call LargeRuleLists.AnyCodes(...) for multi-value conditions. The expression parser can only
+        // resolve static helper types that are registered here (otherwise: "Type 'LargeRuleLists' not found").
+        typeof(LargeRuleLists)
     };
 }

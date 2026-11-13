@@ -495,6 +495,9 @@ namespace RulesEngine.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("DeletionTime");
 
+                    b.Property<string>("ExceptionMessage")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Expression")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

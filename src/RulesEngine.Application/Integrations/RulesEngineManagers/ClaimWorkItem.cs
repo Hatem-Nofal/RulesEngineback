@@ -1,7 +1,9 @@
+
+
+using RulesEngine.Common.Enums;
 using RulesEngine.Integrations;
 using RulesEngine.Models;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -15,9 +17,6 @@ namespace RulesEngine.Integrations.RulesEngineManagers;
 /// </summary>
 internal sealed class ClaimWorkItem
 {
-    // Same bound as before: caching "all other activities" per code is O(n^2) memory for large claims.
-    private const int MaxCachedOtherActivities = 64;
-    private const string NullCodeKey = "\0<null>";
     private readonly string? _specialitiesCode;
     private readonly string? _primaryGenericsGroup;
 
@@ -32,8 +31,8 @@ internal sealed class ClaimWorkItem
     private readonly Dictionary<string, int> _dtgCodeCounts;
     private readonly List<string> _genericsGroups;
     private readonly List<string> _diagnosisGroupCodes;
-    private readonly ConcurrentDictionary<string, List<string>>? _otherActivitiesByCode;
-    private RuleParameter[]? _claimLevelArgs;   // benign race: both candidates are equivalent
+    private readonly RuleParameter[]?[] _activityArgs;   // one slot per activity, shared by every workflow
+    private RuleParameter[]? _claimLevelArgs;            // benign race: both candidates are equivalent
 
     private ClaimWorkItem(ClaimValidationByCodeRequestExtended claim, int age, string gender, DateTime today)
     {
@@ -41,9 +40,11 @@ internal sealed class ClaimWorkItem
         Age = age;
         Gender = gender;
 
-        _diagnosisCodes = NormalizeCodes(claim.DiagnosisCodes);
-        _activityCodes = NormalizeCodes(claim.Activities.Select(x=>x.ActivityCode).ToList());
         Activities = claim.Activities ?? new List<ClaimActivityRequestDto>();
+        _activityArgs = new RuleParameter[Activities.Count][];
+
+        _diagnosisCodes = NormalizeCodes(claim.DiagnosisCodes);
+        _activityCodes = NormalizeCodes(Activities.Select(x => x.ActivityCode).ToList());
         _claimTags = claim.ClaimTags ?? new List<string>();
 
         _diagnosisCounts = CountCodes(_diagnosisCodes);
@@ -54,31 +55,23 @@ internal sealed class ClaimWorkItem
         foreach (var activity in Activities)
             _activityCodeById.TryAdd(activity.ActivityId, activity.ActivityCode); // first one wins
 
-        if (Activities.Count is > 0 and <= MaxCachedOtherActivities)
-            _otherActivitiesByCode = new ConcurrentDictionary<string, List<string>>(StringComparer.Ordinal);
         _specialitiesCode = claim.Claimspeccode;
-        var activities = claim.Activities.ToList() ?? new List<ClaimActivityRequestDto>();
 
         _dtgCodeCounts = CountCodes(
-                        activities
+                        Activities
                             .SelectMany(a => (a.DtgCodes ?? new List<string>())
                                 .Where(x => !string.IsNullOrWhiteSpace(x))
                                 .Select(x => x.Trim().ToUpperInvariant())
                                 .Distinct())
                             .ToList());
 
-         _genericsGroups = Activities
-            .Where(a => !string.IsNullOrWhiteSpace(a.GenericCode))
-            .Select(a => a.GenericCode!.Trim().ToUpperInvariant())
-            .ToList();
+        _genericsGroups = Activities
+           .Where(a => !string.IsNullOrWhiteSpace(a.GenericCode))
+           .Select(a => a.GenericCode!.Trim().ToUpperInvariant())
+           .ToList();
 
-        _diagnosisGroupCodes = claim.DiagnosisGroupCodes ?? new List<string>()
-                  .Where(x => !string.IsNullOrWhiteSpace(x))
-                  .Select(x => x.Trim().ToUpperInvariant())
-                  .ToList();
-
-
-       
+        // Normalized like every other code list. (The previous "a ?? b.Where(..)" only normalized the empty fallback.)
+        _diagnosisGroupCodes = NormalizeCodes(claim.DiagnosisGroupCodes);
 
     }
 
@@ -121,8 +114,18 @@ internal sealed class ClaimWorkItem
         })
     };
 
-    
-    public RuleParameter[] CreateActivityArgs(ClaimActivityRequestDto activity) => new[]
+
+    /// <summary>
+    /// The rule parameters for the activity at <paramref name="index"/>, built once and reused by every workflow that
+    /// evaluates this claim (the context is read-only, so sharing it across threads is safe).
+    /// </summary>
+    public RuleParameter[] GetActivityArgs(int index)
+        => _activityArgs[index] ??= CreateActivityArgs(Activities[index]);
+
+    /// <summary>The code rules see as <c>ctx.Activity</c> for the activity at <paramref name="index"/>.</summary>
+    public string? GetActivityCode(int index) => _activityCodeById[Activities[index].ActivityId];
+
+    private RuleParameter[] CreateActivityArgs(ClaimActivityRequestDto activity) => new[]
     {
         new RuleParameter("ctx", new ActivityRuleContext
         {
@@ -155,30 +158,12 @@ internal sealed class ClaimWorkItem
         })
     };
 
+    /// <summary>Empty contexts of the right type, used to compile a workflow's rules ahead of the first real request.</summary>
+    public static RuleParameter[] CreateWarmupArgs(RejectionLevel level) => level == RejectionLevel.Activity
+        ? new[] { new RuleParameter("ctx", new ActivityRuleContext { Gender = string.Empty }) }
+        : new[] { new RuleParameter("ctx", new ClaimRuleContext { Gender = string.Empty }) };
+
     // ---- helpers ----------------------------------------------------------------------------------
-
-    /// <summary>All activities whose code differs from the given activity's code.</summary>
-    private List<string> GetOtherActivities(ClaimActivityRequestDto activity)
-    {
-        if (_otherActivitiesByCode is null)
-            return BuildOthers(Activities, activity.ActivityCode);
-
-        return _otherActivitiesByCode.GetOrAdd(
-            activity.ActivityCode ?? NullCodeKey,
-            static (_, state) => BuildOthers(state.Activities, state.Code),
-            (Activities, Code: activity.ActivityCode));
-    }
-
-    private static List<string> BuildOthers(List<ClaimActivityRequestDto> all, string? code)
-    {
-        var others = new List<string>(all.Count);
-        foreach (var other in all)
-        {
-            if (!string.Equals(other.ActivityCode, code, StringComparison.Ordinal))
-                others.Add(other.ActivityCode);
-        }
-        return others;
-    }
 
     private static List<string> NormalizeCodes(List<string>? codes)
     {
@@ -215,3 +200,4 @@ internal sealed class ClaimWorkItem
         return sums;
     }
 }
+

@@ -120,49 +120,58 @@ namespace RulesEngine.WorkFlows
         public override async Task<WorkflowDto> UpdateAsync(long id, SaveWorkflowDto input)
         {
             var workflow = await _workFlowRepository.GetForUpdateAsync(id);
-            workflow.UpdateName(input.Name);
-            workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
-            workflow.SetIsWorkflowLevel(input.IsWorkflowLevel);
-            workflow.SetViolationMessage(input.ViolationMessage);
-            workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
-            workflow.SetViolationType(input.ViolationType);
-            if (input.IsWorkflowLevel)
+
+            try
             {
-                if (string.IsNullOrEmpty(input.RuleExpression))
-                    throw new RuleValidationException($"If WorkFlow IsWorkflowLevel , RuleExpression is require !");
-                if (workflow.Rules.Any())
+                workflow.UpdateName(input.Name);
+                workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
+                workflow.SetIsWorkflowLevel(input.IsWorkflowLevel);
+                workflow.SetViolationMessage(input.ViolationMessage);
+                workflow.UpdateRuleFormConfigId(input.RuleFormConfigId);
+                workflow.SetViolationType(input.ViolationType);
+                if (input.IsWorkflowLevel)
                 {
-                    var rule = workflow.Rules.FirstOrDefault();
-                    rule.UpdateExpression(input.RuleExpression);
-                    rule.UpdateViolationMessage(input.ViolationMessage);
-                    rule.UpdateViolationType(input.ViolationType);
-                    await _ruleRepository.UpdateAsync(rule);
+                    if (string.IsNullOrEmpty(input.RuleExpression))
+                        throw new RuleValidationException($"If WorkFlow IsWorkflowLevel , RuleExpression is require !");
+                    if (workflow.Rules.Any())
+                    {
+                        var rule = workflow.Rules.FirstOrDefault();
+                        rule.UpdateExpression(input.RuleExpression);
+                        rule.UpdateViolationMessage(input.ViolationMessage);
+                        rule.UpdateViolationType(input.ViolationType);
+                        await _ruleRepository.UpdateAsync(rule);
+                    }
+                    else
+                    {
+                        var rule = Rule.CreateRuleForCustomeWorkflow("Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression, input.ViolationMessage, input.ViolationType);
+                        await _ruleRepository.InsertAsync(rule);
+                    }
                 }
                 else
                 {
-                    var rule = Rule.CreateRuleForCustomeWorkflow("Rule-" + workflow.Name + "-1", workflow.Id, input.RuleExpression, input.ViolationMessage, input.ViolationType);
-                    await _ruleRepository.InsertAsync(rule);
+                    await _ruleNodeRepository.DeleteDirectAsync(n => n.WorkFlowId == workflow.Id);
+
+                    var flatNodes = new List<RuleNode>();
+                    RuleTreeMapper.Flatten(input.Root, workflow.Id, null, 0, flatNodes);
+                    workflow.AddNodes(flatNodes);
+
+
+
+                    if (workflow.Nodes.Count > 0)
+                    {
+                        await _ruleNodeRepository.InsertManyAsync(workflow.Nodes);
+                        await CurrentUnitOfWork.SaveChangesAsync();
+                    }
                 }
+
+
+                await _workFlowRepository.UpdateAsync(workflow);
             }
-            else
+            catch (Exception)
             {
-                await _ruleNodeRepository.DeleteDirectAsync(n => n.WorkFlowId == workflow.Id);
 
-                var flatNodes = new List<RuleNode>();
-                RuleTreeMapper.Flatten(input.Root, workflow.Id, null, 0, flatNodes);
-                workflow.AddNodes(flatNodes);
-
-
-
-                if (workflow.Nodes.Count > 0)
-                {
-                    await _ruleNodeRepository.InsertManyAsync(workflow.Nodes);
-                    await CurrentUnitOfWork.SaveChangesAsync();
-                }
+                throw;
             }
-
-
-            await _workFlowRepository.UpdateAsync(workflow);
             return Map(workflow, new Dictionary<long, string>(), new Dictionary<long, int> { [workflow.Id] = 0 });
         }
 

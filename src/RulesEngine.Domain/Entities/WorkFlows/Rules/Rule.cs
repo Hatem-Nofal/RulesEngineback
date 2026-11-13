@@ -21,6 +21,8 @@ namespace RulesEngine.Entities.WorkFlows.Rules
 
         public ViolationType ViolationType { get; private set; } = ViolationType.Error;
         public string? ViolationMessage { get; private set; }
+        public string? ExceptionMessage { get; private set; }
+
         public bool IsActive { get; private set; } = true;
         public string Expression { get; private set; }
         public List<RuleAuditLog> RuleAuditLogs { get; private set; } = new();
@@ -65,6 +67,12 @@ namespace RulesEngine.Entities.WorkFlows.Rules
         {
 
             ViolationMessage = violationMessage;
+
+        }
+        public void UpdateExceptionMessage(string exceptionMessage)
+        {
+
+            ExceptionMessage = exceptionMessage;
 
         }
         public void UpdateViolationType(ViolationType violationType)

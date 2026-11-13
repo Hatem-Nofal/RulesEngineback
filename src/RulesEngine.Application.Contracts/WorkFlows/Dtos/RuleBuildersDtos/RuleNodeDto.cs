@@ -1,4 +1,5 @@
 ﻿using RulesEngine.Common.Enums;
+using RulesEngine.Common.Helper;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -18,5 +19,7 @@ namespace RulesEngine.WorkFlows.Dtos.RuleBuildersDtos
         public bool IsMultiple { get; set; }
         public long? ActivityTypeId { get; set; }
         public List<RuleNodeDto> Children { get; set; } = new();
+
+      
     }
 }

@@ -4,6 +4,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authorization;
 using RulesEngine.Common.Enums;
 using RulesEngine.Common.Extensions;
+using RulesEngine.Common.Helper;
 using RulesEngine.Entities.Lookups;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
@@ -21,6 +22,7 @@ using System.IO;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -319,7 +321,8 @@ namespace RulesEngine.WorkFlows.Rules
 
 
             rule.GenerateUniqueNameAsync(count, workflow.Name);
-
+            string exceptionMessage = RuleHelpers.ReplacePlaceholders(input.ViolationMessage ?? workflow.ViolationMessage, input.Root);
+            rule.UpdateExceptionMessage(exceptionMessage);
             rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, prepared.Expression));
 
             await _ruleRepository.InsertAsync(rule);
@@ -338,6 +341,7 @@ namespace RulesEngine.WorkFlows.Rules
                 _ruleRepository.DisableTracking();
                 var rule = await _ruleRepository.GetForUpdateAsync(id);
 
+                var workflow = await _workflowRepository.GetAsync(input.WorkflowId);
 
                 rule.Update(prepared.Expression, input.ViolationMessage, input.ViolationType);
 
@@ -345,7 +349,8 @@ namespace RulesEngine.WorkFlows.Rules
 
 
                 if (input.IsActive) rule.Activate(); else rule.Deactivate();
-
+                string exceptionMessage = RuleHelpers.ReplacePlaceholders(input.ViolationMessage ?? workflow.ViolationMessage, input.Root);
+                rule.UpdateExceptionMessage(exceptionMessage);
                 rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, prepared.Expression));
 
 
@@ -947,15 +952,15 @@ namespace RulesEngine.WorkFlows.Rules
             // ---- Any problem: give the user their own sheet back, annotated. Nothing has been saved. ----
 
             // ---- Phase 2: everything is valid; save. All rows are written in one flush (one transaction). ----
-            var newRules = rows.Where(x =>! x.ExistingId.HasValue).ToList();
+            var newRules = rows.Where(x => !x.ExistingId.HasValue).ToList();
             var updateRules = rows.Where(x => x.ExistingId.HasValue).ToList();
             if (newRules.Any())
             {
-                await SaveBulkRulesAsync(newRules);
+                await SaveBulkRulesAsync(newRules, workflowId);
             }
             if (updateRules.Any())
             {
-                await UpdateBulkRulesAsync(updateRules);
+                await UpdateBulkRulesAsync(updateRules, workflowId);
             }
             //foreach (var row in rows.Where(x => !x.Errors.Any()))
             //{
@@ -985,9 +990,11 @@ namespace RulesEngine.WorkFlows.Rules
 
 
 
-        private async Task SaveBulkRulesAsync(List<UploadRow> rows)
+        private async Task SaveBulkRulesAsync(List<UploadRow> rows, long workflowId)
         {
             var rules = new List<Rule>();
+            var workflow = await _workflowRepository.GetAsync(workflowId);
+
             foreach (var row in rows)
             {
                 row.Prepared ??= await PrepareRuleAsync(row.Dto);
@@ -995,7 +1002,6 @@ namespace RulesEngine.WorkFlows.Rules
 
 
 
-                var workflow = await _workflowRepository.GetAsync(row.Dto.WorkflowId);
                 var rule = new Rule(row.Dto.WorkflowId, row.Prepared.Expression, row.Dto.ViolationMessage ?? workflow.ViolationMessage);
 
                 var count = await _ruleRepository.CountAsync(x => x.WorkflowId == row.Dto.WorkflowId);
@@ -1003,7 +1009,8 @@ namespace RulesEngine.WorkFlows.Rules
 
                 if (row.Dto.IsActive) rule.Activate(); else rule.Deactivate();
 
-
+                string exceptionMessage = RuleHelpers.ReplacePlaceholders(workflow.ViolationMessage, row.Dto.Root);
+                rule.UpdateExceptionMessage(exceptionMessage);
                 rule.GenerateUniqueNameAsync(rules.Count(), workflow.Name);
 
                 rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, row.Prepared.Expression));
@@ -1013,9 +1020,11 @@ namespace RulesEngine.WorkFlows.Rules
 
             await EngineManager.ReloadAfterCommitAsync();   // once per unit of work, even for bulk uploads
         }
-        private async Task UpdateBulkRulesAsync(List<UploadRow> rows)
+        private async Task UpdateBulkRulesAsync(List<UploadRow> rows, long workflowId)
         {
             var rules = new List<Rule>();
+            var workflow = await _workflowRepository.GetAsync(workflowId);
+
             foreach (var row in rows)
             {
                 row.Prepared ??= await PrepareRuleAsync(row.Dto);
@@ -1032,6 +1041,8 @@ namespace RulesEngine.WorkFlows.Rules
 
 
                 if (row.Dto.IsActive) rule.Activate(); else rule.Deactivate();
+                string exceptionMessage = RuleHelpers.ReplacePlaceholders(workflow.ViolationMessage, row.Dto.Root);
+                rule.UpdateExceptionMessage(exceptionMessage);
 
                 rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, row.Prepared.Expression));
                 rules.Add(rule);
