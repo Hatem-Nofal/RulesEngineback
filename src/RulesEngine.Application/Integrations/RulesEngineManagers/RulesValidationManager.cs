@@ -1011,7 +1011,7 @@ public partial class RulesValidationManager : IRulesValidationManager, ITransien
 
         outcome.RulesEngineViolationLog.Add(RulesEngineExecutionLog.Create(
             plan.Name, plan.Id, "", null, custom?.ViolationType.ToString(), result.ExceptionMessage,
-            claim.ClaimNumber, rule.Expression, activityCode!, true));
+            claim.ClaimNumber, rule.Expression, activityCode!, false));
     }
 
     private static bool IsEngineError(string? message)
