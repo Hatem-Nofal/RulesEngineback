@@ -48,11 +48,14 @@ IWorkFlowRepository
         public async Task<WorkFlow> GetDetailsAsync(long id)
         {
             var w = await _context.WorkFlows
-                .Include(x=>x.Rules)
-                .Include(x=>x. Nodes)
+                .Include(x => x.Rules)
+                .Include(x => x.Nodes)
                 .Include(x => x.RuleformConfig)
                 .ThenInclude(x => x.RuleFormConfigFields)
-                  .ThenInclude(x=>x.Rulefield)
+                  .ThenInclude(x => x.Rulefield)
+                // Rules, Nodes and config fields are three sibling collections: without this EF returns their cross
+                // product in ONE result set (rules x nodes x fields rows for a workflow with thousands of rules).
+                .AsSplitQuery()
                 .AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
                     ?? throw new KeyNotFoundException("Workflow not found.");
 
@@ -61,8 +64,8 @@ IWorkFlowRepository
         public async Task<WorkFlow> GetForUpdateAsync(long id)
         {
             var w = await _context.WorkFlows
-                .Include(x=>x.Rules)
-              
+                .Include(x => x.Rules)
+
                 .AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
                     ?? throw new KeyNotFoundException("Workflow not found.");
 
@@ -143,7 +146,7 @@ IWorkFlowRepository
             IQueryable<WorkFlow> query = _context.WorkFlows
                 .AsNoTracking()
                 .Where(x => x.IsActive)
-                .Include(x=>x.RuleformConfig)
+                .Include(x => x.RuleformConfig)
                 .Include(x => x.Rules.Where(r => r.IsActive));
 
             return Task.FromResult(query);

@@ -4,8 +4,8 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authorization;
 using RulesEngine.Common.Enums;
 using RulesEngine.Common.Extensions;
-using RulesEngine.Common.Helper;
 using RulesEngine.Entities.Lookups;
+using RulesEngine.Entities.WorkFlows;
 using RulesEngine.Entities.WorkFlows.Rules;
 using RulesEngine.Entities.WorkFlows.Rules.RuleBuilders;
 using RulesEngine.Integrations.RulesEngineManagers;
@@ -22,7 +22,6 @@ using System.IO;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -289,18 +288,6 @@ namespace RulesEngine.WorkFlows.Rules
 
             return new PreparedRule(ruleDto, expressionResult.Expression);
         }
-        private async Task<PreparedRule> PrepareRuleForBulkAsync(CreateRuleDto input)
-        {
-
-
-
-            var ruleDto = ObjectMapper.Map<CreateRuleDto, RuleDto>(input);
-            var ss = JsonSerializer.Serialize(ruleDto);
-            var expressionResult = await _expressionsBuilder.BuildForRuleAsync(ruleDto);
-
-            return new PreparedRule(ruleDto, expressionResult.Expression);
-        }
-
         /// <param name="saveChanges">
         /// true (default): flush right away. Bulk import passes false and flushes once after the last rule.
         /// </param>
@@ -321,8 +308,7 @@ namespace RulesEngine.WorkFlows.Rules
 
 
             rule.GenerateUniqueNameAsync(count, workflow.Name);
-            string exceptionMessage = RuleHelpers.ReplacePlaceholders(input.ViolationMessage ?? workflow.ViolationMessage, input.Root);
-            rule.UpdateExceptionMessage(exceptionMessage);
+
             rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, prepared.Expression));
 
             await _ruleRepository.InsertAsync(rule);
@@ -341,7 +327,6 @@ namespace RulesEngine.WorkFlows.Rules
                 _ruleRepository.DisableTracking();
                 var rule = await _ruleRepository.GetForUpdateAsync(id);
 
-                var workflow = await _workflowRepository.GetAsync(input.WorkflowId);
 
                 rule.Update(prepared.Expression, input.ViolationMessage, input.ViolationType);
 
@@ -349,8 +334,7 @@ namespace RulesEngine.WorkFlows.Rules
 
 
                 if (input.IsActive) rule.Activate(); else rule.Deactivate();
-                string exceptionMessage = RuleHelpers.ReplacePlaceholders(input.ViolationMessage ?? workflow.ViolationMessage, input.Root);
-                rule.UpdateExceptionMessage(exceptionMessage);
+
                 rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, prepared.Expression));
 
 
@@ -701,9 +685,16 @@ namespace RulesEngine.WorkFlows.Rules
         /// Returns null on success; when any row has a problem, returns the same workbook with the problems
         /// written to an "Errors" column at the end of each affected row (several problems: comma separated).
         /// </summary>
+        /// <summary>
+        /// Imports rules from a sheet: all-or-nothing. If any row has a problem nothing is saved and the user gets their
+        /// own sheet back with only the bad rows and an "Errors" column.
+        /// Database round trips are constant, not per row/cell: one query each for the workflow, its layout, the field
+        /// catalog, the existing rule names, the rules being updated, and one per kind of code (Activity, Diagnoses, ...).
+        /// </summary>
         public async Task<IRemoteStreamContent?> BulkUploadAsync(long workflowId, IRemoteStreamContent file)
         {
             if (file == null || file.ContentLength == 0) return null;
+
             var ruleFields = await _ruleFieldRepository.GetListAsync();
             var fieldsById = ruleFields.ToDictionary(x => x.Id);
 
@@ -719,102 +710,94 @@ namespace RulesEngine.WorkFlows.Rules
 
             if (ws.FirstRowUsed() == null) return null;
 
-            var headerCells = ws.Row(1).CellsUsed().ToList();
-            if (!headerCells.Any()) return null;
+            // Real column numbers (a blank header cell in the middle must not shift the columns after it).
+            var headers = ws.Row(1).CellsUsed()
+                .Select(c => (Column: c.Address.ColumnNumber, Raw: c.GetString()?.Trim() ?? string.Empty))
+                .ToList();
+            if (headers.Count == 0) return null;
 
-            var rawHeaderKeys = headerCells.Select(c => c.GetString()?.Trim() ?? string.Empty).ToList();
-            var colKeys = rawHeaderKeys.Select(NormalizeFieldKey).ToList();
-
-            // Build mapping from field key -> operator column index (headers named like 'AgeOperators')
-            var operatorSuffix = "Operators";
-            var operatorIndexByField = new Dictionary<(string FieldKey, int Occurrence), int>();
-            for (int i = 0; i < rawHeaderKeys.Count; i++)
+            // Operator columns are named '<FieldKey>Operators' (e.g. 'AgeOperators').
+            const string operatorSuffix = "Operators";
+            var operatorColumnByField = new Dictionary<(string FieldKey, int Occurrence), int>();
+            foreach (var (column, raw) in headers)
             {
-                var k = rawHeaderKeys[i];
-                if (k.EndsWith(operatorSuffix, StringComparison.OrdinalIgnoreCase))
-                {
-                    var fieldKey = k.Substring(0, k.Length - operatorSuffix.Length).TrimEnd();
-                    var normalizedKey = NormalizeFieldKey(fieldKey);
-                    var occurrenceIndex = GetFieldOccurrenceIndex(fieldKey);
-                    operatorIndexByField[(normalizedKey, occurrenceIndex)] = i;
-                }
+                if (!raw.EndsWith(operatorSuffix, StringComparison.OrdinalIgnoreCase)) continue;
+                var fieldKey = raw.Substring(0, raw.Length - operatorSuffix.Length).TrimEnd();
+                operatorColumnByField[(NormalizeFieldKey(fieldKey), GetFieldOccurrenceIndex(fieldKey))] = column;
             }
 
-            var workflow = await _workflowRepository.GetDetailsAsync(workflowId)
-                ?? throw new KeyNotFoundException("Workflow not found.");
+            // Workflow + form config + config fields only. (GetDetailsAsync also joins every existing rule and node:
+            // for a workflow with thousands of rules that is a huge, useless result set.)
+            var workflow = await _workflowRepository.GetAsync(workflowId);
             var config = workflow.RuleformConfig;
             if (config == null) throw new RuleValidationException("This workflow has no form config assigned.");
 
             // Built once for the whole sheet: used to validate every row and to build every expression.
             var formConfigDto = RuleExpressionBuilder.BuildFormConfigDto(config, fieldsById);
+            var fieldMap = formConfigDto.Fields
+                .Select(f => new FieldMapDto(
+                    f.Key ?? throw new RuleValidationException(
+                        $"Field '{f.Label}' has no context path in form config '{formConfigDto.Name}'."),
+                    FieldMapDto.KindOf(f.DataType)))
+                .ToList();
 
-            // The workflow's saved rule layout (groups + AND/OR joins). Each row is poured into this shape so the
+            // The workflow's saved rule layout (groups + AND/OR joins): each row is poured into this shape so the
             // generated expression keeps its grouping instead of becoming one flat AND list.
             var layout = workflow.IsWorkflowLevel
                 ? null
-                : RuleLayout.FromNodes(workflow.Nodes);
+                : RuleLayout.FromNodes(await _ruleNodeRepository.GetListAsync(n => n.WorkFlowId == workflowId));
 
-            var allowedByKey = new List<(RuleFormConfigField Config, RuleField Field)>();
-            foreach (var configField in config.RuleFormConfigFields)
-            {
-                var configuredField = fieldsById[configField.RulefieldId];
-                allowedByKey.Add((configField, configuredField));
-            }
+            var allowedByKey = config.RuleFormConfigFields
+                .Select(configField => (Config: configField, Field: fieldsById[configField.RulefieldId]))
+                .ToList();
 
-            // Keep duplicate field keys in the same list and resolve by occurrence order.
-            // This allows columns such as 'Age', 'Age (Primary)', 'Age (Secondary)' to map correctly.
-            var allowedFieldKeys = allowedByKey
-                .Select(x => x.Field.Key)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            if (allowedFieldKeys.Count == 0)
+            if (allowedByKey.Count == 0)
                 throw new RuleValidationException("This workflow has no valid form fields assigned.");
 
-            // Prevent duplicate keys from being treated as unique field definitions when resolving a row.
-            foreach (var key in allowedFieldKeys)
-            {
-                var keyMatches = allowedByKey
-                    .Where(x => string.Equals(x.Field.Key, key, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+            int FindColumn(string name) => headers
+                .FirstOrDefault(h => string.Equals(NormalizeFieldKey(h.Raw), name, StringComparison.OrdinalIgnoreCase)).Column;
 
-                if (keyMatches.Count > 1)
-                {
-                    var ordered = keyMatches
-                        .Select((match, index) => (match, index))
-                        .OrderBy(x => x.index)
-                        .Select(x => x.match)
-                        .ToList();
-
-                    for (var i = 0; i < ordered.Count; i++)
-                    {
-                        allowedByKey[allowedByKey.IndexOf(ordered[i])] = ordered[i];
-                    }
-                }
-            }
-
-
-            var nameIndex = colKeys.FindIndex(c => string.Equals(c, "Name", StringComparison.OrdinalIgnoreCase));
-            var isActiveIndex = colKeys.FindIndex(c => string.Equals(c, "IsActive", StringComparison.OrdinalIgnoreCase));
-            var idIndex = colKeys.FindIndex(c => string.Equals(c, "ID", StringComparison.OrdinalIgnoreCase));
+            var nameColumn = FindColumn("Name");
+            var isActiveColumn = FindColumn("IsActive");
+            var idColumn = FindColumn("ID");
 
             // Without a Name column no row can ever be imported; say so instead of silently doing nothing.
-            if (nameIndex < 0)
+            if (nameColumn == 0)
                 throw new RuleValidationException("The sheet must contain a 'Name' column.");
 
-            var lastRow = ws.LastRowUsed().RowNumber();
-            var rows = new List<UploadRow>();
-
-            // ---- Phase 1: read + validate every row. Nothing is written to the database here. ----
-            for (int r = 2; r <= lastRow; r++)
+            // Resolve every header ONCE (field, occurrence, operator column, code kind) instead of once per cell.
+            var fieldColumns = new List<SheetColumn>();
+            foreach (var (column, raw) in headers)
             {
+                var key = NormalizeFieldKey(raw);
+                if (string.Equals(key, "Name", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(key, "IsActive", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(key, "ID", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(key, ErrorsHeader, StringComparison.OrdinalIgnoreCase)) continue;
 
-                var row = new UploadRow(r);
+                var occurrence = GetFieldOccurrenceIndex(raw);
+                var allowed = ResolveAllowedField(key, occurrence, allowedByKey);
+                if (allowed == null) continue;
+
+                fieldColumns.Add(new SheetColumn(
+                    column, key, occurrence, allowed.Value.Config, allowed.Value.Field,
+                    operatorColumnByField.TryGetValue((key, occurrence), out var opColumn) ? opColumn : 0,
+                    layout?.DefaultOperatorFor(key, occurrence),
+                    GetCodeKind(key)));
+            }
+
+            var rows = new List<UploadRow>();
+            var pendingCodes = new PendingCodeChecks<UploadRow>();
+
+            // ---- Phase 1a: read every row. Nothing is written to the database. ----
+            foreach (var xlRow in ws.RowsUsed().Where(x => x.RowNumber() > 1))
+            {
+                var row = new UploadRow(xlRow.RowNumber());
                 rows.Add(row);
 
-                if (idIndex >= 0)
+                if (idColumn > 0)
                 {
-                    var idText = ws.Cell(r, idIndex + 1).GetString()?.Trim();
+                    var idText = xlRow.Cell(idColumn).GetString()?.Trim();
                     if (!string.IsNullOrWhiteSpace(idText))
                     {
                         if (long.TryParse(idText, out var parsedId)) row.ExistingId = parsedId;
@@ -822,102 +805,73 @@ namespace RulesEngine.WorkFlows.Rules
                     }
                 }
 
-                var isActive = true;
-                if (isActiveIndex >= 0)
+                if (isActiveColumn > 0)
                 {
-                    var text = ws.Cell(r, isActiveIndex + 1).GetString()?.Trim();
-                    if (!string.IsNullOrWhiteSpace(text) && !bool.TryParse(text, out isActive))
+                    var text = xlRow.Cell(isActiveColumn).GetString()?.Trim();
+                    if (!string.IsNullOrWhiteSpace(text))
                     {
-                        row.Errors.Add($"Invalid IsActive '{text}' (expected True or False).");
-                        isActive = true;
+                        if (bool.TryParse(text, out var parsedActive)) row.IsActive = parsedActive;
+                        else row.Errors.Add($"Invalid IsActive '{text}' (expected True or False).");
                     }
                 }
 
-                var conditions = new List<LayoutCondition>();
-
-                for (int c = 0; c < rawHeaderKeys.Count; c++)
+                foreach (var col in fieldColumns)
                 {
-                    var rawKey = rawHeaderKeys[c];
-                    var key = NormalizeFieldKey(rawKey);
-                    // Skip control columns
-                    if (string.Equals(key, "Name", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(key, "IsActive", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(key, "ID", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(key, ErrorsHeader, StringComparison.OrdinalIgnoreCase)) continue;
-
-                    var val = ws.Cell(r, c + 1).GetString()?.Trim();
+                    var val = xlRow.Cell(col.Column).GetString()?.Trim();
                     if (string.IsNullOrWhiteSpace(val)) continue;
 
-
-                    var occurrenceIndex = GetFieldOccurrenceIndex(rawKey);
-                    var allowedField = ResolveAllowedField(key, occurrenceIndex, allowedByKey);
-                    if (allowedField == null) continue;
-
-                    var cfg = allowedField.Value.Config;
-                    var field = allowedField.Value.Field;
-
-                    // Determine operator for this field (per-row operator column named '<FieldKey>Operators')
-                    var operatorToUse = layout?.DefaultOperatorFor(key, occurrenceIndex) ?? RuleOperator.Equal;
-                    if (operatorIndexByField.TryGetValue((key, occurrenceIndex), out var opIdx))
+                    // Per-row operator column ('<FieldKey>Operators'); blank = the layout's operator, else Equal.
+                    var operatorToUse = col.DefaultOperator ?? RuleOperator.Equal;
+                    if (col.OperatorColumn > 0)
                     {
-                        var opCellStr = ws.Cell(r, opIdx + 1).GetString()?.Trim();
+                        var opCellStr = xlRow.Cell(col.OperatorColumn).GetString()?.Trim();
                         if (!string.IsNullOrWhiteSpace(opCellStr))
                         {
                             if (Enum.TryParse<RuleOperator>(opCellStr, true, out var parsedOp)) operatorToUse = parsedOp;
-                            else row.Errors.Add($"Invalid operator '{opCellStr}' for '{key}'.");
+                            else row.Errors.Add($"Invalid operator '{opCellStr}' for '{col.Key}'.");
                         }
                     }
-                    var rulenodes = conditions.Select(x => x.Node).ToList();
+
+                    if (val.Equals(operatorToUse.ToString())) continue;
 
                     var node = new RuleNodeDto
                     {
                         NodeType = RuleNodeType.Condition,
-                        FieldKey = key,
+                        FieldKey = col.Key,
                         Operator = operatorToUse,
-                        IsMultiple = cfg.IsMultiple
+                        IsMultiple = col.Config.IsMultiple
                     };
-                    if (val.Equals(operatorToUse.ToString())) continue;
 
-                    if (cfg.IsMultiple || val.Contains('|') || (field.DataType == "List" && val.Contains(',')))
+                    // SerializeToElement: no JsonDocument to dispose (Parse(...).RootElement leaks a pooled buffer per cell).
+                    if (col.Config.IsMultiple || val.Contains('|') || (col.Field.DataType == "List" && val.Contains(',')))
                     {
-                        var parts = val.Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToArray();
-                        node.Value = JsonDocument.Parse(JsonSerializer.Serialize(parts)).RootElement;
+                        var parts = val.Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => s.Trim()).ToArray();
+                        node.Value = JsonSerializer.SerializeToElement(parts);
                     }
                     else
                     {
+                        node.Value = JsonSerializer.SerializeToElement(val);
+                    }
 
-                        node.Value = JsonDocument.Parse(JsonSerializer.Serialize(val)).RootElement;
-                    }
-                    conditions.Add(new LayoutCondition(key, occurrenceIndex, node));
+                    row.Conditions.Add(new LayoutCondition(col.Key, col.Occurrence, node));
 
-                    if (string.Equals(key, "Activity", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(key, "Activities", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await ValidateFieldActivityCodesAsync(row, key, val);
-                    }
-                    if (string.Equals(key, "GenericGroup", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(key, "GenericsGroups", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await ValidateFieldGenericGroupCodesAsync(row, key, val);
-                    }
-                    if (string.Equals(key, "Diagnoses", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await ValidateFieldDiagnosesCodesAsync(row, key, val);
-                    }
-                    if (string.Equals(key, "DiagnosisGroupCodes", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await ValidateFieldDiagnosisGroupCodesAsync(row, key, val);
-                    }
-                    if (string.Equals(key, "SpecialitiesCode", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await ValidateFieldSpecialitiesAsync(row, key, val);
-                    }
+                    if (col.CodeKind is { } kind)
+                        pendingCodes.Add(kind, val, row);
                 }
+            }
 
-                if (row.Errors.Count > 0) continue;   // cell-level problems found: no point validating the whole rule
+            // ---- Phase 1b: verify every code of the sheet with a few set-based queries (not one per cell). ----
+            foreach (var kind in pendingCodes.Kinds)
+            {
+                var existing = await LoadExistingCodesAsync(kind, pendingCodes.CodesOf(kind));
+                pendingCodes.ReportMissing(kind, existing, (row, code) => row.Errors.Add(MissingCodeMessage(kind, code)));
+            }
 
-                var root = layout != null ? layout.Bind(conditions) : RuleLayout.BuildFlat(conditions);
-                row.Dto = new CreateRuleDto { WorkflowId = workflowId, IsActive = isActive, Root = root };
+            // ---- Phase 1c: build + validate each clean row's tree and expression (pure CPU, no database). ----
+            foreach (var row in rows.Where(x => x.Errors.Count == 0))
+            {
+                var root = layout != null ? layout.Bind(row.Conditions) : RuleLayout.BuildFlat(row.Conditions);
 
                 // Report every problem of the row at once, so the user can fix the whole row in a single pass.
                 var treeErrors = RuleTreeValidator.ValidateWitErrors(root, formConfigDto);
@@ -929,7 +883,7 @@ namespace RulesEngine.WorkFlows.Rules
 
                 try
                 {
-                    row.Prepared = await PrepareRuleForBulkAsync(row.Dto);
+                    row.Expression = (await _expressionsBuilder.Build(root, formConfigDto.StrategyKey, fieldMap)).Expression;
                 }
                 catch (RuleValidationException ex)
                 {
@@ -937,249 +891,160 @@ namespace RulesEngine.WorkFlows.Rules
                 }
             }
 
-            // Rows that update an existing rule must point at one that exists (read-only projection: no tracking).
+            // ---- Rows that update an existing rule: load them all at once (also proves they exist). ----
+            var rulesToUpdate = new Dictionary<long, Rule>();
             var idsToUpdate = rows.Where(x => x.ExistingId.HasValue && x.Errors.Count == 0)
                 .Select(x => x.ExistingId!.Value).Distinct().ToList();
-            if (idsToUpdate.Count > 0)
+            foreach (var chunk in idsToUpdate.Chunk(1000))
             {
-                var existing = (await AsyncExecuter.ToListAsync(
-                    (await Repository.GetQueryableAsync()).Where(x => idsToUpdate.Contains(x.Id)).Select(x => x.Id))).ToHashSet();
+                var ids = chunk;
+                var found = await AsyncExecuter.ToListAsync((await Repository.GetQueryableAsync()).Where(x => ids.Contains(x.Id)));
+                foreach (var rule in found) rulesToUpdate[rule.Id] = rule;
+            }
 
-                foreach (var row in rows.Where(x => x.ExistingId.HasValue && x.Errors.Count == 0 && !existing.Contains(x.ExistingId.Value)))
+            foreach (var row in rows.Where(x => x.ExistingId.HasValue && x.Errors.Count == 0))
+            {
+                if (!rulesToUpdate.TryGetValue(row.ExistingId!.Value, out var target))
                     row.Errors.Add($"Rule with ID '{row.ExistingId}' was not found.");
+                else if (target.WorkflowId != workflowId)
+                    row.Errors.Add($"Rule with ID '{row.ExistingId}' does not belong to this workflow.");
             }
 
-            // ---- Any problem: give the user their own sheet back, annotated. Nothing has been saved. ----
-
-            // ---- Phase 2: everything is valid; save. All rows are written in one flush (one transaction). ----
-            var newRules = rows.Where(x => !x.ExistingId.HasValue).ToList();
-            var updateRules = rows.Where(x => x.ExistingId.HasValue).ToList();
-            if (newRules.Any())
+            // ---- Any problem: give the user their own sheet back, annotated. NOTHING has been saved. ----
+            if (rows.Any(x => x.Errors.Count > 0))
             {
-                await SaveBulkRulesAsync(newRules, workflowId);
+                var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
+                return BuildErrorWorkbook(wb, ws, lastRow, rows.Where(x => x.Errors.Count > 0).ToList(), workflow.Name);
             }
-            if (updateRules.Any())
-            {
-                await UpdateBulkRulesAsync(updateRules, workflowId);
-            }
-            //foreach (var row in rows.Where(x => !x.Errors.Any()))
-            //{
-            //    if (row.ExistingId.HasValue)
-            //    {
-            //        await UpdateRuleAsync(row.Dto!, row.ExistingId.Value, row.Prepared, saveChanges: false);
 
-            //    }
-            //    else
-            //    {
-            //        await SaveRuleAsync(row.Dto!, row.Prepared, saveChanges: false);
+            // ---- Phase 2: everything is valid; save. One flush = one transaction. ----
+            var newRows = rows.Where(x => !x.ExistingId.HasValue).ToList();
+            var updateRows = rows.Where(x => x.ExistingId.HasValue).ToList();
 
-            //    }
-            //}
+            if (newRows.Count > 0)
+                await SaveBulkRulesAsync(workflow, newRows);
 
-            if (rows.Count > 0 && rows.Any(x => x.Errors.Count() > 0))
-                await CurrentUnitOfWork.SaveChangesAsync();
+            if (updateRows.Count > 0)
+                await UpdateBulkRulesAsync(updateRows, rulesToUpdate);
 
-            if (rows.Any(x => x.Errors.Any()))
-                return BuildErrorWorkbook(wb, ws, lastRow, rows.Where(x => x.Errors.Any()).ToList(), workflow.Name);
+            await CurrentUnitOfWork!.SaveChangesAsync();
+            await EngineManager.ReloadAfterCommitAsync();   // once per unit of work, however many rules changed
 
             return null;
         }
 
-
-
-
-
-
-        private async Task SaveBulkRulesAsync(List<UploadRow> rows, long workflowId)
+        private async Task SaveBulkRulesAsync(WorkFlow workflow, List<UploadRow> rows)
         {
-            var rules = new List<Rule>();
-            var workflow = await _workflowRepository.GetAsync(workflowId);
+            // Names continue above every number already used in this workflow. (Numbering from the batch alone
+            // duplicated existing names, and the rules engine cannot compile a batch that contains duplicate names.)
+            var existingNames = await AsyncExecuter.ToListAsync(
+                (await Repository.GetQueryableAsync()).Where(x => x.WorkflowId == workflow.Id).Select(x => x.Name));
+            var names = new RuleNameAllocator(workflow.Name, existingNames);
 
+            var rules = new List<Rule>(rows.Count);
             foreach (var row in rows)
             {
-                row.Prepared ??= await PrepareRuleAsync(row.Dto);
-                var ruleDto = row.Prepared.Dto;
+                var rule = new Rule(workflow.Id, row.Expression!, workflow.ViolationMessage);
 
+                if (row.IsActive) rule.Activate(); else rule.Deactivate();
 
-
-                var rule = new Rule(row.Dto.WorkflowId, row.Prepared.Expression, row.Dto.ViolationMessage ?? workflow.ViolationMessage);
-
-                var count = await _ruleRepository.CountAsync(x => x.WorkflowId == row.Dto.WorkflowId);
-
-
-                if (row.Dto.IsActive) rule.Activate(); else rule.Deactivate();
-
-                string exceptionMessage = RuleHelpers.ReplacePlaceholders(workflow.ViolationMessage, row.Dto.Root);
-                rule.UpdateExceptionMessage(exceptionMessage);
-                rule.GenerateUniqueNameAsync(rules.Count(), workflow.Name);
-
-                rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, row.Prepared.Expression));
+                rule.GenerateUniqueNameAsync(names.Next() - 1, workflow.Name);   // produces "{workflow}-Rule-{n}"
+                rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, row.Expression!));
                 rules.Add(rule);
             }
+
             await _ruleRepository.InsertManyAsync(rules);
-
-            await EngineManager.ReloadAfterCommitAsync();   // once per unit of work, even for bulk uploads
         }
-        private async Task UpdateBulkRulesAsync(List<UploadRow> rows, long workflowId)
-        {
-            var rules = new List<Rule>();
-            var workflow = await _workflowRepository.GetAsync(workflowId);
 
+        private async Task UpdateBulkRulesAsync(List<UploadRow> rows, Dictionary<long, Rule> loadedRules)
+        {
+            var changed = new List<Rule>(rows.Count);
             foreach (var row in rows)
             {
-                row.Prepared ??= await PrepareRuleAsync(row.Dto);
-                var ruleDto = row.Prepared.Dto;
+                var rule = loadedRules[row.ExistingId!.Value];
 
+                // Re-uploading an unchanged sheet must not rewrite thousands of rules and audit rows.
+                if (rule.Expression == row.Expression && rule.IsActive == row.IsActive)
+                    continue;
 
-                _ruleRepository.DisableTracking();
-                var rule = await _ruleRepository.GetForUpdateAsync(row.ExistingId.Value);
+                // The sheet carries the expression and the active flag only: keep the rule's own violation
+                // message and type (the previous code overwrote both with null/default).
+                rule.UpdateExpression(row.Expression!);
+                if (row.IsActive) rule.Activate(); else rule.Deactivate();
 
-
-                rule.Update(row.Prepared.Expression, row.Dto.ViolationMessage, row.Dto.ViolationType);
-
-                // Replace the whole tree: one set-based DELETE instead of loading and deleting every node separately.
-
-
-                if (row.Dto.IsActive) rule.Activate(); else rule.Deactivate();
-                string exceptionMessage = RuleHelpers.ReplacePlaceholders(workflow.ViolationMessage, row.Dto.Root);
-                rule.UpdateExceptionMessage(exceptionMessage);
-
-                rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, row.Prepared.Expression));
-                rules.Add(rule);
-
+                rule.AddRuleAuditLog(RuleAuditLog.Create(rule.Id, rule, rule.ViolationType, rule.ViolationMessage, rule.IsActive, row.Expression!));
+                changed.Add(rule);
             }
 
-            await _ruleRepository.UpdateManyAsync(rules);
-
-
-            await EngineManager.ReloadAfterCommitAsync();
-
+            if (changed.Count > 0)
+                await _ruleRepository.UpdateManyAsync(changed);
         }
 
-
-
-
-
-        private async Task ValidateFieldActivityCodesAsync(UploadRow row, string fieldKey, string values)
+        /// <summary>Which of these codes exist? Projects only the code column, in chunks that stay under SQL parameter limits.</summary>
+        private async Task<HashSet<string>> LoadExistingCodesAsync(CodeKind kind, IReadOnlyCollection<string> codes)
         {
-            if (string.IsNullOrWhiteSpace(values))
-                return;
+            var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-
-            var codes = values
-                .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(x => x.Trim())
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (codes.Count == 0)
-                return;
-
-            var existing = await _activitySubTypeRepository.GetListAsync(x => codes.Contains(x.iqvia_code));
-            var validCodes = new HashSet<string>(existing.Select(x => x.iqvia_code), StringComparer.OrdinalIgnoreCase);
-
-            foreach (var code in codes.Where(x => !validCodes.Contains(x)))
+            foreach (var chunk in codes.Chunk(1000))
             {
-                row.Errors.Add($"Activity '{code}' was not found in the database.");
+                var list = chunk;
+                IQueryable<string> query = kind switch
+                {
+                    CodeKind.Activity => (await _activitySubTypeRepository.GetQueryableAsync())
+                        .Where(x => list.Contains(x.iqvia_code)).Select(x => x.iqvia_code),
+                    CodeKind.Speciality => (await _specialitiesRepository.GetQueryableAsync())
+                        .Where(x => list.Contains(x.SpecialityCode)).Select(x => x.SpecialityCode),
+                    CodeKind.GenericGroup => (await _genericDrugsRepository.GetQueryableAsync())
+                        .Where(x => list.Contains(x.GenericCode)).Select(x => x.GenericCode),
+                    CodeKind.Diagnosis => (await _diagnosisRepository.GetQueryableAsync())
+                        .Where(x => list.Contains(x.iqvia_code)).Select(x => x.iqvia_code),
+                    CodeKind.DiagnosisGroup => (await _morbidityGroupRepository.GetQueryableAsync())
+                        .Where(x => list.Contains(x.MorbidityGroupSystemCode)).Select(x => x.MorbidityGroupSystemCode),
+                    _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+                };
+
+                foreach (var code in await AsyncExecuter.ToListAsync(query))
+                {
+                    if (!string.IsNullOrWhiteSpace(code))
+                        existing.Add(code);
+                }
             }
+
+            return existing;
         }
-        private async Task ValidateFieldSpecialitiesAsync(UploadRow row, string fieldKey, string values)
+
+        private static CodeKind? GetCodeKind(string key)
         {
-            if (string.IsNullOrWhiteSpace(values))
-                return;
-
-
-            var codes = values
-                .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(x => x.Trim())
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (codes.Count == 0)
-                return;
-
-            var existing = await _specialitiesRepository.GetListAsync(x => codes.Contains(x.SpecialityCode));
-            var validCodes = new HashSet<string>(existing.Select(x => x.SpecialityCode), StringComparer.OrdinalIgnoreCase);
-
-            foreach (var code in codes.Where(x => !validCodes.Contains(x)))
-            {
-                row.Errors.Add($"Speciality '{code}' was not found in the database.");
-            }
+            if (string.Equals(key, "Activity", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, "Activities", StringComparison.OrdinalIgnoreCase)) return CodeKind.Activity;
+            if (string.Equals(key, "GenericGroup", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, "GenericsGroups", StringComparison.OrdinalIgnoreCase)) return CodeKind.GenericGroup;
+            if (string.Equals(key, "Diagnoses", StringComparison.OrdinalIgnoreCase)) return CodeKind.Diagnosis;
+            if (string.Equals(key, "DiagnosisGroupCodes", StringComparison.OrdinalIgnoreCase)) return CodeKind.DiagnosisGroup;
+            if (string.Equals(key, "SpecialitiesCode", StringComparison.OrdinalIgnoreCase)) return CodeKind.Speciality;
+            return null;
         }
-        private async Task ValidateFieldGenericGroupCodesAsync(UploadRow row, string fieldKey, string values)
+
+        private static string MissingCodeMessage(CodeKind kind, string code) => kind switch
         {
-            if (string.IsNullOrWhiteSpace(values))
-                return;
+            CodeKind.Activity => $"Activity '{code}' was not found in the database.",
+            CodeKind.Speciality => $"Speciality '{code}' was not found in the database.",
+            CodeKind.GenericGroup => $"Generic Group '{code}' was not found in the database.",
+            CodeKind.Diagnosis => $"Diagnoses '{code}' was not found in the database.",
+            CodeKind.DiagnosisGroup => $"Diagnosis Group Codes '{code}' was not found in the database.",
+            _ => $"Code '{code}' was not found in the database."
+        };
 
-
-            var codes = values
-                .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(x => x.Trim())
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (codes.Count == 0)
-                return;
-
-            var existing = await _genericDrugsRepository.GetListAsync(x => codes.Contains(x.GenericCode));
-            var validCodes = new HashSet<string>(existing.Select(x => x.GenericCode), StringComparer.OrdinalIgnoreCase);
-
-            foreach (var code in codes.Where(x => !validCodes.Contains(x)))
-            {
-                row.Errors.Add($"Generic Group '{code}' was not found in the database.");
-            }
-        }
-        private async Task ValidateFieldDiagnosesCodesAsync(UploadRow row, string fieldKey, string values)
-        {
-            if (string.IsNullOrWhiteSpace(values))
-                return;
-
-
-            var codes = values
-                .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(x => x.Trim())
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (codes.Count == 0)
-                return;
-
-            var existing = await _diagnosisRepository.GetListAsync(x => codes.Contains(x.iqvia_code));
-            var validCodes = new HashSet<string>(existing.Select(x => x.iqvia_code), StringComparer.OrdinalIgnoreCase);
-
-            foreach (var code in codes.Where(x => !validCodes.Contains(x)))
-            {
-                row.Errors.Add($"Diagnoses '{code}' was not found in the database.");
-            }
-        }
-        private async Task ValidateFieldDiagnosisGroupCodesAsync(UploadRow row, string fieldKey, string values)
-        {
-            if (string.IsNullOrWhiteSpace(values))
-                return;
-
-
-            var codes = values
-                .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(x => x.Trim())
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (codes.Count == 0)
-                return;
-
-            var existing = await _morbidityGroupRepository.GetListAsync(x => codes.Contains(x.MorbidityGroupSystemCode));
-            var validCodes = new HashSet<string>(existing.Select(x => x.MorbidityGroupSystemCode), StringComparer.OrdinalIgnoreCase);
-
-            foreach (var code in codes.Where(x => !validCodes.Contains(x)))
-            {
-                row.Errors.Add($"Diagnosis Group Codes '{code}' was not found in the database.");
-            }
-        }
+        /// <summary>A header column that maps to a rule field, resolved once per sheet.</summary>
+        private sealed record SheetColumn(
+            int Column,
+            string Key,
+            int Occurrence,
+            RuleFormConfigField Config,
+            RuleField Field,
+            int OperatorColumn,
+            RuleOperator? DefaultOperator,
+            CodeKind? CodeKind);
 
         /// <summary>One data row of the uploaded sheet, with everything that is wrong with it.</summary>
         private sealed class UploadRow
@@ -1188,11 +1053,11 @@ namespace RulesEngine.WorkFlows.Rules
 
             public int RowNumber { get; }
             public long? ExistingId { get; set; }
-            public CreateRuleDto? Dto { get; set; }
-            public PreparedRule? Prepared { get; set; }
+            public bool IsActive { get; set; } = true;
+            public List<LayoutCondition> Conditions { get; } = new();
+            public string? Expression { get; set; }
             public List<string> Errors { get; } = new();
         }
-
 
         /// <summary>Builds a new workbook from scratch with the original headers and only the rows that contain errors.</summary>
         private static IRemoteStreamContent BuildErrorWorkbook(
@@ -1240,9 +1105,7 @@ namespace RulesEngine.WorkFlows.Rules
                 for (var c = 1; c <= lastColumn; c++)
                 {
                     var sourceCell = ws.Cell(row.RowNumber, c);
-                    var targetCell = outputSheet.Cell(outputRow, c);
-                    targetCell.Value = sourceCell.Value;
-                    targetCell.Style = sourceCell.Style;
+                    outputSheet.Cell(outputRow, c).Value = sourceCell.Value;
                 }
 
                 var errorCell = outputSheet.Cell(outputRow, errorColumn);
