@@ -76,7 +76,7 @@ public class RuleFormConfigAppService : CrudAppService<RuleFormConfig, RuleFormC
             Label = f.Label,
             DataType = f.DataType,
             Options = ListExtensions.DeserializeStringList(f.OptionsJson),
-
+            GroupName=f.GroupName
         }).ToList();
     }
 
