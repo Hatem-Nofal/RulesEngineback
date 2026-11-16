@@ -628,7 +628,8 @@ namespace RulesEngine.Migrations
                     Key = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
                     Label = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     DataType = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    OptionsJson = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    OptionsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    GroupName = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -668,7 +669,9 @@ namespace RulesEngine.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     WorkFlowName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    WorkFlowId = table.Column<long>(type: "bigint", nullable: false),
                     Rule = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RuleId = table.Column<long>(type: "bigint", nullable: true),
                     ErrorType = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ErrorMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ClaimNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -1092,10 +1095,8 @@ namespace RulesEngine.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     RuleformConfigId = table.Column<long>(type: "bigint", nullable: false),
                     RulefieldId = table.Column<long>(type: "bigint", nullable: false),
-                    Order = table.Column<int>(type: "int", nullable: false),
                     AllowedOperatorsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsMultiple = table.Column<bool>(type: "bit", nullable: false),
-                    IsDefault = table.Column<bool>(type: "bit", nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -1316,7 +1317,6 @@ namespace RulesEngine.Migrations
                     LogicalJoinOperator = table.Column<int>(type: "int", nullable: true),
                     FieldKey = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
                     Operator = table.Column<int>(type: "int", nullable: true),
-                    ValueJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Order = table.Column<int>(type: "int", nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
@@ -1354,6 +1354,7 @@ namespace RulesEngine.Migrations
                     WorkflowId = table.Column<long>(type: "bigint", nullable: false),
                     ViolationType = table.Column<int>(type: "int", nullable: false),
                     ViolationMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ExceptionMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     Expression = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1405,84 +1406,31 @@ namespace RulesEngine.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "RuleActivitySubTypes",
+                name: "RuleAuditLogs",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     RuleId = table.Column<long>(type: "bigint", nullable: false),
-                    ActivitySubTypeId = table.Column<long>(type: "bigint", nullable: false),
-                    IsSecondary = table.Column<bool>(type: "bit", nullable: true)
+                    ViolationType = table.Column<int>(type: "int", nullable: false),
+                    ViolationMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    Expression = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreationTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    LastModificationTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifierId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    DeleterId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DeletionTime = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RuleActivitySubTypes", x => x.Id);
+                    table.PrimaryKey("PK_RuleAuditLogs", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_RuleActivitySubTypes_Activity_sub_types_ActivitySubTypeId",
-                        column: x => x.ActivitySubTypeId,
-                        principalSchema: "Lookups",
-                        principalTable: "Activity_sub_types",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_RuleActivitySubTypes_Rules_RuleId",
+                        name: "FK_RuleAuditLogs_Rules_RuleId",
                         column: x => x.RuleId,
                         principalTable: "Rules",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "RuleDiagnosis",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    RuleId = table.Column<long>(type: "bigint", nullable: false),
-                    DiagnosisId = table.Column<long>(type: "bigint", nullable: false),
-                    IsSecondary = table.Column<bool>(type: "bit", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RuleDiagnosis", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_RuleDiagnosis_Diagnoses_DiagnosisId",
-                        column: x => x.DiagnosisId,
-                        principalSchema: "Lookups",
-                        principalTable: "Diagnoses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_RuleDiagnosis_Rules_RuleId",
-                        column: x => x.RuleId,
-                        principalTable: "Rules",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "RuleSpecialities",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    RuleId = table.Column<long>(type: "bigint", nullable: false),
-                    SpecialitiesId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RuleSpecialities", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_RuleSpecialities_Rules_RuleId",
-                        column: x => x.RuleId,
-                        principalTable: "Rules",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_RuleSpecialities_Specialities_SpecialitiesId",
-                        column: x => x.SpecialitiesId,
-                        principalSchema: "Lookups",
-                        principalTable: "Specialities",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1830,23 +1778,8 @@ namespace RulesEngine.Migrations
                 column: "ReferenceId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RuleActivitySubTypes_ActivitySubTypeId",
-                table: "RuleActivitySubTypes",
-                column: "ActivitySubTypeId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RuleActivitySubTypes_RuleId",
-                table: "RuleActivitySubTypes",
-                column: "RuleId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RuleDiagnosis_DiagnosisId",
-                table: "RuleDiagnosis",
-                column: "DiagnosisId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RuleDiagnosis_RuleId",
-                table: "RuleDiagnosis",
+                name: "IX_RuleAuditLogs_RuleId",
+                table: "RuleAuditLogs",
                 column: "RuleId");
 
             migrationBuilder.CreateIndex(
@@ -1891,16 +1824,6 @@ namespace RulesEngine.Migrations
                 name: "IX_Rules_WorkflowId",
                 table: "Rules",
                 column: "WorkflowId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RuleSpecialities_RuleId",
-                table: "RuleSpecialities",
-                column: "RuleId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RuleSpecialities_SpecialitiesId",
-                table: "RuleSpecialities",
-                column: "SpecialitiesId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Workflows_Name",
@@ -2023,10 +1946,7 @@ namespace RulesEngine.Migrations
                 name: "OpenIddictTokens");
 
             migrationBuilder.DropTable(
-                name: "RuleActivitySubTypes");
-
-            migrationBuilder.DropTable(
-                name: "RuleDiagnosis");
+                name: "RuleAuditLogs");
 
             migrationBuilder.DropTable(
                 name: "RuleFormConfigFields",
@@ -2041,7 +1961,8 @@ namespace RulesEngine.Migrations
                 schema: "Logers");
 
             migrationBuilder.DropTable(
-                name: "RuleSpecialities");
+                name: "Specialities",
+                schema: "Lookups");
 
             migrationBuilder.DropTable(
                 name: "AbpBlobContainers");
@@ -2059,7 +1980,15 @@ namespace RulesEngine.Migrations
                 name: "AbpRoles");
 
             migrationBuilder.DropTable(
+                name: "Activity_sub_types",
+                schema: "Lookups");
+
+            migrationBuilder.DropTable(
                 name: "DuplicateTherapyGroups",
+                schema: "Lookups");
+
+            migrationBuilder.DropTable(
+                name: "Diagnoses",
                 schema: "Lookups");
 
             migrationBuilder.DropTable(
@@ -2070,29 +1999,14 @@ namespace RulesEngine.Migrations
                 name: "OpenIddictAuthorizations");
 
             migrationBuilder.DropTable(
-                name: "Activity_sub_types",
-                schema: "Lookups");
-
-            migrationBuilder.DropTable(
-                name: "Diagnoses",
-                schema: "Lookups");
+                name: "Rules");
 
             migrationBuilder.DropTable(
                 name: "RuleFields",
                 schema: "RuleBuilders");
 
             migrationBuilder.DropTable(
-                name: "Rules");
-
-            migrationBuilder.DropTable(
-                name: "Specialities",
-                schema: "Lookups");
-
-            migrationBuilder.DropTable(
                 name: "AbpAuditLogs");
-
-            migrationBuilder.DropTable(
-                name: "OpenIddictApplications");
 
             migrationBuilder.DropTable(
                 name: "Activity_types",
@@ -2105,6 +2019,9 @@ namespace RulesEngine.Migrations
             migrationBuilder.DropTable(
                 name: "PrescriptionDurations",
                 schema: "Lookups");
+
+            migrationBuilder.DropTable(
+                name: "OpenIddictApplications");
 
             migrationBuilder.DropTable(
                 name: "Workflows");

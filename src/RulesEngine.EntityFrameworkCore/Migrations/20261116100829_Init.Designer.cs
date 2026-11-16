@@ -13,8 +13,8 @@ using Volo.Abp.EntityFrameworkCore;
 namespace RulesEngine.Migrations
 {
     [DbContext(typeof(RulesEngineDbContext))]
-    [Migration("20261104211320_df")]
-    partial class df
+    [Migration("20261116100829_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -498,6 +498,9 @@ namespace RulesEngine.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("DeletionTime");
 
+                    b.Property<string>("ExceptionMessage")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Expression")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -540,6 +543,67 @@ namespace RulesEngine.Migrations
                     b.ToTable("Rules");
                 });
 
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleAuditLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("Expression")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<long>("RuleId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ViolationMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ViolationType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RuleId");
+
+                    b.ToTable("RuleAuditLogs");
+                });
+
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleField", b =>
                 {
                     b.Property<long>("Id")
@@ -552,6 +616,10 @@ namespace RulesEngine.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("GroupName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Key")
                         .IsRequired()
@@ -666,9 +734,6 @@ namespace RulesEngine.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("DeletionTime");
 
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -685,9 +750,6 @@ namespace RulesEngine.Migrations
                     b.Property<Guid?>("LastModifierId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("LastModifierId");
-
-                    b.Property<int>("Order")
-                        .HasColumnType("int");
 
                     b.Property<long>("RulefieldId")
                         .HasColumnType("bigint");
@@ -2927,6 +2989,17 @@ namespace RulesEngine.Migrations
                     b.Navigation("Workflow");
                 });
 
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleAuditLog", b =>
+                {
+                    b.HasOne("RulesEngine.Entities.WorkFlows.Rules.Rule", "Rule")
+                        .WithMany("RuleAuditLogs")
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Rule");
+                });
+
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfigField", b =>
                 {
                     b.HasOne("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleField", "Rulefield")
@@ -3194,6 +3267,11 @@ namespace RulesEngine.Migrations
             modelBuilder.Entity("RulesEngine.Entities.Lookups.PrescriptionDuration", b =>
                 {
                     b.Navigation("Diagnoses");
+                });
+
+            modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.Rule", b =>
+                {
+                    b.Navigation("RuleAuditLogs");
                 });
 
             modelBuilder.Entity("RulesEngine.Entities.WorkFlows.Rules.RuleBuilders.RuleFormConfig", b =>

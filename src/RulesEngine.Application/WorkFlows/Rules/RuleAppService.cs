@@ -822,7 +822,7 @@ namespace RulesEngine.WorkFlows.Rules
                 foreach (var col in fieldColumns)
                 {
                     var val = xlRow.Cell(col.Column).GetString()?.Trim();
-                    if (string.IsNullOrWhiteSpace(val)) continue;
+                   // if (string.IsNullOrWhiteSpace(val)) continue;
 
                     // Per-row operator column ('<FieldKey>Operators'); blank = the layout's operator, else Equal.
                     var operatorToUse = col.DefaultOperator ?? RuleOperator.Equal;

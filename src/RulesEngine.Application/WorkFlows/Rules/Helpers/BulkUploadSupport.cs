@@ -26,14 +26,16 @@ namespace RulesEngine.WorkFlows.Rules.Helpers
         /// <summary>Splits a cell on '|' and ',', trims, drops blanks and duplicates (case-insensitive).</summary>
         public static List<string> SplitCodes(string? values)
         {
-            if (string.IsNullOrWhiteSpace(values))
-                return new List<string>();
+            //if (string.IsNullOrWhiteSpace(values))
+            //    return new List<string>();
 
-            return values
+          var listvalues =  values
                 .Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
+            return listvalues.Any() ? listvalues
+               : new List<string>() { ""};
         }
 
         public void Add(CodeKind kind, string? cellValue, TOwner owner)
