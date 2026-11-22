@@ -135,7 +135,7 @@ public class RulesEngineManager : IRulesEngineManager, ISingletonDependency
 
             if (_state is null || current != _state.Fingerprint)
             {
-                _logger.LogInformation("Workflows/rules changed in the database; rebuilding the rules engine");
+                _logger.LogWarning("Workflows/rules changed in the database; rebuilding the rules engine");
                 await BuildAndPublishAsync(cancellationToken).ConfigureAwait(false);
             }
         }
@@ -203,7 +203,7 @@ public class RulesEngineManager : IRulesEngineManager, ISingletonDependency
 
             var anchored = snapshot.Workflows.Sum(p => p.AnchoredRuleCount);
             var common = snapshot.Workflows.Sum(p => p.CommonRuleCount);
-            _logger.LogInformation(
+            _logger.LogWarning(
                 "Rules engine loaded: {WorkflowCount} workflow(s); activity-level rules: {Anchored} anchored to specific activity codes (skipped for other activities), {Common} evaluated for every activity",
                 snapshot.Workflows.Count, anchored, common);
         }
