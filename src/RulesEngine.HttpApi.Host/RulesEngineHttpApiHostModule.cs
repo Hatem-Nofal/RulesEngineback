@@ -31,6 +31,7 @@ using Volo.Abp.AspNetCore.ExceptionHandling;
 using Volo.Abp.AspNetCore.MultiTenancy;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.AntiForgery;
+using Volo.Abp.AspNetCore.Mvc.Libs;
 using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
@@ -138,7 +139,7 @@ public class RulesEngineHttpApiHostModule : AbpModule
         ConfigureUrls(configuration);
         ConfigureBundles(hostingEnvironment);
         ConfigureConventionalControllers();
-       // ConfigureHealthChecks(context);
+        // ConfigureHealthChecks(context);
         ConfigureSwagger(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
@@ -156,6 +157,10 @@ public class RulesEngineHttpApiHostModule : AbpModule
             options.SendExceptionsDetailsToClients = true;
             options.SendStackTraceToClients = false;
 
+        });
+        Configure<AbpMvcLibsOptions>(options =>
+        {
+            options.CheckLibs = false;
         });
 
         Configure<AbpAntiForgeryOptions>(options =>
@@ -349,11 +354,11 @@ public class RulesEngineHttpApiHostModule : AbpModule
             .WriteTo.Async(a => a.Console(), bufferSize: 1 * 1024 * 1024)
 
             // Optional Seq sink
-            //.WriteTo.Seq(seqUrl,
-            //    batchPostingLimit: 25,
-            //    period: TimeSpan.FromSeconds(1),
-            //    bufferSizeLimitBytes: 2 * 1024 * 1024,
-            //    eventBodyLimitBytes: 256 * 1024)
+            .WriteTo.Seq(seqUrl,
+                batchPostingLimit: 25,
+                period: TimeSpan.FromSeconds(1),
+                bufferSizeLimitBytes: 2 * 1024 * 1024,
+                eventBodyLimitBytes: 256 * 1024)
 
             // Filters: include only errors or specific HTTP methods
             .Filter.ByIncludingOnly(evt =>

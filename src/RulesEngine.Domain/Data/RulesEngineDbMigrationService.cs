@@ -48,16 +48,16 @@ public class RulesEngineDbMigrationService : ITransientDependency
             return;
         }
 
-        Logger.LogInformation("Started database migrations...");
+        Logger.LogWarning("Started database migrations...");
 
         await MigrateDatabaseSchemaAsync();
         await SeedDataAsync();
 
-        Logger.LogInformation($"Successfully completed host database migrations.");
+        Logger.LogWarning($"Successfully completed host database migrations.");
 
         if (MultiTenancyConsts.IsEnabled)
         {
-            
+
             var tenants = await _tenantRepository.GetListAsync(includeDetails: true);
 
             var migratedDatabaseSchemas = new HashSet<string>();
@@ -82,19 +82,19 @@ public class RulesEngineDbMigrationService : ITransientDependency
                     await SeedDataAsync(tenant);
                 }
 
-                Logger.LogInformation($"Successfully completed {tenant.Name} tenant database migrations.");
+                Logger.LogWarning($"Successfully completed {tenant.Name} tenant database migrations.");
             }
 
-            Logger.LogInformation("Successfully completed all database migrations.");
+            Logger.LogWarning("Successfully completed all database migrations.");
         }
-        Logger.LogInformation("You can safely end this process...");
+        Logger.LogWarning("You can safely end this process...");
     }
 
     private async Task MigrateDatabaseSchemaAsync(Tenant? tenant = null)
     {
-        Logger.LogInformation(
+        Logger.LogWarning(
             $"Migrating schema for {(tenant == null ? "host" : tenant.Name + " tenant")} database...");
-        
+
         foreach (var migrator in _dbSchemaMigrators)
         {
             await migrator.MigrateAsync();
@@ -103,8 +103,8 @@ public class RulesEngineDbMigrationService : ITransientDependency
 
     private async Task SeedDataAsync(Tenant? tenant = null)
     {
-        Logger.LogInformation($"Executing {(tenant == null ? "host" : tenant.Name + " tenant")} database seed...");
-        
+        Logger.LogWarning($"Executing {(tenant == null ? "host" : tenant.Name + " tenant")} database seed...");
+
         await _dataSeeder.SeedAsync(new DataSeedContext(tenant?.Id)
             .WithProperty(IdentityDataSeedContributor.AdminEmailPropertyName,
                 RulesEngineConsts.AdminEmailDefaultValue)
@@ -162,7 +162,7 @@ public class RulesEngineDbMigrationService : ITransientDependency
 
     private void AddInitialMigration()
     {
-        Logger.LogInformation("Creating initial migration...");
+        Logger.LogWarning("Creating initial migration...");
 
         string argumentPrefix;
         string fileName;
